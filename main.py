@@ -4,11 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agno.agent import Agent
-from agno.models.anthropic import Claude
-from agno.os import AgentOS
-from agno.os.interfaces.telegram import Telegram
-from agno.db.sqlite.sqlite import SqliteDb
+from agno.agent import Agent  # noqa: E402
+from agno.models.anthropic import Claude  # noqa: E402
+from agno.os import AgentOS  # noqa: E402
+from agno.os.interfaces.telegram import Telegram  # noqa: E402
+from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -23,8 +23,9 @@ INSTRUCTIONS = [
 ]
 
 interfaces = []
-if os.getenv("TELEGRAM_TOKEN"):
-    interfaces.append(Telegram(token=os.getenv("TELEGRAM_TOKEN")))
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+if telegram_token:
+    interfaces.append(Telegram(token=telegram_token))
 
 agent = Agent(
     name="wasp-agent",

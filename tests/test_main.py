@@ -1,6 +1,6 @@
 def test_agent_config(mock_agno):
     """Agent is instantiated with correct model, storage, history, and instructions."""
-    import main
+    import main  # noqa: F401
 
     mock_agno["agno.models.anthropic"].Claude.assert_called_once_with(
         id="bedrock/anthropic.claude-4-5-haiku"
@@ -18,7 +18,7 @@ def test_agent_os_with_token(mock_agno, monkeypatch):
     """AgentOS receives the agent and Telegram interface when TELEGRAM_TOKEN is set."""
     monkeypatch.setenv("TELEGRAM_TOKEN", "test-token-123")
 
-    import main
+    import main  # noqa: F401
 
     mock_agno["agno.os.interfaces.telegram"].Telegram.assert_called_once_with(
         token="test-token-123"
@@ -31,7 +31,7 @@ def test_telegram_not_added_without_token(mock_agno, monkeypatch):
     """No interfaces are added when TELEGRAM_TOKEN is absent."""
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
-    import main
+    import main  # noqa: F401
 
     mock_agno["agno.os.interfaces.telegram"].Telegram.assert_not_called()
     call_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
