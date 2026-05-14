@@ -51,8 +51,8 @@ wasp-agent/
 Agent(
     name="wasp-agent",
     model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
-    storage=SqliteAgentStorage(db_file="agent.db", table_name="agent_sessions"),
-    add_history_to_messages=True,
+    db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
+    add_history_to_context=True,
     instructions=[...],  # see Instructions section
 )
 ```

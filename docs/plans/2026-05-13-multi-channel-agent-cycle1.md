@@ -40,7 +40,7 @@ name = "wasp-agent"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "agno>=1.4.0",
+    "agno>=2.0.0",
     "python-dotenv>=1.0.0",
 ]
 
@@ -143,9 +143,9 @@ AGNO_MODULES = [
     "agno.agent",
     "agno.models",
     "agno.models.anthropic",
-    "agno.storage",
-    "agno.storage.agent",
-    "agno.storage.agent.sqlite",
+    "agno.db",
+    "agno.db.sqlite",
+    "agno.db.sqlite.sqlite",
     "agno.os",
     "agno.os.interfaces",
     "agno.os.interfaces.telegram",
@@ -172,12 +172,12 @@ def test_agent_config(mock_agno):
     mock_agno["agno.models.anthropic"].Claude.assert_called_once_with(
         id="bedrock/anthropic.claude-4-5-haiku"
     )
-    mock_agno["agno.storage.agent.sqlite"].SqliteAgentStorage.assert_called_once_with(
-        db_file="agent.db", table_name="agent_sessions"
+    mock_agno["agno.db.sqlite.sqlite"].SqliteDb.assert_called_once_with(
+        db_file="agent.db", session_table="agent_sessions"
     )
     call_kwargs = mock_agno["agno.agent"].Agent.call_args.kwargs
     assert call_kwargs["name"] == "wasp-agent"
-    assert call_kwargs["add_history_to_messages"] is True
+    assert call_kwargs["add_history_to_context"] is True
     assert "You are a DevOps assistant." in call_kwargs["instructions"]
 
 
@@ -248,7 +248,7 @@ from agno.agent import Agent
 from agno.models.anthropic import Claude
 from agno.os import AgentOS
 from agno.os.interfaces.telegram import Telegram
-from agno.storage.agent.sqlite import SqliteAgentStorage
+from agno.db.sqlite.sqlite import SqliteDb
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -269,8 +269,8 @@ if os.getenv("TELEGRAM_TOKEN"):
 agent = Agent(
     name="wasp-agent",
     model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
-    storage=SqliteAgentStorage(db_file="agent.db", table_name="agent_sessions"),
-    add_history_to_messages=True,
+    db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
+    add_history_to_context=True,
     instructions=INSTRUCTIONS,
 )
 
