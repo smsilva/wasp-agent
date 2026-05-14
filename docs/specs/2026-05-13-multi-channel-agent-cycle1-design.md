@@ -49,7 +49,7 @@ wasp-agent/
 
 ```python
 Agent(
-    name="WaspAgent",
+    name="wasp-agent",
     model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
     storage=SqliteAgentStorage(db_file="agent.db", table_name="agent_sessions"),
     add_history_to_messages=True,
@@ -118,7 +118,7 @@ Agno's `Telegram` interface derives `session_id` from the Telegram `chat_id` aut
 |--------------|---------------------------------------------------|
 | `make run`   | `uv run python main.py`                           |
 | `make test`  | `uv run pytest --cov=. --cov-report=term-missing` |
-| `make build` | `uv build` (produces wheel/sdist in `dist/`)      |
+| `make build` | `uv sync` (installs/updates all dependencies)     |
 
 ---
 
