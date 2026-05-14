@@ -21,7 +21,8 @@ def test_agent_os_with_token(mock_agno, monkeypatch):
     import main  # noqa: F401
 
     mock_agno["agno.os.interfaces.telegram"].Telegram.assert_called_once_with(
-        token="test-token-123"
+        agent=mock_agno["agno.agent"].Agent.return_value,
+        token="test-token-123",
     )
     call_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
     assert len(call_kwargs["interfaces"]) == 1

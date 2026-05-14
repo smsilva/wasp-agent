@@ -21,6 +21,9 @@ def mock_agno(monkeypatch):
     mocks = {name: MagicMock() for name in AGNO_MODULES}
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
+    # Prevent load_dotenv() from reading the real .env during tests so that
+    # monkeypatch.setenv/delenv has full control over env vars.
+    monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     sys.modules.pop("main", None)
     yield mocks
     sys.modules.pop("main", None)

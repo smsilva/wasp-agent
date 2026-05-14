@@ -22,11 +22,6 @@ INSTRUCTIONS = [
     " user know it will be supported in a future update.",
 ]
 
-interfaces = []
-telegram_token = os.getenv("TELEGRAM_TOKEN")
-if telegram_token:
-    interfaces.append(Telegram(token=telegram_token))
-
 agent = Agent(
     name="wasp-agent",
     model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
@@ -34,6 +29,11 @@ agent = Agent(
     add_history_to_context=True,
     instructions=INSTRUCTIONS,
 )
+
+interfaces = []
+telegram_token = os.getenv("TELEGRAM_TOKEN")
+if telegram_token:
+    interfaces.append(Telegram(agent=agent, token=telegram_token))
 
 agent_os = AgentOS(
     agents=[agent],
