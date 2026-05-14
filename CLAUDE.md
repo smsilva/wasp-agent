@@ -64,10 +64,17 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 We are passionate about testing. We write tests for every feature, bug fix, and refactor. Tests are the safety net that allows us to move fast without breaking things.
 
-The code coverage threshold is 100%.
+The code coverage threshold is 100%. Use `pytest --cov` (`pytest-cov` + `coverage.py`) to verify coverage.
 
 ## 6. Code
 
 This project uses primarily Python. For formatting code, use `ruff`.
 
 For dependencies we use `uv`.
+
+## 7. Brainstorming and specification
+
+All files should be stored in docs/
+- plans/
+- specs/
+- sessions/
