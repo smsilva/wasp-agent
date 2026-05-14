@@ -80,3 +80,19 @@ All files stored in `docs/`, named `<YYYY-MM-DD>-<topic>.md`:
 1. `brainstorms/` — session context, decisions, alternatives
 2. `specs/` — approved design (what to build)
 3. `plans/` — implementation plan (how to build, step-by-step)
+
+## 8. agno
+
+- Versão mínima: `agno>=2.0.0`. A API 1.x é diferente e incompatível.
+- Sessão SQLite: `db=SqliteDb(db_file=..., session_table=...)` via `agno.db.sqlite.sqlite`. Não existe `SqliteAgentStorage`.
+- Histórico de contexto: `add_history_to_context=True` (não `add_history_to_messages`).
+- `SqliteDb` requer `sqlalchemy` — declare como dependência explícita no projeto.
+- Antes de escrever código com agno, verifique os caminhos de import no pacote instalado (`.venv/lib/`). A documentação oficial frequentemente diverge da versão instalada.
+
+Para detalhes e checklist de ciclos futuros, ver `docs/notes/2026-05-13-agno-api-cycle1.md`.
+
+## 9. ruff / lint
+
+- `# noqa: E402` nos imports após `load_dotenv()` em `main.py` — violação intencional (env vars devem estar carregadas antes dos imports do agno).
+- `# noqa: F401` em `import main` dentro de funções de teste — import por efeito colateral (executa código de módulo).
+- `ruff check .` deve passar limpo. Rode antes de qualquer commit.
