@@ -2,39 +2,43 @@
 
 ## Goal
 
-Implement cycle 1 of a multi-channel DevOps agent: a Telegram bot backed by Agno Agent with SQLite session memory and Claude Haiku via LLM proxy.
+Implementar o ciclo 1 de um agente DevOps multi-canal: Telegram bot com Agno Agent, memória de sessão via SQLite e Claude Haiku via LLM proxy.
 
 ## Current Progress
 
-Brainstorming and design complete. Ready to implement.
+**Ciclo 1 completo.** Todo o código está no branch `dev`, pronto para merge ou PR.
 
-**Artifacts committed on `dev` branch:**
-- `docs/specs/2026-05-13-multi-channel-agent-cycle1-design.md` — full design spec
-- `docs/plans/2026-05-13-multi-channel-agent-cycle1.md` — step-by-step implementation plan
+**Artefatos:**
+- `pyproject.toml` + `Makefile` + `.env.example` + `uv.lock` — scaffold completo
+- `main.py` — Agent com Telegram interface e SQLite storage (45 linhas)
+- `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
+- `docs/specs/2026-05-13-multi-channel-agent-cycle1-design.md` — design spec atualizado
+- `docs/plans/2026-05-13-multi-channel-agent-cycle1.md` — plano atualizado
+- `docs/notes/2026-05-13-agno-api-cycle1.md` — referência técnica sobre API do agno
+- `CLAUDE.md` — seções §8 (agno) e §9 (ruff) adicionadas
 
-No code written yet. The repo has only docs and config files.
+**Pendente:**
+- Task 4: smoke test manual (requer `.env` com credenciais reais)
+- Merge/PR do branch `dev` para `main` (o usuário não escolheu a opção ainda)
 
 ## What Worked
 
-All key design decisions made and recorded in the spec:
-- SQLite for local storage (no Docker required for cycle 1)
-- AgentOS minimal setup (Telegram only, FastAPI runs in background but unused)
-- `bedrock/anthropic.claude-4-5-haiku` via LLM proxy (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`)
-- `add_history_to_messages=True` for session memory
-- Generic DevOps/Crossplane instructions (not tied to a specific platform)
+- Subagent-driven development com revisão dupla (spec + qualidade) por task
+- Mocking via `sys.modules` antes de `import main` — isolamento total sem rede/DB nos testes
+- `pythonpath = ["."]` no pytest resolve o `import main` da raiz
 
 ## What Didn't Work
 
-N/A — no implementation attempted yet.
+- **API do agno diverge da documentação:** o plano usava `SqliteAgentStorage`/`add_history_to_messages`, mas agno 2.6.5 usa `SqliteDb`/`add_history_to_context`. Foi detectado e corrigido durante a implementação.
+- **`requires-python` inicial errado:** o plano dizia `>=3.12`, mas o ambiente usa Python 3.14. Corrigido no spec e pyproject.toml.
 
 ## Next Steps
 
-Execute the implementation plan at `docs/plans/2026-05-13-multi-channel-agent-cycle1.md`.
+### Imediato
+1. **Escolher destino do branch `dev`:** merge local para `main`, ou abrir PR.
+2. **Smoke test manual (Task 4):** copiar `.env.example` → `.env`, preencher as 3 vars e rodar `make run`. Ver `docs/plans/2026-05-13-multi-channel-agent-cycle1.md` Task 4 para detalhes.
 
-The plan has 4 tasks:
-1. **Task 1** — Project scaffolding (`pyproject.toml`, `Makefile`, `.env.example`, `.gitignore`)
-2. **Task 2** — Write failing tests (`tests/conftest.py`, `tests/test_main.py`)
-3. **Task 3** — Implement `main.py` (verify Agno import paths first via https://docs.agno.com/)
-4. **Task 4** — Smoke test manually (requires real `TELEGRAM_TOKEN`, `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`)
-
-To start: invoke `superpowers:subagent-driven-development` or `superpowers:executing-plans` and point them at the plan file.
+### Ciclo 2
+Adicionar adapter Discord. Ver checklist em `docs/notes/2026-05-13-agno-api-cycle1.md`.
+- Brainstorm → spec → plano seguindo o mesmo fluxo do ciclo 1
+- A lógica do Agent core não muda — apenas `interfaces` cresce
