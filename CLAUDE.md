@@ -91,6 +91,8 @@ All files stored in `docs/`, named `<YYYY-MM-DD>-<topic>.md`:
 
 Para detalhes e checklist de ciclos futuros, ver `docs/notes/2026-05-13-agno-api-cycle1.md`.
 
+Para rodar o bot localmente com ngrok, ver `docs/runbooks/telegram-local-dev.md`.
+
 ## 9. ruff / lint
 
 - `# noqa: E402` nos imports após `load_dotenv()` em `main.py` — violação intencional (env vars devem estar carregadas antes dos imports do agno).
