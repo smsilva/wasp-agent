@@ -75,6 +75,7 @@ For dependencies we use `uv`.
 ## 7. Brainstorming and specification
 
 All files should be stored in docs/
+- brainstorms/ — `<YYYY-MM-DD>-<topic>.md`
 - plans/
 - specs/
 - sessions/
