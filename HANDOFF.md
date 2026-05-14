@@ -2,43 +2,53 @@
 
 ## Goal
 
-Implementar o ciclo 1 de um agente DevOps multi-canal: Telegram bot com Agno Agent, memória de sessão via SQLite e Claude Haiku via LLM proxy.
+Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent, memória de sessão via SQLite e Claude Haiku via LLM proxy.
 
 ## Current Progress
 
-**Ciclo 1 completo.** Todo o código está no branch `dev`, pronto para merge ou PR.
+**Ciclo 1 completo e validado em produção.** Branch `dev` pronto para merge/PR.
 
-**Artefatos:**
-- `pyproject.toml` + `Makefile` + `.env.example` + `uv.lock` — scaffold completo
-- `main.py` — Agent com Telegram interface e SQLite storage (45 linhas)
+**Código:**
+- `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
 - `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
-- `docs/specs/2026-05-13-multi-channel-agent-cycle1-design.md` — design spec atualizado
-- `docs/plans/2026-05-13-multi-channel-agent-cycle1.md` — plano atualizado
-- `docs/notes/2026-05-13-agno-api-cycle1.md` — referência técnica sobre API do agno
-- `CLAUDE.md` — seções §8 (agno) e §9 (ruff) adicionadas
+- `pyproject.toml` — `agno[anthropic,os,telegram]>=2.0.0`, sqlalchemy, ruff
+
+**Documentação:**
+- `docs/specs/2026-05-13-multi-channel-agent-cycle1-design.md`
+- `docs/plans/2026-05-13-multi-channel-agent-cycle1.md`
+- `docs/notes/2026-05-13-agno-api-cycle1.md` — API real do agno, mocking, extras, load_dotenv
+- `docs/runbooks/telegram-local-dev.md` — ngrok, webhook, secret token
+- `CLAUDE.md` — seções §8 (agno) e §9 (ruff)
+
+**Smoke test validado:**
+- Bot respondeu mensagens no Telegram
+- Memória de sessão funcionando (SQLite + `add_history_to_context=True`)
 
 **Pendente:**
-- Task 4: smoke test manual (requer `.env` com credenciais reais)
-- Merge/PR do branch `dev` para `main` (o usuário não escolheu a opção ainda)
+- Merge/PR do branch `dev` para `main` (não executado — aguardando decisão do usuário)
 
 ## What Worked
 
-- Subagent-driven development com revisão dupla (spec + qualidade) por task
-- Mocking via `sys.modules` antes de `import main` — isolamento total sem rede/DB nos testes
-- `pythonpath = ["."]` no pytest resolve o `import main` da raiz
+- `agno[anthropic,os,telegram]` como extra único cobre todas as deps runtime
+- `Telegram(agent=agent, token=token)` — agent passado no construtor da interface
+- `TELEGRAM_WEBHOOK_SECRET_TOKEN` gerado com `python3 -c "import secrets; print(secrets.token_hex(32))"`
+- Mock de `dotenv.load_dotenv` no conftest evita que `.env` real interfira nos testes
+- ngrok + `setWebhook` com `secret_token` para desenvolvimento local
 
 ## What Didn't Work
 
-- **API do agno diverge da documentação:** o plano usava `SqliteAgentStorage`/`add_history_to_messages`, mas agno 2.6.5 usa `SqliteDb`/`add_history_to_context`. Foi detectado e corrigido durante a implementação.
-- **`requires-python` inicial errado:** o plano dizia `>=3.12`, mas o ambiente usa Python 3.14. Corrigido no spec e pyproject.toml.
+- Declarar `anthropic`, `fastapi`, `uvicorn` como deps individuais — agno não os encontra pelo caminho esperado; usar extras
+- `Telegram(token=token)` sem `agent=` — lança `ValueError` em runtime
+- `monkeypatch.setattr("dotenv.main.load_dotenv", ...)` — não afeta a referência exportada; usar `dotenv.load_dotenv`
+- `SqliteAgentStorage` / `add_history_to_messages` — não existem no agno 2.6.5; usar `SqliteDb` / `add_history_to_context`
 
 ## Next Steps
 
 ### Imediato
-1. **Escolher destino do branch `dev`:** merge local para `main`, ou abrir PR.
-2. **Smoke test manual (Task 4):** copiar `.env.example` → `.env`, preencher as 3 vars e rodar `make run`. Ver `docs/plans/2026-05-13-multi-channel-agent-cycle1.md` Task 4 para detalhes.
+Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
 
 ### Ciclo 2
 Adicionar adapter Discord. Ver checklist em `docs/notes/2026-05-13-agno-api-cycle1.md`.
-- Brainstorm → spec → plano seguindo o mesmo fluxo do ciclo 1
-- A lógica do Agent core não muda — apenas `interfaces` cresce
+- Fluxo: brainstorm → spec → plano (mesmo padrão do ciclo 1)
+- Agent core não muda — apenas `interfaces` cresce
+- Verificar se agno tem extra `discord` antes de declarar deps individuais
