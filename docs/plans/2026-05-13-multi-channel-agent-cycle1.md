@@ -38,7 +38,7 @@
 [project]
 name = "wasp-agent"
 version = "0.1.0"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "agno>=1.4.0",
     "python-dotenv>=1.0.0",

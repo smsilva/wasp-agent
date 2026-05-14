@@ -32,7 +32,7 @@ The FastAPI server started by AgentOS is not used in this cycle but is the found
 
 ```
 wasp-agent/
-├── pyproject.toml       # uv project; deps: agno, python-dotenv, pytest, pytest-cov
+├── pyproject.toml       # uv project (Python >=3.14); deps: agno, python-dotenv, pytest, pytest-cov
 ├── Makefile             # targets: run, build, test
 ├── .env.example         # template for required env vars
 ├── main.py              # single entrypoint
