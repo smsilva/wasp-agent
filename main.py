@@ -8,7 +8,7 @@ from agno.agent import Agent
 from agno.models.anthropic import Claude
 from agno.os import AgentOS
 from agno.os.interfaces.telegram import Telegram
-from agno.storage.agent.sqlite import SqliteAgentStorage
+from agno.db.sqlite.sqlite import SqliteDb
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -29,8 +29,8 @@ if os.getenv("TELEGRAM_TOKEN"):
 agent = Agent(
     name="wasp-agent",
     model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
-    storage=SqliteAgentStorage(db_file="agent.db", table_name="agent_sessions"),
-    add_history_to_messages=True,
+    db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
+    add_history_to_context=True,
     instructions=INSTRUCTIONS,
 )
 
