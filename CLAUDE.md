@@ -93,7 +93,16 @@ Para detalhes e checklist de ciclos futuros, ver `docs/notes/2026-05-13-agno-api
 
 Para rodar o bot localmente com ngrok, ver `docs/runbooks/telegram-local-dev.md`.
 
-## 9. ruff / lint
+## 9. Security tracking
+
+Issues de segurança ativas ficam em `docs/security/issues/SEC-NNN-<slug>.md`.
+Quando resolvida, mover para `docs/security/issues/archived/`.
+
+Cada arquivo tem: `id`, `severity`, `status`, `opened` (e `resolved` quando arquivada), descrição, impacto e fix.
+
+Ao fazer security review, checar issues abertas antes de reportar duplicatas.
+
+## 10. ruff / lint
 
 - `# noqa: E402` nos imports após `load_dotenv()` em `main.py` — violação intencional (env vars devem estar carregadas antes dos imports do agno).
 - `# noqa: F401` em `import main` dentro de funções de teste — import por efeito colateral (executa código de módulo).

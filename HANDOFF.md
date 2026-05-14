@@ -1,5 +1,15 @@
 # Handoff
 
+## ⚠️ Open Security Issues
+
+Resolver antes de novas features. Ver detalhes em `docs/security/issues/`.
+
+| ID | Severity | Título |
+|----|----------|--------|
+| SEC-001 | Medium | `.env.example` não documenta `TELEGRAM_WEBHOOK_SECRET_TOKEN` |
+| SEC-002 | Low | `agent.db` tem permissão world-readable |
+| SEC-003 | Low | `APP_ENV=development` desabilita autenticação do webhook |
+
 ## Goal
 
 Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent, memória de sessão via SQLite e Claude Haiku via LLM proxy.
@@ -18,14 +28,16 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent, memória 
 - `docs/plans/2026-05-13-multi-channel-agent-cycle1.md`
 - `docs/notes/2026-05-13-agno-api-cycle1.md` — API real do agno, mocking, extras, load_dotenv
 - `docs/runbooks/telegram-local-dev.md` — ngrok, webhook, secret token
-- `CLAUDE.md` — seções §8 (agno) e §9 (ruff)
+- `docs/security/issues/` — 3 issues abertas (ver tabela acima)
+- `CLAUDE.md` — seções §8 (agno), §9 (security tracking), §10 (ruff)
 
 **Smoke test validado:**
 - Bot respondeu mensagens no Telegram
 - Memória de sessão funcionando (SQLite + `add_history_to_context=True`)
 
 **Pendente:**
-- Merge/PR do branch `dev` para `main` (não executado — aguardando decisão do usuário)
+- Resolver issues de segurança abertas
+- Merge/PR do branch `dev` para `main` (aguardando decisão do usuário)
 
 ## What Worked
 
@@ -44,11 +56,16 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent, memória 
 
 ## Next Steps
 
-### Imediato
-Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
+### Imediato (segurança)
+1. **SEC-001** — Adicionar `TELEGRAM_WEBHOOK_SECRET_TOKEN` ao `.env.example`
+2. **SEC-003** — Documentar `APP_ENV=development` no `.env.example` com aviso
+3. **SEC-002** — Avaliar se o ambiente de deploy usa container dedicado; se não, restringir permissões do `agent.db`
+
+### Após resolver segurança
+4. Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
 
 ### Ciclo 2
-Adicionar adapter Discord. Ver checklist em `docs/notes/2026-05-13-agno-api-cycle1.md`.
-- Fluxo: brainstorm → spec → plano (mesmo padrão do ciclo 1)
-- Agent core não muda — apenas `interfaces` cresce
-- Verificar se agno tem extra `discord` antes de declarar deps individuais
+5. Adicionar adapter Discord. Ver checklist em `docs/notes/2026-05-13-agno-api-cycle1.md`.
+   - Fluxo: brainstorm → spec → plano (mesmo padrão do ciclo 1)
+   - Agent core não muda — apenas `interfaces` cresce
+   - Verificar se agno tem extra `discord` antes de declarar deps individuais
