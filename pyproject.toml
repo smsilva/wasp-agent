@@ -6,6 +6,8 @@ dependencies = [
     "agno[anthropic,os,telegram]>=2.0.0",
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.0",
+    "PyGithub>=2.0.0",
+    "pyyaml>=6.0",
 ]
 
 [dependency-groups]
