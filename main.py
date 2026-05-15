@@ -11,6 +11,7 @@ from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
+from tools.provision import provision_platform_instance  # noqa: E402
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -30,6 +31,7 @@ agent = Agent(
     db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
     add_history_to_context=True,
     instructions=INSTRUCTIONS,
+    tools=[provision_platform_instance],
 )
 
 interfaces = []
