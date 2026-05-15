@@ -6,7 +6,7 @@ from github import Github
 from pydantic import BaseModel, Field
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
-DEFAULT_REGIONS = ["us-east-1"]
+DEFAULT_REGIONS = ("us-east-1",)
 
 
 class ServiceSpec(BaseModel):
@@ -56,7 +56,7 @@ class PlatformManifest(BaseModel):
 def provision_platform_instance(
     name: str,
     domain: str = DEFAULT_DOMAIN,
-    regions: list[str] = DEFAULT_REGIONS,
+    regions: list[str] | None = None,
     requested_by: str = "",
 ) -> dict:
     """
@@ -65,16 +65,20 @@ def provision_platform_instance(
 
     Returns: commit_sha, file_path, status.
     """
+    if regions is None:
+        regions = list(DEFAULT_REGIONS)
+
     pat = os.getenv("GH_PAT")
     if not pat:
         raise ValueError("GH_PAT environment variable is required")
 
     manifest = PlatformManifest.build(name=name, domain=domain, regions=regions)
-    yaml_content = yaml.dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
+    yaml_content = yaml.safe_dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
 
     repo = Github(pat).get_repo("smsilva/wasp-gitops")
     file_path = f"infrastructure/tenants/{name}.yaml"
-    commit_message = f"feat(tenants): provision {name}\n\nRequested by: {requested_by}"
+    safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
+    commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
 
     result = repo.create_file(
         path=file_path,
@@ -87,5 +91,5 @@ def provision_platform_instance(
         "commit_sha": result["commit"].sha,
         "file_path": file_path,
         "status": "provisioning",
-        "message": "Commit feito. ArgoCD vai sincronizar em ~1min.",
+        "message": "Committed. ArgoCD will sync in ~1 min.",
     }

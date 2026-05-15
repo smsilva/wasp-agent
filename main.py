@@ -11,7 +11,7 @@ from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
-from tools.provision import provision_platform_instance  # noqa: E402
+from tools import provision_platform_instance  # noqa: E402
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
