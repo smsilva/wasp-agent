@@ -1,15 +1,5 @@
 # Handoff
 
-## ⚠️ Open Security Issues
-
-Resolver antes de novas features. Ver detalhes em `docs/security/issues/`.
-
-| ID | Severity | Título |
-|----|----------|--------|
-| SEC-001 | Medium | `.env.example` não documenta `TELEGRAM_WEBHOOK_SECRET_TOKEN` |
-| SEC-002 | Low | `agent.db` tem permissão world-readable |
-| SEC-003 | Low | `APP_ENV=development` desabilita autenticação do webhook |
-
 ## Goal
 
 Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão e suporte futuro a Discord/Slack.
@@ -55,16 +45,11 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Next Steps
 
-### Imediato (segurança)
-1. **SEC-001** — Adicionar `TELEGRAM_WEBHOOK_SECRET_TOKEN` ao `.env.example`
-2. **SEC-003** — Documentar `APP_ENV=development` no `.env.example` com aviso
-3. **SEC-002** — Avaliar permissões do `agent.db` no ambiente de deploy
-
-### Após resolver segurança
-4. Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
+### Imediato
+1. Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
 
 ### Ciclo 2 — implementação
-5. Criar plano de implementação a partir do spec:
+2. Criar plano de implementação a partir do spec:
    `docs/specs/2026-05-15-platform-provisioning-design.md`
    - Fluxo: invocar `superpowers:writing-plans` com o spec como entrada
    - Arquivos a criar: `tools/__init__.py`, `tools/provision.py`, `tests/test_provision.py`
@@ -72,4 +57,4 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
    - Registrar `provision_platform_instance` nas tools do agent em `main.py`
 
 ### Ciclo 3
-6. Watcher assíncrono: `asyncio.create_task` in-process + notificação proativa no Telegram quando `Platform` atingir `Ready: True`.
+3. Watcher assíncrono: `asyncio.create_task` in-process + notificação proativa no Telegram quando `Platform` atingir `Ready: True`.
