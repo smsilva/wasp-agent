@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+os.umask(0o077)  # agent.db created with 600 permissions
+
 from agno.agent import Agent  # noqa: E402
 from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402

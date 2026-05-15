@@ -1,15 +1,16 @@
 ---
 id: SEC-003
 severity: Low
-status: open
+status: resolved
 opened: 2026-05-13
+resolved: 2026-05-15
 ---
 
 # SEC-003: `APP_ENV=development` desabilita autenticação do webhook
 
 ## Descrição
 
-A biblioteca agno desabilita completamente a validação do `TELEGRAM_WEBHOOK_SECRET_TOKEN` quando `APP_ENV=development`. Esse comportamento não está documentado em `.env.example` nem em nenhum arquivo do projeto.
+A biblioteca agno desabilita completamente a validação do `TELEGRAM_WEBHOOK_SECRET_TOKEN` quando `APP_ENV=development`. Esse comportamento não estava documentado em `.env.example` nem em nenhum arquivo do projeto.
 
 ## Código relevante (agno)
 
@@ -39,3 +40,7 @@ Documentar no `.env.example` com aviso explícito:
 ```
 
 Garantir que pipelines de produção não definam `APP_ENV=development`.
+
+## Resolução
+
+Adicionado ao `.env.example` como comentário com aviso explícito de não usar em produção.

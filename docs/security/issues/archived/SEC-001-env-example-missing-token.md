@@ -1,8 +1,9 @@
 ---
 id: SEC-001
 severity: Medium
-status: open
+status: resolved
 opened: 2026-05-13
+resolved: 2026-05-15
 ---
 
 # SEC-001: `.env.example` não documenta `TELEGRAM_WEBHOOK_SECRET_TOKEN`
@@ -28,3 +29,7 @@ Gerar com:
 ```bash
 python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+## Resolução
+
+Adicionado ao `.env.example` com instrução de geração.

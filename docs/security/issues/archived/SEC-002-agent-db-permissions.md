@@ -1,8 +1,9 @@
 ---
 id: SEC-002
 severity: Low
-status: open
+status: resolved
 opened: 2026-05-13
+resolved: 2026-05-15
 ---
 
 # SEC-002: `agent.db` tem permissão world-readable
@@ -32,3 +33,7 @@ umask 0077        # arquivos criados com 600
 # ou após criação:
 chmod 600 agent.db
 ```
+
+## Resolução
+
+`os.umask(0o077)` adicionado em `main.py` logo após `load_dotenv()`, garantindo que `agent.db` seja criado com permissão 600.
