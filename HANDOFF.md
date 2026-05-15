@@ -6,25 +6,25 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Current Progress
 
-**Ciclo 1 completo e validado.** Branch `dev` pronto para merge/PR.
+**Ciclo 1 completo — mergeado para `main`.**
 
-**Ciclo 2 — design aprovado, implementação pendente.**
+**Ciclo 2 — plano de implementação criado, pronto para execução.**
 
 ### Ciclo 1 (completo)
 - `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
 - `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
 - Smoke test validado: bot respondeu no Telegram, memória de sessão funcionando
 
-### Ciclo 2 — design (esta sessão)
+### Ciclo 2 — design e planejamento (completo)
 - Brainstorm `docs/brainstorms/agno-crossplane-provisioning-flow.md` analisado e todas as decisões resolvidas
-- Spec aprovado e commitado: `docs/specs/2026-05-15-platform-provisioning-design.md`
-- `CLAUDE.md` atualizado com `§11. Platform provisioning`
+- Spec aprovado: `docs/specs/2026-05-15-platform-provisioning-design.md`
+- Plano de implementação criado: `docs/plans/2026-05-15-platform-provisioning.md`
+- `CLAUDE.md` atualizado com `§11. Platform provisioning` e notas de teste para `@tool`
 
-**Decisões tomadas no ciclo 2:**
+**Decisões do ciclo 2:**
 - Commit direto em branch `dev` do `smsilva/wasp-gitops` (não PR)
 - Path: `infrastructure/tenants/{name}.yaml`
 - Pydantic models para gerar o manifesto (não Jinja2)
-- `asyncio.create_task` in-process para watcher (deferred para ciclo 3)
 - PAT fine-grained no MVP (não GitHub App)
 - Default domain: `wasp.silvios.me`, default region: `us-east-1`
 
@@ -45,16 +45,11 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Next Steps
 
-### Imediato
-1. Escolher destino do branch `dev`: merge local para `main` ou abrir PR.
-
 ### Ciclo 2 — implementação
-2. Criar plano de implementação a partir do spec:
-   `docs/specs/2026-05-15-platform-provisioning-design.md`
-   - Fluxo: invocar `superpowers:writing-plans` com o spec como entrada
-   - Arquivos a criar: `tools/__init__.py`, `tools/provision.py`, `tests/test_provision.py`
-   - Adicionar deps: `PyGithub>=2.0.0`, `pyyaml>=6.0`
-   - Registrar `provision_platform_instance` nas tools do agent em `main.py`
+1. **Executar o plano** `docs/plans/2026-05-15-platform-provisioning.md`
+   - Invocar `superpowers:subagent-driven-development` (recomendado) ou `superpowers:executing-plans`
+   - 4 tasks: deps → modelos Pydantic → tool function → wire em `main.py`
+   - Antes de começar: adicionar `GH_PAT` ao `.env` (PAT fine-grained para `smsilva/wasp-gitops`, permissão Contents: write, branch `dev`)
 
 ### Ciclo 3
-3. Watcher assíncrono: `asyncio.create_task` in-process + notificação proativa no Telegram quando `Platform` atingir `Ready: True`.
+2. Watcher assíncrono: `asyncio.create_task` in-process + notificação proativa no Telegram quando `Platform` atingir `Ready: True`.

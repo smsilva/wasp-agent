@@ -89,6 +89,8 @@ All files stored in `docs/`, named `<YYYY-MM-DD>-<topic>.md`:
 - `SqliteDb` requer `sqlalchemy` — declare como dependência explícita no projeto.
 - Antes de escrever código com agno, verifique os caminhos de import no pacote instalado (`.venv/lib/`). A documentação oficial frequentemente diverge da versão instalada.
 
+- `@tool(requires_confirmation=True)` em `tools/provision.py`: ao adicionar um módulo com esse decorator, adicionar `"agno.tools"` a `AGNO_MODULES` em `conftest.py` e configurar `mocks["agno.tools"].tool = lambda **kwargs: lambda fn: fn` — isso mantém a função diretamente chamável nos testes. Também fazer `sys.modules.pop("tools", None)` e `sys.modules.pop("tools.provision", None)` no setup e teardown do fixture; sem isso, o decorator corre com o mock errado na primeira importação e quebra os testes subsequentes.
+
 Para detalhes e checklist de ciclos futuros, ver `docs/notes/2026-05-13-agno-api-cycle1.md`.
 
 Para rodar o bot localmente com ngrok, ver `docs/runbooks/telegram-local-dev.md`.
