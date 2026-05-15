@@ -102,6 +102,18 @@ Cada arquivo tem: `id`, `severity`, `status`, `opened` (e `resolved` quando arqu
 
 Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 
+## 11. Platform provisioning
+
+- GitOps repo: `smsilva/wasp-gitops`, branch `dev`, path `infrastructure/tenants/{name}.yaml`.
+- CRD: `apiVersion: wasp.silvios.me/v1alpha1`, `kind: Platform`. Campo `name` é top-level (não em `metadata`).
+- Endpoint derivado deterministicamente: `gateway.{aws-region}.{name}.{domain}` — nenhum campo desconhecido no momento do commit.
+- Services são fixos para toda instância: auth, discovery, callback, portal.
+- Default domain: `wasp.silvios.me`. Default region: `us-east-1`.
+- Use Pydantic models para gerar o manifesto (não Jinja2). O LLM extrai parâmetros; Pydantic valida e serializa. Nunca peça pro LLM gerar YAML Crossplane diretamente.
+- Tools de provisionamento usam `@tool(requires_confirmation=True)` para exigir confirmação antes de commitar.
+
+Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
+
 ## 10. ruff / lint
 
 - `# noqa: E402` nos imports após `load_dotenv()` em `main.py` — violação intencional (env vars devem estar carregadas antes dos imports do agno).
