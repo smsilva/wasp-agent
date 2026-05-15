@@ -113,6 +113,9 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 - Default domain: `wasp.silvios.me`. Default region: `us-east-1`.
 - Use Pydantic models para gerar o manifesto (não Jinja2). O LLM extrai parâmetros; Pydantic valida e serializa. Nunca peça pro LLM gerar YAML Crossplane diretamente.
 - Tools de provisionamento usam `@tool(requires_confirmation=True)` para exigir confirmação antes de commitar.
+- Sempre usar `yaml.safe_dump()` (não `yaml.dump()`) ao serializar manifests — impede que input do LLM/usuário injete objetos Python arbitrários no YAML.
+- Parâmetros `list` com default em tool functions: usar tupla como constante (`DEFAULT_REGIONS = ("us-east-1",)`) e `None` na assinatura com inicialização no corpo (`regions = list(DEFAULT_REGIONS)`). Lista mutável como default é Python gotcha.
+- Sanitizar strings de usuário antes de interpolar em mensagens de commit: `value.replace("\n", " ").replace("\r", " ")` — evita injeção de linhas extras no commit message.
 
 Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
 
