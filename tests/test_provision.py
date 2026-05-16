@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_manifest_build():
     from tools.provision import PlatformManifest
 

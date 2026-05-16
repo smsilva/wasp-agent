@@ -16,14 +16,20 @@ AGNO_MODULES = [
     "agno.tools",
 ]
 
+KUBE_MODULES = [
+    "kubernetes",
+    "kubernetes.client",
+    "kubernetes.config",
+]
+
 
 @pytest.fixture(autouse=True)
 def mock_agno(monkeypatch):
     # Clear cached modules so each test gets a fresh import with current mocks.
-    for mod in ("main", "tools", "tools.provision"):
+    for mod in ("main", "tools", "tools.provision", "tools.watcher"):
         sys.modules.pop(mod, None)
 
-    mocks = {name: MagicMock() for name in AGNO_MODULES}
+    mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES}
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
     # Make @tool a transparent no-op so provision_platform_instance remains directly callable in tests.
@@ -33,5 +39,5 @@ def mock_agno(monkeypatch):
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     yield mocks
 
-    for mod in ("main", "tools", "tools.provision"):
+    for mod in ("main", "tools", "tools.provision", "tools.watcher"):
         sys.modules.pop(mod, None)

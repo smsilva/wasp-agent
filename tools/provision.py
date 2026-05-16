@@ -81,7 +81,7 @@ def provision_platform_instance(
         safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
         commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
 
-        result = repo.create_file(
+        repo.create_file(
             path=file_path,
             message=commit_message,
             content=yaml_content,
