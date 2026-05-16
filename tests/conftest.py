@@ -26,9 +26,8 @@ def mock_agno(monkeypatch):
     mocks = {name: MagicMock() for name in AGNO_MODULES}
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
-    # Make @tool(requires_confirmation=True) a transparent no-op so
-    # provision_platform_instance remains directly callable in tests.
-    mocks["agno.tools"].tool = lambda **kwargs: lambda fn: fn
+    # Make @tool a transparent no-op so provision_platform_instance remains directly callable in tests.
+    mocks["agno.tools"].tool = lambda fn: fn
     # Prevent load_dotenv() from reading the real .env during tests so that
     # monkeypatch.setenv/delenv has full control over env vars.
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)

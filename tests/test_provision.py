@@ -70,9 +70,8 @@ def test_provision_commits(monkeypatch):
     assert call_kwargs["branch"] == "dev"
     assert "feat(tenants): provision wp2" in call_kwargs["message"]
     assert "Requested by: alice" in call_kwargs["message"]
-    assert result["commit_sha"] == "abc123def456"
-    assert result["file_path"] == "infrastructure/tenants/wp2.yaml"
     assert result["status"] == "provisioning"
+    assert "wp2" in result["message"]
 
 
 def test_provision_missing_pat(monkeypatch):
@@ -83,7 +82,8 @@ def test_provision_missing_pat(monkeypatch):
     mock_github_cls = MagicMock()
     monkeypatch.setattr("tools.provision.Github", mock_github_cls)
 
-    with pytest.raises(ValueError, match="GH_PAT"):
-        provision_platform_instance(name="wp2")
+    result = provision_platform_instance(name="wp2")
 
+    assert result["status"] == "error"
+    assert result["message"] == "Provisioning failed. Please try again later."
     mock_github_cls.assert_not_called()

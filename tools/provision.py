@@ -52,7 +52,7 @@ class PlatformManifest(BaseModel):
         )
 
 
-@tool(requires_confirmation=True)
+@tool
 def provision_platform_instance(
     name: str,
     domain: str = DEFAULT_DOMAIN,
@@ -68,28 +68,35 @@ def provision_platform_instance(
     if regions is None:
         regions = list(DEFAULT_REGIONS)
 
-    pat = os.getenv("GH_PAT")
-    if not pat:
-        raise ValueError("GH_PAT environment variable is required")
+    try:
+        pat = os.getenv("GH_PAT")
+        if not pat:
+            raise ValueError("GH_PAT not set")
 
-    manifest = PlatformManifest.build(name=name, domain=domain, regions=regions)
-    yaml_content = yaml.safe_dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
+        manifest = PlatformManifest.build(name=name, domain=domain, regions=regions)
+        yaml_content = yaml.safe_dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
 
-    repo = Github(pat).get_repo("smsilva/wasp-gitops")
-    file_path = f"infrastructure/tenants/{name}.yaml"
-    safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
-    commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
+        repo = Github(pat).get_repo("smsilva/wasp-gitops")
+        file_path = f"infrastructure/tenants/{name}.yaml"
+        safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
+        commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
 
-    result = repo.create_file(
-        path=file_path,
-        message=commit_message,
-        content=yaml_content,
-        branch="dev",
-    )
+        result = repo.create_file(
+            path=file_path,
+            message=commit_message,
+            content=yaml_content,
+            branch="dev",
+        )
 
-    return {
-        "commit_sha": result["commit"].sha,
-        "file_path": file_path,
-        "status": "provisioning",
-        "message": "Committed. ArgoCD will sync in ~1 min.",
-    }
+        return {
+            "status": "provisioning",
+            "message": (
+                f"Request accepted. Tenant '{name}' provisioning has started."
+                " You will be notified when the status changes."
+            ),
+        }
+    except Exception:
+        return {
+            "status": "error",
+            "message": "Provisioning failed. Please try again later.",
+        }
