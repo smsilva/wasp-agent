@@ -1,9 +1,12 @@
+import asyncio
 import os
 
 import yaml
 from agno.tools import tool
 from github import Github
 from pydantic import BaseModel, Field
+
+from tools.watcher import extract_chat_id, watch_platform
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
@@ -58,6 +61,7 @@ def provision_platform_instance(
     domain: str = DEFAULT_DOMAIN,
     regions: list[str] | None = None,
     requested_by: str = "",
+    run_context=None,
 ) -> dict:
     """
     Provisions a new Platform by committing a Crossplane manifest to
@@ -87,6 +91,15 @@ def provision_platform_instance(
             content=yaml_content,
             branch="dev",
         )
+
+        chat_id = extract_chat_id(run_context)
+        token = os.getenv("TELEGRAM_TOKEN")
+        if chat_id and token:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(watch_platform(name, chat_id, token))
+            except RuntimeError:
+                pass
 
         return {
             "status": "provisioning",
