@@ -35,7 +35,21 @@ O script `run` executa em sequência:
 
 ---
 
-## 2. Aplicar a Application wasp-gitops
+## 2. Instalar o Crossplane
+
+Script: `/home/silvios/git/kubernetes/lab/argo/argocd/crossplane-install.sh`
+
+```bash
+cd ~/git/kubernetes/lab/argo/argocd
+
+bash crossplane-install.sh
+```
+
+Instala o Crossplane 2.2.1 via Helm no namespace `crossplane-system` e aguarda os deployments ficarem Available.
+
+---
+
+## 3. Aplicar a Application wasp-gitops
 
 O manifesto está em `docs/runbooks/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
 
@@ -58,7 +72,7 @@ Aponta para:
 
 ---
 
-## 3. Verificar sincronização
+## 4. Verificar sincronização
 
 ```bash
 argocd app get wasp-gitops
