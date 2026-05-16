@@ -155,12 +155,15 @@ Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` s
 ## 13. Watcher assíncrono (Ciclo 3)
 
 - `tools/watcher.py` — `watch_platform(name, chat_id, token)`: polling de Platform CR via `kubernetes.client.CustomObjectsApi`, 10s/poll, 10min timeout, notifica via `httpx.AsyncClient` POST direto na Telegram API.
-- Spawn: em `provision_platform_instance`, após `repo.create_file` bem-sucedido: `asyncio.get_running_loop().create_task(watch_platform(...))`. Envolto em `try/except RuntimeError: pass` para contextos sem event loop.
+- Spawn: agno chama tools síncronas em thread executor (sem event loop ativo), portanto `asyncio.get_running_loop()` e `get_event_loop()` falham. Usar `threading.Thread(target=asyncio.run, args=(watch_platform(...),), daemon=True).start()` — cria event loop próprio na thread daemon.
+- 404 do k8s API ao buscar o Platform CR recém-commitado é esperado (ArgoCD ainda não sincronizou). Tratar como "ainda não criado": `sleep(POLL_INTERVAL)` e `continue`, não notificar erro nem retornar. Só notificar timeout após `WATCH_TIMEOUT_SECONDS`.
+- Watcher é fire-and-forget em thread daemon — exceções são silenciosamente engolidas. Envolver lógica interna em `_watch_platform_inner` chamada via `try/except Exception: log.exception(...)` no wrapper público.
+- Dev-only: edits em arquivos durante uvicorn `--reload` matam tasks asyncio em voo (watchfiles reinicia o processo). Em produção sem `--reload` não há problema.
 - `run_context=None` em `provision_platform_instance` — agno injeta o contexto de execução; `extract_chat_id` faz parse de `session_id = "tg:{entity}:{chat_id}"`. Se não for sessão Telegram ou `TELEGRAM_TOKEN` não estiver setado, watcher não é spawnado silenciosamente.
 - `RunContext` está em `agno.run.base` (agno 2.6.5).
 - `pytest-asyncio` versão 1.3.0 usa strict mode por default — adicionar `asyncio_mode = "auto"` no `[tool.pytest.ini_options]` para evitar `@pytest.mark.asyncio` em cada teste.
 - Mocks de `kubernetes` e `kubernetes.config` no conftest: `ConfigException` e `ApiException` são MagicMock — não podem ser usados em `raise`/`except`. Nos testes que precisam testar essas exceções, criar `FakeConfigException(Exception)` / `FakeApiException(Exception)` reais e fazer `monkeypatch.setattr(w.config, "ConfigException", FakeConfigException)` antes de usar.
-- `monkeypatch.setattr("tools.provision.asyncio.get_running_loop", ...)` não funciona — `monkeypatch` com dotted string trata `tools.provision.asyncio` como módulo aninhado. Usar `monkeypatch.setattr(asyncio, "get_running_loop", ...)` (módulo real importado no teste).
+- Para testar spawn do watcher, mockar `threading.Thread` via `patch("tools.provision.threading.Thread", mock_thread_cls)` e asseritar `mock_thread_cls.assert_called_once()` + `mock_thread.start.assert_called_once()`. Não tente executar a coroutine real no teste.
 - Ao mockar `time.monotonic` com `iter([...])` em testes async: o teardown do event loop chama `time.monotonic()` extras vezes, causando `StopIteration`. Usar `itertools.chain([...], repeat(ultimo_valor))` para never-exhausting iterator.
 - Warning `coroutine 'watch_platform' was never awaited` em testes que mockam `loop.create_task`: inofensivo — o mock não executa a coroutine, que é coletada pelo GC. Não suprimir; é artefato esperado do mock setup.
 - `notify_telegram` usa `httpx.AsyncClient` direto — não reusa o cliente do agno/Telegram (não há acesso). Overhead aceitável: uma conexão por notificação.

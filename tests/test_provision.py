@@ -72,8 +72,8 @@ def test_provision_commits(monkeypatch):
 
 
 def test_provision_spawns_watcher(monkeypatch):
-    import asyncio
-    from unittest.mock import MagicMock
+    import threading
+    from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 
     mock_github_cls = MagicMock()
@@ -83,29 +83,28 @@ def test_provision_spawns_watcher(monkeypatch):
     mock_github_cls.return_value.get_repo.return_value = mock_repo
     mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
 
-    create_task = MagicMock()
-    loop = MagicMock()
-    loop.create_task = create_task
-
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("tools.provision.Github", mock_github_cls)
-    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+
+    mock_thread = MagicMock()
+    mock_thread_cls = MagicMock(return_value=mock_thread)
 
     class FakeCtx:
         session_id = "tg:5621932873:5621932873"
 
-    result = provision_platform_instance(
-        name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
-    )
+    with patch("tools.provision.threading.Thread", mock_thread_cls):
+        result = provision_platform_instance(
+            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+        )
 
-    create_task.assert_called_once()
+    mock_thread_cls.assert_called_once()
+    mock_thread.start.assert_called_once()
     assert result["status"] == "provisioning"
 
 
 def test_provision_skips_watcher_without_chat_id(monkeypatch):
-    import asyncio
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 
     mock_github_cls = MagicMock()
@@ -115,47 +114,21 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
     mock_github_cls.return_value.get_repo.return_value = mock_repo
     mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
 
-    loop = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("tools.provision.Github", mock_github_cls)
-    monkeypatch.setattr(asyncio, "get_running_loop", lambda: loop)
+
+    mock_thread_cls = MagicMock()
 
     class FakeCtx:
         session_id = "web:abc:def"
 
-    result = provision_platform_instance(
-        name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
-    )
+    with patch("tools.provision.threading.Thread", mock_thread_cls):
+        result = provision_platform_instance(
+            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+        )
 
-    loop.create_task.assert_not_called()
-    assert result["status"] == "provisioning"
-
-
-def test_provision_skips_watcher_without_running_loop(monkeypatch):
-    import asyncio
-    from unittest.mock import MagicMock
-    from tools.provision import provision_platform_instance
-
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_commit = MagicMock()
-    mock_commit.sha = "abc"
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
-    mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
-
-    monkeypatch.setenv("GH_PAT", "x")
-    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
-    monkeypatch.setattr(asyncio, "get_running_loop", lambda: (_ for _ in ()).throw(RuntimeError("no loop")))
-
-    class FakeCtx:
-        session_id = "tg:5621932873:5621932873"
-
-    result = provision_platform_instance(
-        name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
-    )
-
+    mock_thread_cls.assert_not_called()
     assert result["status"] == "provisioning"
 
 
