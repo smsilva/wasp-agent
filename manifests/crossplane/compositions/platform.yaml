@@ -1,0 +1,40 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: platform
+  labels:
+    crossplane.io/xrd: platforms.wasp.silvios.me
+spec:
+  compositeTypeRef:
+    apiVersion: wasp.silvios.me/v1alpha1
+    kind: Platform
+  resources:
+    - name: configmap
+      base:
+        apiVersion: kubernetes.crossplane.io/v1alpha2
+        kind: Object
+        spec:
+          forProvider:
+            manifest:
+              apiVersion: v1
+              kind: ConfigMap
+              metadata:
+                name: to-be-patched
+                namespace: to-be-patched
+              data: {}
+      patches:
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.metadata.name
+
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.metadata.namespace
+
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.manifest.data[name]
+
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.domain
+          toFieldPath: spec.forProvider.manifest.data[domain]

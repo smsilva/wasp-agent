@@ -1,0 +1,46 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: platforms.wasp.silvios.me
+spec:
+  group: wasp.silvios.me
+  names:
+    kind: Platform
+    plural: platforms
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - domain
+                - regions
+              properties:
+                domain:
+                  type: string
+                regions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - endpoint
+                    properties:
+                      name:
+                        type: string
+                      endpoint:
+                        type: string
+                services:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string

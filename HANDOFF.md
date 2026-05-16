@@ -8,6 +8,8 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 **Ciclos 1 e 2 completos — mergeados para `main`. Smoke test do ciclo 2 validado.**
 
+**Ciclo 3 em preparação — scaffolding dos manifestos Crossplane locais criado.**
+
 ### Ciclo 1 (completo)
 - `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
 - `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
@@ -30,50 +32,68 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - `yaml.safe_dump()` para serialização segura
 - `DEFAULT_REGIONS` como tupla, `None` default na assinatura da função
 
+### Scaffolding Crossplane local (esta sessão)
+- `manifests/crossplane/xrd/platform.yaml` — XRD que instala o Kind `Platform` no cluster
+- `manifests/crossplane/compositions/platform.yaml` — Composition `platform`: Platform → ConfigMap (nome e namespace derivam de `metadata.name`)
+- `manifests/argocd/wasp-gitops-application.yaml` — Application ArgoCD (movido de `docs/runbooks/`)
+- `manifests/tenants/example.yaml` — Platform instance de teste
+- Runbook `docs/runbooks/k3d-argocd-wasp-gitops.md` atualizado com passos 4–6: provider-kubernetes, aplicar XRD+Composition, testar com example
+
 ## What Worked
 
 - `agno[anthropic,os,telegram]` como extra único cobre todas as deps runtime
 - `Telegram(agent=agent, token=token)` — agent passado no construtor da interface
 - Mock de `dotenv.load_dotenv` no conftest evita que `.env` real interfira nos testes
 - ngrok + `setWebhook` com `secret_token` para desenvolvimento local
-- `TELEGRAM_WEBHOOK_SECRET_TOKEN` gerado com `python3 -c "import secrets; print(secrets.token_hex(32))"`
 - `yaml.safe_dump()` previne injeção de objetos Python arbitrários em manifests GitOps
 - PAT fine-grained com escopo mínimo: apenas `smsilva/wasp-gitops`, apenas Contents write
 - Confirmação via LLM (system prompt) funciona bem no Telegram
 - Tool retornando dict genérico com apenas `status` e `message` — LLM não vaza detalhes internos
-- WatchFiles recarrega o agent automaticamente ao salvar arquivos durante dev
+- Compositions Crossplane: usar `metadata.name` para derivar nome **e** namespace do ConfigMap criado
 
 ## What Didn't Work
 
 - Declarar `anthropic`, `fastapi`, `uvicorn` como deps individuais — agno não os encontra; usar extras
 - `Telegram(token=token)` sem `agent=` — lança `ValueError` em runtime
-- `monkeypatch.setattr("dotenv.main.load_dotenv", ...)` — não afeta a referência exportada; usar `dotenv.load_dotenv`
 - `SqliteAgentStorage` / `add_history_to_messages` — não existem no agno 2.6.5; usar `SqliteDb` / `add_history_to_context`
 - `DEFAULT_REGIONS = ["us-east-1"]` como default de função — lista mutável é Python gotcha; usar tupla + `None`
-- `yaml.dump()` com input de usuário — usa Dumper completo; sempre `yaml.safe_dump()` para manifests
 - `@tool(requires_confirmation=True)` com Telegram — o agno emite `RunPausedEvent` mas a interface Telegram não tem handler para ele; a tool é silenciosamente rejeitada. Usar confirmação via LLM no system prompt
 - Retornar campos técnicos no dict da tool (`commit_sha`, `file_path`) — o LLM os surfacia todos ao usuário; incluir só `status` e `message`
+- Nomear Composition com sufixo da implementação (`platform-configmap`) — usar o nome do tipo composto (`platform`)
 
 ## Next Steps
 
-### Ciclo 3
-1. **Watcher assíncrono:** `asyncio.create_task` in-process que observa o status do `Platform` CRD e envia notificação proativa no Telegram quando `Ready: True`.
+### Ciclo 3 — Watcher assíncrono
+**Pré-requisito:** subir o cluster k3d com os manifestos locais e validar o ciclo completo.
 
-**Blocker:** aguardando cluster k3d com ArgoCD + Crossplane + CRD do Platform para responder as dúvidas abaixo.
+```bash
+cd ~/git/kubernetes/lab/argo/argocd && bash run
+bash crossplane-install.sh
+kubectl apply --filename ~/git/wasp-agent/manifests/argocd/wasp-gitops-application.yaml
+kubectl apply --filename ~/git/wasp-agent/manifests/crossplane/xrd/platform.yaml
+kubectl apply --filename ~/git/wasp-agent/manifests/crossplane/compositions/platform.yaml
+# instalar provider-kubernetes (ver runbook passo 4)
+kubectl apply --filename ~/git/wasp-agent/manifests/tenants/example.yaml
+kubectl get configmap example --namespace example --output yaml
+```
+
+**Implementação:**
+1. `asyncio.create_task` in-process que observa status do `Platform` CRD
+2. Notificação proativa no Telegram quando `Ready: True`
 
 **Decisões já tomadas:**
 - Agent rodará in-cluster (mesmo cluster do Crossplane/ArgoCD) — caso principal
-- `RunContext.session_id` disponível via `run_context: RunContext` em `@tool` (agno injeta automaticamente)
-- `session_id` Telegram = `tg:{entity_id}:{chat_id}` — chat_id é o último segmento
+- `RunContext.session_id` disponível via `run_context: RunContext` em `@tool`
+- `session_id` Telegram = `tg:{entity_id}:{chat_id}` — `chat_id` é o último segmento
 - Dep nova: `kubernetes` (client in-cluster), `httpx` (POST Telegram Bot API)
 - Watch state persistido em SQLite: `platform_watches(name, session_id, status, created_at)`
 - Notificação proativa via `POST /bot{token}/sendMessage` direto na Telegram API
 
 **Dúvidas abertas (responder com cluster real):**
-- Qual é a estrutura de `.status` do Platform CRD? Crossplane padrão = `conditions[{type:"Ready", status:"True"}]` — confirmar.
+- Estrutura de `.status` do Platform CRD: Crossplane padrão = `conditions[{type:"Ready", status:"True"}]` — confirmar
 - Em qual namespace fica o recurso `Platform`?
 - Fallback local: watcher usa `KUBECONFIG` se disponível, ou só in-cluster no MVP?
 - Restart resilience: recarregar watches pendentes do SQLite no startup, ou perder é aceitável no MVP?
 
 ### Backlog
-2. **Logging estruturado:** suporte opcional a JSONL em arquivo via `LOG_FILE` env var. Ver `docs/specs/2026-05-16-structured-logging.md`.
+- **Logging estruturado:** suporte opcional a JSONL via `LOG_FILE` env var. Ver `docs/specs/2026-05-16-structured-logging.md`.

@@ -51,11 +51,11 @@ Instala o Crossplane 2.2.1 via Helm no namespace `crossplane-system` e aguarda o
 
 ## 3. Aplicar a Application wasp-gitops
 
-O manifesto está em `docs/runbooks/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
+O manifesto está em `manifests/argocd/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
 
 ```bash
 kubectl apply \
-  --filename ~/git/wasp-agent/docs/runbooks/wasp-gitops-application.yaml
+  --filename ~/git/wasp-agent/manifests/argocd/wasp-gitops-application.yaml
 ```
 
 Aponta para:
@@ -72,13 +72,79 @@ Aponta para:
 
 ---
 
-## 4. Verificar sincronização
+## 4. Instalar o Kubernetes provider do Crossplane
+
+O Crossplane precisa do provider `upbound/provider-kubernetes` para criar os objetos (`Object`) que a Composition usa.
+
+```bash
+kubectl apply --filename - <<'EOF'
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-kubernetes
+spec:
+  package: xpkg.upbound.io/upbound/provider-kubernetes:v0.14.0
+EOF
+```
+
+Aguardar o provider ficar healthy:
+
+```bash
+kubectl wait provider/provider-kubernetes \
+  --for=condition=Healthy \
+  --timeout=120s
+```
+
+Criar o `ProviderConfig` usando a kubeconfig do cluster local:
+
+```bash
+kubectl apply --filename - <<'EOF'
+apiVersion: kubernetes.crossplane.io/v1alpha1
+kind: ProviderConfig
+metadata:
+  name: default
+spec:
+  credentials:
+    source: InjectedIdentity
+EOF
+```
+
+---
+
+## 5. Aplicar os manifestos Crossplane locais
+
+XRD e Composition estão em `manifests/crossplane/` neste repositório (`wasp-agent`).
+
+```bash
+kubectl apply \
+  --filename ~/git/wasp-agent/manifests/crossplane/xrd/platform.yaml
+
+kubectl apply \
+  --filename ~/git/wasp-agent/manifests/crossplane/compositions/platform.yaml
+```
+
+---
+
+## 6. Verificar sincronização e testar
 
 ```bash
 argocd app get wasp-gitops
 ```
 
 Ou via UI: acesse `https://localhost:9443`, faça login com `admin` e a senha exibida no passo 1.
+
+Para testar o ciclo completo sem o wasp-agent, aplique a Platform instance de exemplo:
+
+```bash
+kubectl apply \
+  --filename ~/git/wasp-agent/manifests/tenants/example.yaml
+```
+
+Verificar o ConfigMap criado pelo Crossplane:
+
+```bash
+kubectl get configmap example --namespace example --output yaml
+```
 
 ---
 

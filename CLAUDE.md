@@ -131,10 +131,14 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 
 Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
 
-Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` sincronizando `infrastructure/tenants` do repo `smsilva/wasp-gitops` (branch `dev`), ver `docs/runbooks/k3d-argocd-wasp-gitops.md`. O manifesto da Application está em `docs/runbooks/wasp-gitops-application.yaml`. O script de criação do cluster está em `~/git/kubernetes/lab/argo/argocd/run` (repo `smsilva/kubernetes`) — o `run` orquestra em sequência: k3d-cluster-creation → argocd-install → argocd-notification → crossplane-install → argocd-get-initial-password.
+Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` sincronizando `infrastructure/tenants` do repo `smsilva/wasp-gitops` (branch `dev`), ver `docs/runbooks/k3d-argocd-wasp-gitops.md`. O manifesto da Application está em `manifests/argocd/wasp-gitops-application.yaml`. O script de criação do cluster está em `~/git/kubernetes/lab/argo/argocd/run` (repo `smsilva/kubernetes`) — o `run` orquestra em sequência: k3d-cluster-creation → argocd-install → argocd-notification → crossplane-install → argocd-get-initial-password.
 
 - Crossplane: versão 2.2.1, namespace `crossplane-system`, script `crossplane-install.sh` no mesmo diretório do `run`.
 - `smsilva/kubernetes` usa `main` como branch principal — sempre criar feature branch antes de commitar.
+- Manifestos locais (XRD, Compositions, Application ArgoCD, tenants de teste) ficam em `manifests/` no root do projeto — subpastas: `crossplane/xrd/`, `crossplane/compositions/`, `argocd/`, `tenants/`.
+- Crossplane Compositions para Platform usam `metadata.name` para derivar tanto o nome quanto o namespace dos recursos criados.
+- Nomes de Compositions devem refletir o tipo do recurso composto (`platform`), não a implementação (`platform-configmap`).
+- O provider `upbound/provider-kubernetes` com `ProviderConfig` usando `InjectedIdentity` é necessário para Compositions criarem objetos no cluster local k3d.
 
 ## 10. ruff / lint
 

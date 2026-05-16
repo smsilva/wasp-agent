@@ -1,0 +1,14 @@
+apiVersion: wasp.silvios.me/v1alpha1
+kind: Platform
+metadata:
+  name: example
+spec:
+  domain: wasp.silvios.me
+  regions:
+    - name: us-east-1
+      endpoint: gateway.us-east-1.example.wasp.silvios.me
+  services:
+    - name: auth
+    - name: discovery
+    - name: callback
+    - name: portal
