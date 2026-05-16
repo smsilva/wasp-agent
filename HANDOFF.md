@@ -6,7 +6,7 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Current Progress
 
-**Ciclos 1 e 2 completos.** Pipeline Crossplane local validado end-to-end com Composition v2 + function-patch-and-transform. **Ciclo de migração Crossplane v2 completo.** **Ciclo 3 (watcher assíncrono) com spec + plan TDD aprovados — pronto para implementar.**
+**Ciclos 1, 2 e 3 completos.** Pipeline Crossplane local validado end-to-end. **Ciclo 3 (watcher assíncrono) implementado com TDD, 22 testes, 100% cobertura — pronto para smoke test e merge.**
 
 ### Ciclo 1 (completo, mergeado em `main`)
 - `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
@@ -30,9 +30,15 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - Teste end-to-end OK: aplicar `manifests/tenants/example.yaml` → Platform `example` reconcilia → Namespace `example` criado → ConfigMap `example/example` com `data.domain: wasp.silvios.me`
 - Migração Crossplane v2 completa: runbook `docs/runbooks/k3d-argocd-wasp-gitops.md` atualizado (Provider+DRC, function antes da Composition, XRD v2)
 
-### Ciclo 3 — spec + plan aprovados (branch `dev`, não implementado)
-- `docs/specs/2026-05-16-platform-watcher-cycle3-design.md` — design do watcher: kube auto-detect (in-cluster → kubeconfig), polling 10s/timeout 10min, integração com `provision_platform_instance` via `run_context`, parse de `tg:{entity}:{chat_id}`, POST direto na Telegram API
-- `docs/plans/2026-05-16-platform-watcher-cycle3.md` — 5 Tasks TDD (deps → helpers puros → async loop → integração → smoke), cada Task com red-green-refactor, 100% coverage e commit conventional
+### Ciclo 3 — Watcher assíncrono (completo, branch `dev`, pendente smoke test + merge)
+- `tools/watcher.py` — `load_kube_config_auto` (in-cluster → kubeconfig fallback), `extract_chat_id` (parse `tg:{entity}:{chat_id}`), `ready_message`, `notify_telegram` (httpx async POST), `watch_platform` (polling loop 10s, timeout 10min)
+- `tests/test_watcher.py` — 12 testes, 100% cobertura
+- `tools/provision.py` — `run_context=None` adicionado; spawna `loop.create_task(watch_platform(...))` após commit bem-sucedido se `chat_id` e `TELEGRAM_TOKEN` disponíveis
+- `tests/test_provision.py` — 7 testes, 100% cobertura (22 total)
+- `pyproject.toml` — deps `kubernetes>=29.0.0`, `httpx>=0.27.0`; dev `pytest-asyncio>=0.23.0`; `asyncio_mode = "auto"`
+- Commits: `8e11be8`, `e92d7a9`, `a452a91`, `f632da2`
+- `docs/specs/2026-05-16-platform-watcher-cycle3-design.md` — design do watcher
+- `docs/plans/2026-05-16-platform-watcher-cycle3.md` — plano TDD (referência)
 - `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` — design deferido (SQLite `platform_watches`) para implementar **depois** do MVP
 
 ## What Worked
@@ -66,23 +72,13 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Next Steps
 
-### Implementar Ciclo 3 — Watcher assíncrono (próxima ação)
+### Task 5 do Ciclo 3 — Smoke test end-to-end (próxima ação)
 
-Seguir o plano TDD em `docs/plans/2026-05-16-platform-watcher-cycle3.md` Task-por-Task:
-
-1. **Task 1** — adicionar deps `kubernetes`, `httpx`, `pytest-asyncio`. Confirmar caminho de import de `RunContext` no agno instalado (`grep -rn "class RunContext" .venv/lib/python*/site-packages/agno`)
-2. **Task 2** — `tools/watcher.py` com helpers puros: `load_kube_config_auto` (in-cluster → kubeconfig), `extract_chat_id`, `ready_message`. 5 testes
-3. **Task 3** — adicionar `notify_telegram` (httpx async POST) e `watch_platform` (polling loop). 4 testes async
-4. **Task 4** — integrar em `provision_platform_instance`: adicionar `run_context=None`, spawnar `asyncio.create_task(watch_platform(...))` após commit bem-sucedido. 2 testes
-5. **Task 5** — smoke test end-to-end via Telegram local com ngrok + cluster k3d
-
-### Decisões para o MVP (já registradas na spec)
-- Fallback local: watcher tenta `load_incluster_config()` e cai para `load_kube_config()` (`KUBECONFIG`/`~/.kube/config`)
-- Sem restart resilience no MVP — watches são in-memory only; ver spec deferida
-- Polling 10s, timeout 10min
-- Sem retry de POST para Telegram; sem parse_mode (texto plano)
-- Platform CR é cluster-scoped (XRD `scope: Cluster`)
-- Status check: `conditions[{type:"Ready", status:"True"}]` (padrão Crossplane)
+1. Subir agente local com ngrok + `KUBECONFIG` apontando para k3d. Ver `docs/runbooks/telegram-local-dev.md`
+2. Pedir `cria plataforma wp-smoke em us-east-1` no Telegram
+3. Confirmar: bot responde com status, depois ~1 min notificação proativa "Plataforma 'wp-smoke' está pronta..." com endpoint
+4. Limpeza: deletar `infrastructure/tenants/wp-smoke.yaml` no `smsilva/wasp-gitops` branch `dev`
+5. Após smoke test OK: merge `dev` → `main`
 
 ### Backlog (depois do Ciclo 3)
 - **Restart resilience do watcher** — persistir `platform_watches` em SQLite. Ver `docs/specs/2026-05-16-platform-watcher-restart-resilience.md`
