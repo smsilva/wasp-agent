@@ -131,6 +131,8 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 
 Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
 
+Para criar um cluster k3d com ArgoCD e a Application `wasp-gitops` sincronizando `infrastructure/tenants` do repo `smsilva/wasp-gitops` (branch `dev`), ver `docs/runbooks/k3d-argocd-wasp-gitops.md`. O manifesto da Application está em `docs/runbooks/wasp-gitops-application.yaml`. O script de criação do cluster está em `~/git/kubernetes/lab/argo/argocd/run` (repo `smsilva/kubernetes`).
+
 ## 10. ruff / lint
 
 - `# noqa: E402` nos imports após `load_dotenv()` em `main.py` — violação intencional (env vars devem estar carregadas antes dos imports do agno).
