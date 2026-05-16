@@ -139,6 +139,10 @@ Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` s
 - Crossplane Compositions para Platform usam `metadata.name` para derivar tanto o nome quanto o namespace dos recursos criados.
 - Nomes de Compositions devem refletir o tipo do recurso composto (`platform`), não a implementação (`platform-configmap`).
 - O provider `upbound/provider-kubernetes` com `ProviderConfig` usando `InjectedIdentity` é necessário para Compositions criarem objetos no cluster local k3d.
+- XRD usa `apiextensions.crossplane.io/v2` com `spec.scope: Cluster`. O campo `scope` é imutável após criado — para alterar é necessário deletar e recriar a XRD (destrutivo para CRs existentes).
+- Composition continua em `apiextensions.crossplane.io/v1` (não há v2). O modo `spec.resources` (patch-and-transform nativo) foi REMOVIDO no Crossplane v2 — usar `spec.mode: Pipeline` com `function-patch-and-transform`. Manifesto em `manifests/crossplane/functions/`.
+- Quando a Composition cria recursos em um namespace dedicado, ela própria precisa criar o `Namespace` (provider-kubernetes não cria automaticamente). Adicionar o Namespace como recurso `Object` antes do ConfigMap (ou demais) na pipeline.
+- `ProviderConfig` do provider-kubernetes com `InjectedIdentity` exige `ClusterRoleBinding` para o SA do provider em `crossplane-system`. O nome do SA é gerado em runtime (`provider-kubernetes-<hash>`) e muda em reinstalações — usar `DeploymentRuntimeConfig` para pinar o SA antes de bindings estáveis.
 
 ## 10. ruff / lint
 
