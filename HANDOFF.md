@@ -59,5 +59,21 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 ### Ciclo 3
 1. **Watcher assíncrono:** `asyncio.create_task` in-process que observa o status do `Platform` CRD e envia notificação proativa no Telegram quando `Ready: True`.
 
+**Blocker:** aguardando cluster k3d com ArgoCD + Crossplane + CRD do Platform para responder as dúvidas abaixo.
+
+**Decisões já tomadas:**
+- Agent rodará in-cluster (mesmo cluster do Crossplane/ArgoCD) — caso principal
+- `RunContext.session_id` disponível via `run_context: RunContext` em `@tool` (agno injeta automaticamente)
+- `session_id` Telegram = `tg:{entity_id}:{chat_id}` — chat_id é o último segmento
+- Dep nova: `kubernetes` (client in-cluster), `httpx` (POST Telegram Bot API)
+- Watch state persistido em SQLite: `platform_watches(name, session_id, status, created_at)`
+- Notificação proativa via `POST /bot{token}/sendMessage` direto na Telegram API
+
+**Dúvidas abertas (responder com cluster real):**
+- Qual é a estrutura de `.status` do Platform CRD? Crossplane padrão = `conditions[{type:"Ready", status:"True"}]` — confirmar.
+- Em qual namespace fica o recurso `Platform`?
+- Fallback local: watcher usa `KUBECONFIG` se disponível, ou só in-cluster no MVP?
+- Restart resilience: recarregar watches pendentes do SQLite no startup, ou perder é aceitável no MVP?
+
 ### Backlog
 2. **Logging estruturado:** suporte opcional a JSONL em arquivo via `LOG_FILE` env var. Ver `docs/specs/2026-05-16-structured-logging.md`.
