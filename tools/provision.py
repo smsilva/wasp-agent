@@ -32,16 +32,20 @@ class PlatformSpec(BaseModel):
     )
 
 
+class MetadataSpec(BaseModel):
+    name: str
+
+
 class PlatformManifest(BaseModel):
     apiVersion: str = "wasp.silvios.me/v1alpha1"
     kind: str = "Platform"
-    name: str
+    metadata: MetadataSpec
     spec: PlatformSpec
 
     @classmethod
     def build(cls, name: str, domain: str, regions: list[str]) -> "PlatformManifest":
         return cls(
-            name=name,
+            metadata=MetadataSpec(name=name),
             spec=PlatformSpec(
                 domain=domain,
                 regions=[

@@ -7,7 +7,7 @@ def test_manifest_build():
         regions=["us-east-1", "sa-east-1"],
     )
 
-    assert manifest.name == "wp2"
+    assert manifest.metadata.name == "wp2"
     assert manifest.spec.domain == "wasp.silvios.me"
     assert len(manifest.spec.regions) == 2
     r0 = manifest.spec.regions[0]
@@ -30,7 +30,7 @@ def test_manifest_yaml_output():
 
     assert data["apiVersion"] == "wasp.silvios.me/v1alpha1"
     assert data["kind"] == "Platform"
-    assert data["name"] == "wp2"
+    assert data["metadata"]["name"] == "wp2"
     assert data["spec"]["domain"] == "wasp.silvios.me"
     assert data["spec"]["regions"][0]["endpoint"] == "gateway.us-east-1.wp2.wasp.silvios.me"
     assert len(data["spec"]["services"]) == 4

@@ -116,7 +116,7 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 ## 11. Platform provisioning
 
 - GitOps repo: `smsilva/wasp-gitops`, branch `dev`, path `infrastructure/tenants/{name}.yaml`.
-- CRD: `apiVersion: wasp.silvios.me/v1alpha1`, `kind: Platform`. Campo `name` é top-level (não em `metadata`).
+- CRD: `apiVersion: wasp.silvios.me/v1alpha1`, `kind: Platform`. Usa `metadata.name` padrão Kubernetes.
 - Endpoint derivado deterministicamente: `gateway.{aws-region}.{name}.{domain}` — nenhum campo desconhecido no momento do commit.
 - Services são fixos para toda instância: auth, discovery, callback, portal.
 - Default domain: `wasp.silvios.me`. Default region: `us-east-1`.
