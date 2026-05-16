@@ -135,7 +135,7 @@ Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` s
 
 - Crossplane: versão 2.2.1, namespace `crossplane-system`, script `crossplane-install.sh` no mesmo diretório do `run`.
 - `smsilva/kubernetes` usa `main` como branch principal — sempre criar feature branch antes de commitar.
-- Manifestos locais (XRD, Compositions, Application ArgoCD, tenants de teste) ficam em `manifests/` no root do projeto — subpastas: `crossplane/xrd/`, `crossplane/compositions/`, `argocd/`, `tenants/`.
+- Manifestos locais (XRD, Compositions, Functions, Providers, ProviderConfigs, Application ArgoCD, tenants de teste) ficam em `manifests/` no root do projeto — subpastas: `crossplane/xrd/`, `crossplane/compositions/`, `crossplane/functions/`, `crossplane/providers/`, `crossplane/providerconfigs/`, `argocd/`, `tenants/`.
 - Crossplane Compositions para Platform usam `metadata.name` para derivar tanto o nome quanto o namespace dos recursos criados.
 - Nomes de Compositions devem refletir o tipo do recurso composto (`platform`), não a implementação (`platform-configmap`).
 - O provider `upbound/provider-kubernetes` com `ProviderConfig` usando `InjectedIdentity` é necessário para Compositions criarem objetos no cluster local k3d.
@@ -143,6 +143,8 @@ Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` s
 - Composition continua em `apiextensions.crossplane.io/v1` (não há v2). O modo `spec.resources` (patch-and-transform nativo) foi REMOVIDO no Crossplane v2 — usar `spec.mode: Pipeline` com `function-patch-and-transform`. Manifesto em `manifests/crossplane/functions/`.
 - Quando a Composition cria recursos em um namespace dedicado, ela própria precisa criar o `Namespace` (provider-kubernetes não cria automaticamente). Adicionar o Namespace como recurso `Object` antes do ConfigMap (ou demais) na pipeline.
 - `ProviderConfig` do provider-kubernetes com `InjectedIdentity` exige `ClusterRoleBinding` para o SA do provider em `crossplane-system`. O nome do SA é gerado em runtime (`provider-kubernetes-<hash>`) e muda em reinstalações — usar `DeploymentRuntimeConfig` para pinar o SA antes de bindings estáveis.
+- Pinar o SA do provider: criar um `DeploymentRuntimeConfig` com `spec.serviceAccountTemplate.metadata.name: provider-kubernetes` e referenciá-lo no `Provider` via `spec.runtimeConfigRef.name`. O nome do Deployment continua tracking a revision (ex.: `provider-kubernetes-f8518c887488`), mas o `serviceAccountName` interno passa a ser o pinado e o `ClusterRoleBinding` fica estável entre reinstalações.
+- Drift do provider-kubernetes não é detectado em tempo real: quando o objeto gerenciado é deletado externamente, o `Object` reporta `Ready=True` por alguns minutos até a próxima reconciliação periódica. Forçar reconciliação imediata: `kubectl annotate object <name> reconcile=$(date +%s) --overwrite`.
 
 ## 10. ruff / lint
 
