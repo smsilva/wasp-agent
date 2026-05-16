@@ -76,15 +76,11 @@ Aponta para:
 
 O Crossplane precisa do provider `upbound/provider-kubernetes` para criar os objetos (`Object`) que a Composition usa.
 
+O manifesto inclui um `DeploymentRuntimeConfig` que pina o nome do `ServiceAccount` do provider para `provider-kubernetes` — sem isso, o SA é gerado em runtime com um hash que muda a cada reinstalação e quebra o `ClusterRoleBinding`.
+
 ```bash
-kubectl apply --filename - <<'EOF'
-apiVersion: pkg.crossplane.io/v1
-kind: Provider
-metadata:
-  name: provider-kubernetes
-spec:
-  package: xpkg.upbound.io/upbound/provider-kubernetes:v0.14.0
-EOF
+kubectl apply \
+  --filename manifests/crossplane/providers/kubernetes.yaml
 ```
 
 Aguardar o provider ficar healthy:
@@ -95,25 +91,37 @@ kubectl wait provider/provider-kubernetes \
   --timeout=120s
 ```
 
-Criar o `ProviderConfig` usando a kubeconfig do cluster local:
+Aplicar o `ProviderConfig` (`InjectedIdentity`) e o `ClusterRoleBinding` que dá `cluster-admin` ao SA pinado:
 
 ```bash
-kubectl apply --filename - <<'EOF'
-apiVersion: kubernetes.crossplane.io/v1alpha1
-kind: ProviderConfig
-metadata:
-  name: default
-spec:
-  credentials:
-    source: InjectedIdentity
-EOF
+kubectl apply \
+  --filename manifests/crossplane/providerconfigs/kubernetes.yaml
 ```
 
 ---
 
-## 5. Aplicar os manifestos Crossplane locais
+## 5. Instalar a function-patch-and-transform
 
-XRD e Composition estão em `manifests/crossplane/` neste repositório (`wasp-agent`).
+Crossplane v2 removeu o modo `spec.resources` (patch-and-transform legacy) das Compositions. A Composition de Platform usa `spec.mode: Pipeline` com `function-patch-and-transform`, que precisa estar instalada antes.
+
+```bash
+kubectl apply \
+  --filename manifests/crossplane/functions/patch-and-transform.yaml
+```
+
+Aguardar a function ficar healthy:
+
+```bash
+kubectl wait function/function-patch-and-transform \
+  --for=condition=Healthy \
+  --timeout=120s
+```
+
+---
+
+## 6. Aplicar os manifestos Crossplane locais
+
+XRD em `apiextensions.crossplane.io/v2` (`scope: Cluster`) e Composition em modo Pipeline.
 
 ```bash
 kubectl apply \
@@ -125,7 +133,7 @@ kubectl apply \
 
 ---
 
-## 6. Verificar sincronização e testar
+## 7. Verificar sincronização e testar
 
 ```bash
 argocd app get wasp-gitops
