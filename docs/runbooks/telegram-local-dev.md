@@ -43,7 +43,16 @@ Anote a URL pública exibida, ex: `https://abc123.ngrok-free.app`.
 ## 3. Registrar o webhook no Telegram
 
 ```bash
-curl --request POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook" \
+TELEGRAM_WEBHOOK_URL=
+
+cat <<EOF
+TELEGRAM_TOKEN................: ${TELEGRAM_TOKEN:0:4}
+TELEGRAM_WEBHOOK_URL..........: ${TELEGRAM_WEBHOOK_URL}
+TELEGRAM_WEBHOOK_SECRET_TOKEN.: ${TELEGRAM_WEBHOOK_SECRET_TOKEN:0:4}
+EOF
+
+curl \
+  --request POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/setWebhook" \
   --header "Content-Type: application/json" \
   --data @- <<EOF
 {

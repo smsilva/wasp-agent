@@ -6,21 +6,20 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Current Progress
 
-**Ciclos 1 e 2 completos — mergeados para `main`.**
+**Ciclos 1 e 2 completos — mergeados para `main`. Smoke test do ciclo 2 validado.**
 
 ### Ciclo 1 (completo)
 - `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
 - `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
 - Smoke test validado: bot respondeu no Telegram, memória de sessão funcionando
 
-### Ciclo 2 (completo)
-- `tools/provision.py` — modelos Pydantic (`PlatformManifest`, `PlatformSpec`, `RegionSpec`, `ServiceSpec`) + `provision_platform_instance` tool com `@tool(requires_confirmation=True)`
+### Ciclo 2 (completo + smoke test validado)
+- `tools/provision.py` — modelos Pydantic + `provision_platform_instance` tool
 - `tools/__init__.py` — re-exporta `provision_platform_instance`
 - `tests/test_provision.py` — 4 testes, 100% cobertura
-- `tests/conftest.py` — mock `agno.tools` + teardown de `tools`/`tools.provision`
-- `main.py` — tool registrado em `Agent(tools=[provision_platform_instance])`
+- `main.py` — tool registrada, system prompt refinado (tom, escopo, confirmação)
 - 7 testes, 100% cobertura
-- `GH_PAT` fine-grained criado no GitHub para `smsilva/wasp-gitops` (Contents: write, expira Jun 14, 2026) e adicionado ao `.env`
+- Commit real confirmado em `smsilva/wasp-gitops` branch `dev`
 
 **Decisões do ciclo 2:**
 - Commit direto em branch `dev` do `smsilva/wasp-gitops` (não PR)
@@ -40,6 +39,9 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - `TELEGRAM_WEBHOOK_SECRET_TOKEN` gerado com `python3 -c "import secrets; print(secrets.token_hex(32))"`
 - `yaml.safe_dump()` previne injeção de objetos Python arbitrários em manifests GitOps
 - PAT fine-grained com escopo mínimo: apenas `smsilva/wasp-gitops`, apenas Contents write
+- Confirmação via LLM (system prompt) funciona bem no Telegram
+- Tool retornando dict genérico com apenas `status` e `message` — LLM não vaza detalhes internos
+- WatchFiles recarrega o agent automaticamente ao salvar arquivos durante dev
 
 ## What Didn't Work
 
@@ -49,11 +51,13 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - `SqliteAgentStorage` / `add_history_to_messages` — não existem no agno 2.6.5; usar `SqliteDb` / `add_history_to_context`
 - `DEFAULT_REGIONS = ["us-east-1"]` como default de função — lista mutável é Python gotcha; usar tupla + `None`
 - `yaml.dump()` com input de usuário — usa Dumper completo; sempre `yaml.safe_dump()` para manifests
+- `@tool(requires_confirmation=True)` com Telegram — o agno emite `RunPausedEvent` mas a interface Telegram não tem handler para ele; a tool é silenciosamente rejeitada. Usar confirmação via LLM no system prompt
+- Retornar campos técnicos no dict da tool (`commit_sha`, `file_path`) — o LLM os surfacia todos ao usuário; incluir só `status` e `message`
 
 ## Next Steps
 
-### Ciclo 2 — smoke test
-1. **Rodar o bot localmente** (ver `docs/runbooks/telegram-local-dev.md`) e enviar mensagem de provisionamento via Telegram. Verificar que o commit aparece em `smsilva/wasp-gitops` branch `dev`. O `GH_PAT` já está no `.env`.
-
 ### Ciclo 3
-2. **Watcher assíncrono:** `asyncio.create_task` in-process + notificação proativa no Telegram quando `Platform` atingir `Ready: True`.
+1. **Watcher assíncrono:** `asyncio.create_task` in-process que observa o status do `Platform` CRD e envia notificação proativa no Telegram quando `Ready: True`.
+
+### Backlog
+2. **Logging estruturado:** suporte opcional a JSONL em arquivo via `LOG_FILE` env var. Ver `docs/specs/2026-05-16-structured-logging.md`.

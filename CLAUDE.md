@@ -89,11 +89,20 @@ All files stored in `docs/`, named `<YYYY-MM-DD>-<topic>.md`:
 - `SqliteDb` requer `sqlalchemy` — declare como dependência explícita no projeto.
 - Antes de escrever código com agno, verifique os caminhos de import no pacote instalado (`.venv/lib/`). A documentação oficial frequentemente diverge da versão instalada.
 
-- `@tool(requires_confirmation=True)` em `tools/provision.py`: ao adicionar um módulo com esse decorator, adicionar `"agno.tools"` a `AGNO_MODULES` em `conftest.py` e configurar `mocks["agno.tools"].tool = lambda **kwargs: lambda fn: fn` — isso mantém a função diretamente chamável nos testes. Também fazer `sys.modules.pop("tools", None)` e `sys.modules.pop("tools.provision", None)` no setup e teardown do fixture; sem isso, o decorator corre com o mock errado na primeira importação e quebra os testes subsequentes.
+- `@tool` sem `requires_confirmation`: o decorator agora é usado sem argumentos (`mocks["agno.tools"].tool = lambda fn: fn` no conftest). `requires_confirmation=True` é incompatível com Telegram — ver seção 11.
 
 Para detalhes e checklist de ciclos futuros, ver `docs/notes/2026-05-13-agno-api-cycle1.md`.
 
 Para rodar o bot localmente com ngrok, ver `docs/runbooks/telegram-local-dev.md`.
+
+## 12. Telegram — tom do bot
+
+No system prompt, incluir instruções explícitas de anti-padrões para controlar o tom do LLM:
+- Sem palavras de preenchimento ("Certo!", "Perfeito!", "Excelente!")
+- Sem emojis, sem exclamações
+- Parágrafos curtos separados por linha em branco
+- Evitar listas com bullet e bold salvo quando a estrutura genuinamente ajuda
+- Ao repassar resultado de tool bem-sucedida, usar o campo `message` do dict — não inventar texto adicional
 
 ## 9. Security tracking
 
@@ -112,10 +121,13 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 - Services são fixos para toda instância: auth, discovery, callback, portal.
 - Default domain: `wasp.silvios.me`. Default region: `us-east-1`.
 - Use Pydantic models para gerar o manifesto (não Jinja2). O LLM extrai parâmetros; Pydantic valida e serializa. Nunca peça pro LLM gerar YAML Crossplane diretamente.
-- Tools de provisionamento usam `@tool(requires_confirmation=True)` para exigir confirmação antes de commitar.
+- Tools de provisionamento usam confirmação via LLM (system prompt) — `@tool(requires_confirmation=True)` é incompatível com a interface Telegram (não há handler para `RunPausedEvent`).
 - Sempre usar `yaml.safe_dump()` (não `yaml.dump()`) ao serializar manifests — impede que input do LLM/usuário injete objetos Python arbitrários no YAML.
 - Parâmetros `list` com default em tool functions: usar tupla como constante (`DEFAULT_REGIONS = ("us-east-1",)`) e `None` na assinatura com inicialização no corpo (`regions = list(DEFAULT_REGIONS)`). Lista mutável como default é Python gotcha.
 - Sanitizar strings de usuário antes de interpolar em mensagens de commit: `value.replace("\n", " ").replace("\r", " ")` — evita injeção de linhas extras no commit message.
+- Erros em tools de provisionamento devem retornar dict genérico `{"status": "error", "message": "..."}` — nunca `raise`, para não vazar detalhes internos ao usuário via LLM.
+- O LLM surfacia **todos os campos** do dict retornado por uma tool. Incluir apenas campos com valor para o usuário final; excluir `commit_sha`, `file_path`, nomes internos de sistemas (ex: "ArgoCD").
+- `GH_PAT`: fine-grained PAT no GitHub com escopo mínimo (`smsilva/wasp-gitops`, Contents: write). Ver `docs/runbooks/github-pat-setup.md`.
 
 Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
 
