@@ -131,7 +131,10 @@ Ao fazer security review, checar issues abertas antes de reportar duplicatas.
 
 Para o design completo do ciclo 2, ver `docs/specs/2026-05-15-platform-provisioning-design.md`.
 
-Para criar um cluster k3d com ArgoCD e a Application `wasp-gitops` sincronizando `infrastructure/tenants` do repo `smsilva/wasp-gitops` (branch `dev`), ver `docs/runbooks/k3d-argocd-wasp-gitops.md`. O manifesto da Application está em `docs/runbooks/wasp-gitops-application.yaml`. O script de criação do cluster está em `~/git/kubernetes/lab/argo/argocd/run` (repo `smsilva/kubernetes`).
+Para criar um cluster k3d com ArgoCD, Crossplane e a Application `wasp-gitops` sincronizando `infrastructure/tenants` do repo `smsilva/wasp-gitops` (branch `dev`), ver `docs/runbooks/k3d-argocd-wasp-gitops.md`. O manifesto da Application está em `docs/runbooks/wasp-gitops-application.yaml`. O script de criação do cluster está em `~/git/kubernetes/lab/argo/argocd/run` (repo `smsilva/kubernetes`) — o `run` orquestra em sequência: k3d-cluster-creation → argocd-install → argocd-notification → crossplane-install → argocd-get-initial-password.
+
+- Crossplane: versão 2.2.1, namespace `crossplane-system`, script `crossplane-install.sh` no mesmo diretório do `run`.
+- `smsilva/kubernetes` usa `main` como branch principal — sempre criar feature branch antes de commitar.
 
 ## 10. ruff / lint
 
