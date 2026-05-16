@@ -8,7 +8,7 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 **Ciclos 1 e 2 completos — mergeados para `main`. Smoke test do ciclo 2 validado.**
 
-**Ciclo 3 em preparação — scaffolding dos manifestos Crossplane locais criado.**
+**Ciclo 3 em preparação — pipeline Crossplane local validado end-to-end com Composition v2 + function-patch-and-transform.**
 
 ### Ciclo 1 (completo)
 - `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
@@ -23,21 +23,12 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - 7 testes, 100% cobertura
 - Commit real confirmado em `smsilva/wasp-gitops` branch `dev`
 
-**Decisões do ciclo 2:**
-- Commit direto em branch `dev` do `smsilva/wasp-gitops` (não PR)
-- Path: `infrastructure/tenants/{name}.yaml`
-- Pydantic models para gerar o manifesto (não Jinja2)
-- PAT fine-grained no MVP (não GitHub App)
-- Default domain: `wasp.silvios.me`, default region: `us-east-1`
-- `yaml.safe_dump()` para serialização segura
-- `DEFAULT_REGIONS` como tupla, `None` default na assinatura da função
-
-### Scaffolding Crossplane local (esta sessão)
-- `manifests/crossplane/xrd/platform.yaml` — XRD que instala o Kind `Platform` no cluster
-- `manifests/crossplane/compositions/platform.yaml` — Composition `platform`: Platform → ConfigMap (nome e namespace derivam de `metadata.name`)
-- `manifests/argocd/wasp-gitops-application.yaml` — Application ArgoCD (movido de `docs/runbooks/`)
-- `manifests/tenants/example.yaml` — Platform instance de teste
-- Runbook `docs/runbooks/k3d-argocd-wasp-gitops.md` atualizado com passos 4–6: provider-kubernetes, aplicar XRD+Composition, testar com example
+### Pipeline Crossplane local — validado nesta sessão
+- `manifests/crossplane/xrd/platform.yaml` — XRD em `apiextensions.crossplane.io/v2` com `scope: Cluster`
+- `manifests/crossplane/compositions/platform.yaml` — Composition em modo Pipeline com `function-patch-and-transform:v0.10.5`; cria `Namespace` + `ConfigMap` derivados de `metadata.name`
+- `manifests/crossplane/functions/patch-and-transform.yaml` — Function package
+- `manifests/crossplane/providerconfigs/kubernetes.yaml` — ProviderConfig `default` com InjectedIdentity + ClusterRoleBinding cluster-admin para o SA do provider-kubernetes
+- Teste end-to-end OK: aplicar `manifests/tenants/example.yaml` → Platform `example` reconcilia → Namespace `example` criado → ConfigMap `example/example` com `data.domain: wasp.silvios.me`
 
 ## What Worked
 
@@ -49,7 +40,8 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - PAT fine-grained com escopo mínimo: apenas `smsilva/wasp-gitops`, apenas Contents write
 - Confirmação via LLM (system prompt) funciona bem no Telegram
 - Tool retornando dict genérico com apenas `status` e `message` — LLM não vaza detalhes internos
-- Compositions Crossplane: usar `metadata.name` para derivar nome **e** namespace do ConfigMap criado
+- Composition Pipeline com `function-patch-and-transform`: patches FromCompositeFieldPath funcionam idênticos ao modo resources legacy
+- Criar `Namespace` como recurso `Object` na própria pipeline antes de outros recursos namespaced — provider-kubernetes reconcilia eventualmente sem ordering explícito
 
 ## What Didn't Work
 
@@ -60,22 +52,18 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 - `@tool(requires_confirmation=True)` com Telegram — o agno emite `RunPausedEvent` mas a interface Telegram não tem handler para ele; a tool é silenciosamente rejeitada. Usar confirmação via LLM no system prompt
 - Retornar campos técnicos no dict da tool (`commit_sha`, `file_path`) — o LLM os surfacia todos ao usuário; incluir só `status` e `message`
 - Nomear Composition com sufixo da implementação (`platform-configmap`) — usar o nome do tipo composto (`platform`)
+- `apiextensions.crossplane.io/v1` na XRD — deprecated no Crossplane v2; usar `/v2` com `spec.scope` (imutável, exige delete/recreate da XRD para mudar)
+- Composition `spec.resources` (patch-and-transform legacy) — REMOVIDO no Crossplane v2; servidor rejeita com `unknown field "spec.resources"`. Migrar para `spec.mode: Pipeline`
+- Composition referenciando Namespace inexistente — provider-kubernetes não cria namespaces implicitamente; adicionar `Namespace` como recurso `Object` na pipeline
 
 ## Next Steps
 
-### Ciclo 3 — Watcher assíncrono
-**Pré-requisito:** subir o cluster k3d com os manifestos locais e validar o ciclo completo.
+### Pendências do ciclo de migração Crossplane v2
+1. **`ClusterRoleBinding` com SA name fragil** — `manifests/crossplane/providerconfigs/kubernetes.yaml` usa o SA runtime-generated `provider-kubernetes-f8518c887488`, que muda em reinstalações do provider. Substituir por `DeploymentRuntimeConfig` que pina um SA com nome estável, e ajustar o binding para esse SA.
+2. **Atualizar `docs/runbooks/k3d-argocd-wasp-gitops.md`** — refletir a nova estrutura de manifestos (`functions/`, `providerconfigs/`), apiVersion v2 da XRD, e o passo de instalação da `function-patch-and-transform` antes da Composition. Arquivo já aberto no IDE com modificações pendentes.
 
-```bash
-cd ~/git/kubernetes/lab/argo/argocd && bash run
-bash crossplane-install.sh
-kubectl apply --filename ~/git/wasp-agent/manifests/argocd/wasp-gitops-application.yaml
-kubectl apply --filename ~/git/wasp-agent/manifests/crossplane/xrd/platform.yaml
-kubectl apply --filename ~/git/wasp-agent/manifests/crossplane/compositions/platform.yaml
-# instalar provider-kubernetes (ver runbook passo 4)
-kubectl apply --filename ~/git/wasp-agent/manifests/tenants/example.yaml
-kubectl get configmap example --namespace example --output yaml
-```
+### Ciclo 3 — Watcher assíncrono
+**Pré-requisito:** pipeline Crossplane local já validado nesta sessão (Namespace + ConfigMap criados via Platform).
 
 **Implementação:**
 1. `asyncio.create_task` in-process que observa status do `Platform` CRD
@@ -90,8 +78,8 @@ kubectl get configmap example --namespace example --output yaml
 - Notificação proativa via `POST /bot{token}/sendMessage` direto na Telegram API
 
 **Dúvidas abertas (responder com cluster real):**
-- Estrutura de `.status` do Platform CRD: Crossplane padrão = `conditions[{type:"Ready", status:"True"}]` — confirmar
-- Em qual namespace fica o recurso `Platform`?
+- Estrutura de `.status` do Platform CRD: validado nesta sessão — `conditions[{type:"Ready", status:"True"}]` é o padrão Crossplane. Confirmar via `kubectl get platform.wasp.silvios.me example -o jsonpath='{.status.conditions}'`
+- Em qual namespace fica o recurso `Platform`? Cluster-scoped (XRD `scope: Cluster`), sem namespace
 - Fallback local: watcher usa `KUBECONFIG` se disponível, ou só in-cluster no MVP?
 - Restart resilience: recarregar watches pendentes do SQLite no startup, ou perder é aceitável no MVP?
 

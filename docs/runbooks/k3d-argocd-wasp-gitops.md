@@ -117,10 +117,10 @@ XRD e Composition estão em `manifests/crossplane/` neste repositório (`wasp-ag
 
 ```bash
 kubectl apply \
-  --filename ~/git/wasp-agent/manifests/crossplane/xrd/platform.yaml
+  --filename manifests/crossplane/xrd/platform.yaml
 
 kubectl apply \
-  --filename ~/git/wasp-agent/manifests/crossplane/compositions/platform.yaml
+  --filename manifests/crossplane/compositions/platform.yaml
 ```
 
 ---
@@ -137,7 +137,7 @@ Para testar o ciclo completo sem o wasp-agent, aplique a Platform instance de ex
 
 ```bash
 kubectl apply \
-  --filename ~/git/wasp-agent/manifests/tenants/example.yaml
+  --filename manifests/tenants/example.yaml
 ```
 
 Verificar o ConfigMap criado pelo Crossplane:
