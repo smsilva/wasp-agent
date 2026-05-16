@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_extract_chat_id_from_telegram_session():
     from tools.watcher import extract_chat_id
 
@@ -76,3 +79,140 @@ def test_load_kube_config_auto_fallback_local(monkeypatch):
 
     incluster.assert_called_once()
     local.assert_called_once()
+
+
+async def test_notify_telegram_posts_message(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    import tools.watcher as w
+
+    fake_client = AsyncMock()
+    fake_client.__aenter__.return_value = fake_client
+    fake_client.__aexit__.return_value = False
+    cm = MagicMock(return_value=fake_client)
+    monkeypatch.setattr(w.httpx, "AsyncClient", cm)
+
+    await w.notify_telegram("12345", "fake-token", "hello")
+
+    cm.assert_called_once()
+    fake_client.post.assert_awaited_once_with(
+        "https://api.telegram.org/botfake-token/sendMessage",
+        json={"chat_id": "12345", "text": "hello"},
+    )
+
+
+async def test_watch_platform_notifies_when_ready(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    import tools.watcher as w
+
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "spec": {"regions": [{"name": "us-east-1", "endpoint": "gateway.us-east-1.wp2.wasp.silvios.me"}]},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    notify = AsyncMock()
+    monkeypatch.setattr(w, "notify_telegram", notify)
+
+    await w.watch_platform("wp2", "12345", "fake-token")
+
+    notify.assert_awaited_once()
+    args = notify.await_args.args
+    assert args[0] == "12345"
+    assert "wp2" in args[2]
+    assert "https://gateway.us-east-1.wp2.wasp.silvios.me" in args[2]
+
+
+async def test_watch_platform_notifies_on_404(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    import tools.watcher as w
+
+    class FakeApiException(Exception):
+        def __init__(self, status, reason):
+            self.status = status
+            self.reason = reason
+
+    # ApiException must be a real Exception subclass for raise/except to work with mocked module
+    monkeypatch.setattr(w, "ApiException", FakeApiException)
+
+    api = MagicMock()
+    api.get_cluster_custom_object.side_effect = FakeApiException(status=404, reason="NotFound")
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    notify = AsyncMock()
+    monkeypatch.setattr(w, "notify_telegram", notify)
+
+    await w.watch_platform("wp2", "12345", "fake-token")
+
+    notify.assert_awaited_once()
+    assert "não encontrada" in notify.await_args.args[2]
+
+
+async def test_watch_platform_timeout(monkeypatch):
+    from itertools import chain, repeat
+    from unittest.mock import AsyncMock, MagicMock
+    import tools.watcher as w
+
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {"status": {"conditions": []}}
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    notify = AsyncMock()
+    monkeypatch.setattr(w, "notify_telegram", notify)
+
+    monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
+    # First call returns 0 (deadline = 600), all subsequent calls return 601 (> deadline → exit loop).
+    # Use repeat so teardown calls to time.monotonic() don't exhaust the iterator.
+    times = chain([0], repeat(w.WATCH_TIMEOUT_SECONDS + 1))
+    monkeypatch.setattr(w.time, "monotonic", lambda: next(times))
+
+    await w.watch_platform("wp2", "12345", "fake-token")
+
+    notify.assert_awaited_once()
+    assert "10 minutos" in notify.await_args.args[2]
+
+
+def test_find_condition_returns_none_when_not_found():
+    from tools.watcher import _find_condition
+
+    assert _find_condition({"status": {"conditions": [{"type": "Synced", "status": "True"}]}}, "Ready") is None
+    assert _find_condition({}, "Ready") is None
+
+
+async def test_watch_platform_reraises_non_404_exception(monkeypatch):
+    from unittest.mock import MagicMock
+    import tools.watcher as w
+
+    class FakeApiException(Exception):
+        def __init__(self, status, reason):
+            self.status = status
+            self.reason = reason
+
+    monkeypatch.setattr(w, "ApiException", FakeApiException)
+
+    api = MagicMock()
+    api.get_cluster_custom_object.side_effect = FakeApiException(status=500, reason="InternalServerError")
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+
+    with pytest.raises(FakeApiException):
+        await w.watch_platform("wp2", "12345", "fake-token")
+
+
+async def test_watch_platform_retries_until_ready(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    import tools.watcher as w
+
+    api = MagicMock()
+    not_ready = {"status": {"conditions": []}}
+    ready = {
+        "spec": {"regions": []},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    api.get_cluster_custom_object.side_effect = [not_ready, ready]
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    notify = AsyncMock()
+    monkeypatch.setattr(w, "notify_telegram", notify)
+    monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
+
+    await w.watch_platform("wp2", "12345", "fake-token")
+
+    assert api.get_cluster_custom_object.call_count == 2
+    notify.assert_awaited_once()
+    assert "pronta" in notify.await_args.args[2]
