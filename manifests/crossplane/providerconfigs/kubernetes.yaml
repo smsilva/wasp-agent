@@ -16,5 +16,5 @@ roleRef:
   name: cluster-admin
 subjects:
   - kind: ServiceAccount
-    name: provider-kubernetes-f8518c887488
+    name: provider-kubernetes
     namespace: crossplane-system

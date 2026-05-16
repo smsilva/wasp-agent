@@ -59,8 +59,7 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 ## Next Steps
 
 ### Pendências do ciclo de migração Crossplane v2
-1. **`ClusterRoleBinding` com SA name fragil** — `manifests/crossplane/providerconfigs/kubernetes.yaml` usa o SA runtime-generated `provider-kubernetes-f8518c887488`, que muda em reinstalações do provider. Substituir por `DeploymentRuntimeConfig` que pina um SA com nome estável, e ajustar o binding para esse SA.
-2. **Atualizar `docs/runbooks/k3d-argocd-wasp-gitops.md`** — refletir a nova estrutura de manifestos (`functions/`, `providerconfigs/`), apiVersion v2 da XRD, e o passo de instalação da `function-patch-and-transform` antes da Composition. Arquivo já aberto no IDE com modificações pendentes.
+1. **Atualizar `docs/runbooks/k3d-argocd-wasp-gitops.md`** — refletir a nova estrutura de manifestos (`providers/`, `functions/`, `providerconfigs/`), apiVersion v2 da XRD, instalação da `function-patch-and-transform` antes da Composition, e a aplicação do `DeploymentRuntimeConfig` que pina o SA `provider-kubernetes`. Arquivo já aberto no IDE com modificações pendentes.
 
 ### Ciclo 3 — Watcher assíncrono
 **Pré-requisito:** pipeline Crossplane local já validado nesta sessão (Namespace + ConfigMap criados via Platform).
