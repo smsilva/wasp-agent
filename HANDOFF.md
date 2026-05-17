@@ -4,47 +4,64 @@
 
 Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão e suporte futuro a Discord/Slack.
 
-Ciclos 1–3 completos e em `main`. A próxima feature em andamento é **OpenTelemetry** (Ciclo 4) — spec aprovado, aguardando plano de implementação.
+Ciclos 1–3 completos em `main`. Próxima feature: **OpenTelemetry (Ciclo 4)** — spec aprovado em `dev`, aguardando plano de implementação.
 
 ## Current Progress
 
-**Ciclos 1, 2 e 3 completos em `main`.** Smoke test end-to-end validado em 2026-05-16. Loop completo (Telegram → GitHub commit → ArgoCD sync → Crossplane reconcile → watcher detecta Ready → notificação Telegram) fecha em < 1 min.
+**Ciclos 1, 2 e 3 em `main`.** Smoke test end-to-end validado em 2026-05-16 (Telegram → GitHub → ArgoCD → Crossplane → watcher → notificação). Loop fecha em < 1 min.
 
 ### Esta sessão (2026-05-17)
 
-- Tenants de teste (`sandbox-1`, `producao`) removidos do `wasp-gitops` — `5690ae2`.
-- System prompt reforçado: `"Pronto!"` adicionado à lista de filler words; ArgoCD/Crossplane/GitHub/Kubernetes explicitamente proibidos nas respostas do bot — `d80f994`.
-- Lint limpo (F401, E402 preexistentes corrigidos em test files e provision.py).
-- `dev` mergeado em `main` — `7b6518d`.
-- Spec OTel escrito e commitado em `docs/specs/2026-05-17-opentelemetry-design.md` — `e530d61`.
-- Aprendizados sobre decorator order com `@tool` e limitações de hooks do agno adicionados em `docs/references/agno.md` — `045cc0b`.
+- **Reorganização de `docs/`** — `39f0870`:
+  - Pasta órfã `docs/superpowers/` removida; OTel spec movido para `docs/specs/`
+  - `docs/notes/` eliminado (conteúdo já em `docs/references/agno.md`)
+  - Criados `archived/` em `specs/`, `plans/`, `brainstorms/` (mesmo padrão de `security/issues/archived/`)
+  - 8 arquivos dos Ciclos 1-3 movidos para `archived/`
+  - `**Status:**` padronizado em todos os 6 specs (`Idea | Draft | Approved | Implemented | Deferred`)
+  - `CLAUDE.md §7` reescrito com tabela de subpastas + taxonomia de Status + regra de arquivamento
+- **Convenção de quebra de linha em headers** — `452ca56`: dois espaços no fim de linhas `**Field:**` empilhadas (renderiza line break em vez de colapsar).
+- **Skill global `handoff` atualizada** — em `~/git/linux/ac38862`: enumera `docs/specs/*.md` e `docs/plans/*.md` ativos (não-archived) e usa para popular **Next Steps**.
 
-### Estado dos ciclos
+### Commits no `dev` ainda não em `main`
 
-- **Ciclo 1** — mergeado em `main`. Agent + Telegram interface + SQLite.
-- **Ciclo 2** — mergeado em `main`. `provision_platform_instance` tool + Pydantic models + commit GitOps.
-- **Ciclo 3** — mergeado em `main`. Watcher async, polling de Platform CR, notificação Telegram.
-- **Ciclo 4 (OTel)** — spec aprovado. Plano de implementação ainda não criado.
+```
+452ca56 docs: note two-space line break for stacked header fields
+39f0870 docs: reorganize docs/ with archived/ convention and Status field
+42592ab docs: update HANDOFF.md — OTel spec done, awaiting review and plan
+045cc0b docs(agno): add OTel decorator order and pre-routing hook gotchas
+e530d61 docs(specs): add OpenTelemetry instrumentation design
+```
+
+### Specs ativos
+
+| Arquivo | Status |
+|---|---|
+| `docs/specs/2026-05-17-opentelemetry-design.md` | Approved (sem plano ainda) |
+| `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
+| `docs/specs/2026-05-16-structured-logging.md` | Deferred (será absorvido pelo OTel) |
+
+### Plans ativos
+
+Nenhum — todos os planos dos Ciclos 1-3 foram arquivados em `docs/plans/archived/`.
 
 ## What Worked
 
-- Spec OTel usa `@instrument` como decorator interno ao `@tool` (agno exige que `@tool` seja o externo para que `inspect.signature()` via `__wrapped__` funcione corretamente).
-- Métricas channel-agnósticas: label `channel` com valores `tg`/`discord`/etc., derivado do prefixo de `session_id` — não menciona Telegram no código de métricas.
-- Watcher como trace separado com `SpanLink` para o span pai — padrão OTel correto para trabalho fire-and-forget em thread daemon.
-- Configuração 100% via env vars OTel padrão (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`); no-op automático quando ausentes.
+- Estender o padrão `archived/` (que já existia para security) para `specs/`, `plans/` e `brainstorms/` — convenção uniforme, fácil de manter.
+- Campo `**Status:**` no header de cada spec — auto-documenta o que está pronto, em design ou diferido, sem precisar consultar `HANDOFF.md`.
+- Skill global `handoff` ficou project-agnostic via guards (`if docs/specs/ exists`) — não quebra projetos sem essa estrutura.
 
 ## What Didn't Work
 
-- Starlette middleware para root span `agent.message.handle`: agno não expõe pre-routing hook com `session_id`. O `channel`/`user_id` só está disponível dentro da tool via `run_context`. Mensagens sem tool call ficam sem trace nesta versão (gap aceito).
+Nada negativo nesta sessão. Reorganização foi puramente mecânica e validada por `git status` em cada etapa.
 
 ## Next Steps
 
-1. **Usuário revisa o spec OTel** — `docs/specs/2026-05-17-opentelemetry-design.md`. Confirmar se o design está ok antes de criar o plano.
-2. **Criar plano de implementação** — invocar `writing-plans` skill com o spec aprovado.
+1. **Revisar/aprovar o spec OTel** — `docs/specs/2026-05-17-opentelemetry-design.md` (Status: Approved, mas ainda sem plano). Confirmar design antes de criar plano.
+2. **Criar plano de implementação OTel** — invocar `writing-plans` skill com o spec aprovado.
 3. **Implementar Ciclo 4 (OTel)** — `telemetry.py`, instrumentação de `provision.py` e `watcher.py`, rota `/metrics`, testes.
-4. **Merge `dev` → `main`** após testes passando e cobertura 100%.
+4. **Merge `dev` → `main`** após o Ciclo 4 com testes passando e cobertura 100%.
 
-### Backlog (depois do OTel)
+### Backlog
 
 - **Restart resilience do watcher** — persistir `platform_watches` em SQLite. Spec: `docs/specs/2026-05-16-platform-watcher-restart-resilience.md`.
 - **Logging estruturado** — JSONL opcional via `LOG_FILE`. Será consolidado com OTel logs no Ciclo 4. Spec: `docs/specs/2026-05-16-structured-logging.md`.
