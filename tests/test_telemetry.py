@@ -1,0 +1,151 @@
+import pytest
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+
+
+def test_configure_noop_by_default(monkeypatch):
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+    import telemetry
+    telemetry.configure()
+    assert telemetry.tracer is not None
+    assert telemetry.meter is not None
+
+
+def test_configure_with_in_memory_exporters():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    reader = InMemoryMetricReader()
+    telemetry.configure(span_exporter=exporter, metric_reader=reader)
+    assert telemetry.tracer is not None
+    assert telemetry.meter is not None
+
+
+def test_instrument_sync_records_span():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    @telemetry.instrument("test.op")
+    def my_fn(x):
+        return x * 2
+
+    result = my_fn(3)
+    assert result == 6
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].name == "test.op"
+
+
+def test_instrument_sync_records_error_status():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    @telemetry.instrument("test.fail")
+    def broken():
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError):
+        broken()
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    from opentelemetry.trace import StatusCode
+    assert spans[0].status.status_code == StatusCode.ERROR
+
+
+@pytest.mark.asyncio
+async def test_instrument_async_records_span():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    @telemetry.instrument("test.async")
+    async def async_fn():
+        return "done"
+
+    result = await async_fn()
+    assert result == "done"
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    assert spans[0].name == "test.async"
+
+
+def test_instrument_records_tool_call_counter():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    reader = InMemoryMetricReader()
+    telemetry.configure(span_exporter=exporter, metric_reader=reader)
+
+    @telemetry.instrument("my.tool")
+    def my_tool():
+        return "ok"
+
+    my_tool()
+    metrics_data = reader.get_metrics_data()
+    metric_names = {
+        m.name
+        for rm in metrics_data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    }
+    assert "agent.tool_calls.total" in metric_names
+
+
+def test_instrument_records_duration_histogram():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    reader = InMemoryMetricReader()
+    telemetry.configure(span_exporter=exporter, metric_reader=reader)
+
+    @telemetry.instrument("my.tool")
+    def my_tool():
+        return "ok"
+
+    my_tool()
+    metrics_data = reader.get_metrics_data()
+    metric_names = {
+        m.name
+        for rm in metrics_data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    }
+    assert "agent.tool_calls.duration_seconds" in metric_names
+
+
+def test_configure_with_otlp_endpoint(monkeypatch):
+    from unittest.mock import MagicMock
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter",
+        MagicMock(),
+    )
+    import telemetry
+    telemetry.configure()
+    assert telemetry.tracer is not None
+    assert telemetry.meter is not None
+
+
+@pytest.mark.asyncio
+async def test_instrument_async_records_error_status():
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    @telemetry.instrument("test.async.fail")
+    async def broken():
+        raise ValueError("boom")
+
+    with pytest.raises(ValueError):
+        await broken()
+
+    spans = exporter.get_finished_spans()
+    assert len(spans) == 1
+    from opentelemetry.trace import StatusCode
+    assert spans[0].status.status_code == StatusCode.ERROR
