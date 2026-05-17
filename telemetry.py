@@ -1,5 +1,5 @@
-import asyncio
 import functools
+import inspect
 import os
 import time
 
@@ -80,7 +80,7 @@ configure()
 def instrument(name: str):
     """Decorator: span + agent.tool_calls.* metrics. Works on sync and async functions."""
     def decorator(fn):
-        if asyncio.iscoroutinefunction(fn):
+        if inspect.iscoroutinefunction(fn):
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 t0 = time.perf_counter()
