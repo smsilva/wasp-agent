@@ -87,6 +87,10 @@ fe9ea4c test(conftest): reset telemetry module between tests
    - Validar formato Prometheus (sample, type, help) e que counters incrementam entre chamadas
 4. **Investigar `RuntimeWarning: coroutine 'watch_platform' was never awaited`** em `test_provision_skips_watcher_without_chat_id` — coroutine órfã quando `threading.Thread` é mockado. Cosmético, pré-existe ao Ciclo 4, mas vale limpar.
 
+### Brainstorms abertos
+
+- `docs/brainstorms/2026-05-17-e2e-testing-without-external-chats.md` — pipeline E2E em cluster efêmero (k3d/vcluster), gitops mock, Telegram mock, validação de métricas. Próximo: decidir cluster + gitops mock, depois virar spec.
+
 ### Backlog
 
 - **Structured logging completo** (`docs/specs/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar se ainda faz sentido após Ciclo 4 ou consolidar com OTel logs.
