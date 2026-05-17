@@ -6,6 +6,8 @@ load_dotenv()
 
 os.umask(0o077)  # agent.db created with 600 permissions
 
+import telemetry  # noqa: E402, F401 — must come after load_dotenv so env vars are set
+
 from agno.agent import Agent  # noqa: E402
 from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
@@ -52,6 +54,18 @@ agent_os = AgentOS(
 )
 
 app = agent_os.get_app()
+
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST  # noqa: E402
+from starlette.requests import Request  # noqa: E402
+from starlette.responses import Response  # noqa: E402
+from starlette.routing import Route  # noqa: E402
+
+
+async def metrics_endpoint(request: Request) -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+app.routes.append(Route("/metrics", metrics_endpoint))
 
 if __name__ == "__main__":  # pragma: no cover
     agent_os.serve(app="main:app", reload=True)

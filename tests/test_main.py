@@ -37,3 +37,17 @@ def test_telegram_not_added_without_token(mock_agno, monkeypatch):
     mock_agno["agno.os.interfaces.telegram"].Telegram.assert_not_called()
     call_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
     assert call_kwargs["interfaces"] == []
+
+
+def test_metrics_route_exists():
+    import main
+    appended = [call.args[0] for call in main.app.routes.append.call_args_list]
+    paths = [r.path for r in appended if hasattr(r, "path")]
+    assert "/metrics" in paths
+
+
+async def test_metrics_endpoint_returns_prometheus_format():
+    import main
+    response = await main.metrics_endpoint(request=None)
+    assert response.status_code == 200
+    assert "text/plain" in response.media_type
