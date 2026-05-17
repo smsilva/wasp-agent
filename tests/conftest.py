@@ -26,7 +26,7 @@ KUBE_MODULES = [
 @pytest.fixture(autouse=True)
 def mock_agno(monkeypatch):
     # Clear cached modules so each test gets a fresh import with current mocks.
-    for mod in ("main", "tools", "tools.provision", "tools.watcher"):
+    for mod in ("main", "tools", "tools.provision", "tools.watcher", "telemetry"):
         sys.modules.pop(mod, None)
 
     mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES}
@@ -39,5 +39,5 @@ def mock_agno(monkeypatch):
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     yield mocks
 
-    for mod in ("main", "tools", "tools.provision", "tools.watcher"):
+    for mod in ("main", "tools", "tools.provision", "tools.watcher", "telemetry"):
         sys.modules.pop(mod, None)
