@@ -40,10 +40,7 @@ Há correções pós-smoke **não commitadas** em `dev` (5 arquivos modificados)
 
 ## Next Steps
 
-1. **Commit dos fixes pós-smoke** (5 arquivos modificados em `dev`). Mensagem sugerida: `fix(provision,watcher): spawn via thread, retry 404, log exceptions`.
-2. **Limpar tenants de teste no `wasp-gitops`** — deletar `infrastructure/tenants/{sandbox-1..5,producao}.yaml` na branch `dev`. Manter apenas o tenant `example` se ainda for útil para Crossplane.
-3. **Reforçar system prompt em `main.py`** — bot ainda emite "Pronto!", "Perfeito!" e menciona "ArgoCD" nas respostas, violando CLAUDE.md §11 (não vazar nomes internos) e §12 (tom — sem palavras de preenchimento). Adicionar exemplos negativos explícitos.
-4. **Merge `dev` → `main`** após os itens acima.
+1. **Merge `dev` → `main`** — 5 commits prontos: fixes pós-smoke, system prompt reforçado, lint limpo.
 
 ### Backlog (depois)
 - **Restart resilience do watcher** — persistir `platform_watches` em SQLite. Spec: `docs/specs/2026-05-16-platform-watcher-restart-resilience.md`.
