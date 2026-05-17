@@ -132,6 +132,15 @@ def test_configure_with_otlp_endpoint(monkeypatch):
     assert telemetry.meter is not None
 
 
+def test_watcher_metrics_exist_after_configure():
+    import telemetry
+    reader = InMemoryMetricReader()
+    telemetry.configure(metric_reader=reader)
+    assert telemetry.provisioning_counter is not None
+    assert telemetry.watcher_duration is not None
+    assert telemetry.watcher_polls_counter is not None
+
+
 @pytest.mark.asyncio
 async def test_instrument_async_records_error_status():
     import telemetry

@@ -15,6 +15,10 @@ meter: _metrics_api.Meter = None  # type: ignore[assignment]
 _tool_calls_counter = None
 _tool_calls_duration = None
 
+provisioning_counter = None
+watcher_duration = None
+watcher_polls_counter = None
+
 
 def configure(*, span_exporter=None, metric_reader=None) -> None:
     global tracer, meter, _tool_calls_counter, _tool_calls_duration
@@ -52,6 +56,21 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
         "agent.tool_calls.duration_seconds",
         description="Tool call latency",
         unit="s",
+    )
+
+    global provisioning_counter, watcher_duration, watcher_polls_counter
+    provisioning_counter = meter.create_counter(
+        "agent.provisioning.total",
+        description="Provisioning lifecycle events",
+    )
+    watcher_duration = meter.create_histogram(
+        "agent.watcher.duration_seconds",
+        description="Watcher spawn-to-notification time",
+        unit="s",
+    )
+    watcher_polls_counter = meter.create_counter(
+        "agent.watcher.polls.total",
+        description="Individual watcher poll iterations",
     )
 
 
