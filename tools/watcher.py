@@ -3,8 +3,10 @@ import logging
 import time
 
 import httpx
+import telemetry
 from kubernetes import client, config
 from kubernetes.client import ApiException
+from opentelemetry.trace import Link
 
 log = logging.getLogger(__name__)
 
@@ -60,39 +62,64 @@ async def watch_platform(name: str, chat_id: str, token: str, parent_span_ctx=No
 async def _watch_platform_inner(
     name: str, chat_id: str, token: str, parent_span_ctx=None
 ) -> None:
-    api = load_kube_config_auto()
-    deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
+    links = []
+    if parent_span_ctx and parent_span_ctx.is_valid:
+        links = [Link(parent_span_ctx)]
 
-    while time.monotonic() < deadline:
-        try:
-            platform = api.get_cluster_custom_object(
-                group=PLATFORM_GROUP,
-                version=PLATFORM_VERSION,
-                plural=PLATFORM_PLURAL,
-                name=name,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                log.debug("Platform %s not in cluster yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
-                await asyncio.sleep(POLL_INTERVAL_SECONDS)
-                continue
-            raise
+    with telemetry.tracer.start_as_current_span(
+        "agent.watcher.lifecycle", links=links
+    ) as span:
+        span.set_attribute("platform.name", name)
+        api = load_kube_config_auto()
+        deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
+        t0 = time.perf_counter()
+        poll_count = 0
 
-        condition = _find_condition(platform, "Ready")
-        if condition and condition.get("status") == "True":
-            log.info("Platform %s is Ready — notifying", name)
-            await notify_telegram(chat_id, token, ready_message(name, platform))
-            return
+        while time.monotonic() < deadline:
+            try:
+                platform = api.get_cluster_custom_object(
+                    group=PLATFORM_GROUP,
+                    version=PLATFORM_VERSION,
+                    plural=PLATFORM_PLURAL,
+                    name=name,
+                )
+            except ApiException as e:
+                if e.status == 404:
+                    poll_count += 1
+                    telemetry.watcher_polls_counter.add(1, {"result": "not_found"})
+                    log.debug("Platform %s not in cluster yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
+                    await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                    continue
+                raise
 
-        log.debug("Platform %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
-        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+            poll_count += 1
+            condition = _find_condition(platform, "Ready")
+            if condition and condition.get("status") == "True":
+                telemetry.watcher_polls_counter.add(1, {"result": "ready"})
+                elapsed = time.perf_counter() - t0
+                telemetry.watcher_duration.record(elapsed, {"outcome": "ready"})
+                span.set_attribute("outcome", "ready")
+                span.set_attribute("poll_count", poll_count)
+                span.set_attribute("duration_seconds", elapsed)
+                log.info("Platform %s is Ready — notifying", name)
+                await notify_telegram(chat_id, token, ready_message(name, platform))
+                return
 
-    log.warning("Watcher timeout for %s", name)
-    await notify_telegram(
-        chat_id,
-        token,
-        f"Provisionamento de '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
-    )
+            telemetry.watcher_polls_counter.add(1, {"result": "pending"})
+            log.debug("Platform %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
+            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+        elapsed = time.perf_counter() - t0
+        telemetry.watcher_duration.record(elapsed, {"outcome": "timeout"})
+        span.set_attribute("outcome", "timeout")
+        span.set_attribute("poll_count", poll_count)
+        span.set_attribute("duration_seconds", elapsed)
+        log.warning("Watcher timeout for %s", name)
+        await notify_telegram(
+            chat_id,
+            token,
+            f"Provisionamento de '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
+        )
 
 
 def ready_message(name: str, platform: dict) -> str:

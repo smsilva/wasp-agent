@@ -198,6 +198,114 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     await w.watch_platform("wp2", "12345", "fake-token")
 
 
+async def test_watcher_records_polls_counter(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+    import telemetry
+    reader = InMemoryMetricReader()
+    telemetry.configure(metric_reader=reader)
+
+    import tools.watcher as w
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "spec": {"regions": []},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
+
+    await w.watch_platform("wp1", "123", "tok")
+
+    metrics_data = reader.get_metrics_data()
+    metric_names = {
+        m.name
+        for rm in metrics_data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    }
+    assert "agent.watcher.polls.total" in metric_names
+
+
+async def test_watcher_records_duration_on_ready(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+    import telemetry
+    reader = InMemoryMetricReader()
+    telemetry.configure(metric_reader=reader)
+
+    import tools.watcher as w
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "spec": {"regions": []},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
+
+    await w.watch_platform("wp1", "123", "tok")
+
+    metrics_data = reader.get_metrics_data()
+    metric_names = {
+        m.name
+        for rm in metrics_data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+    }
+    assert "agent.watcher.duration_seconds" in metric_names
+
+
+async def test_watcher_links_to_parent_span(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.trace import SpanContext, TraceFlags
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    import tools.watcher as w
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "spec": {"regions": []},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
+
+    parent_ctx = SpanContext(
+        trace_id=0x1234,
+        span_id=0x5678,
+        is_remote=False,
+        trace_flags=TraceFlags(TraceFlags.SAMPLED),
+    )
+    await w.watch_platform("wp1", "123", "tok", parent_ctx)
+
+    spans = exporter.get_finished_spans()
+    lifecycle = next(s for s in spans if s.name == "agent.watcher.lifecycle")
+    assert len(lifecycle.links) == 1
+
+
+async def test_watcher_creates_lifecycle_span(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    import tools.watcher as w
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "spec": {"regions": []},
+        "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+    }
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
+
+    await w.watch_platform("wp1", "123", "tok")
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "agent.watcher.lifecycle" for s in spans)
+
+
 async def test_watch_platform_retries_until_ready(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
     import tools.watcher as w
