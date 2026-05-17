@@ -42,7 +42,9 @@ e530d61 docs(specs): add OpenTelemetry instrumentation design
 
 ### Plans ativos
 
-Nenhum — todos os planos dos Ciclos 1-3 foram arquivados em `docs/plans/archived/`.
+| Arquivo | Referência |
+|---|---|
+| `docs/plans/2026-05-17-opentelemetry-cycle4.md` | Implementa o spec OTel |
 
 ## What Worked
 
@@ -56,10 +58,8 @@ Nada negativo nesta sessão. Reorganização foi puramente mecânica e validada 
 
 ## Next Steps
 
-1. **Revisar/aprovar o spec OTel** — `docs/specs/2026-05-17-opentelemetry-design.md` (Status: Approved, mas ainda sem plano). Confirmar design antes de criar plano.
-2. **Criar plano de implementação OTel** — invocar `writing-plans` skill com o spec aprovado.
-3. **Implementar Ciclo 4 (OTel)** — `telemetry.py`, instrumentação de `provision.py` e `watcher.py`, rota `/metrics`, testes.
-4. **Merge `dev` → `main`** após o Ciclo 4 com testes passando e cobertura 100%.
+1. **Implementar Ciclo 4 (OTel)** — seguir `docs/plans/2026-05-17-opentelemetry-cycle4.md` task a task (TDD). Ordem: deps → `telemetry.py` → `conftest.py` → `provision.py` → `watcher.py` → `main.py`.
+2. **Merge `dev` → `main`** após o Ciclo 4 com testes passando e cobertura 100%.
 
 ### Backlog
 
