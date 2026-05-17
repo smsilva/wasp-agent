@@ -1,6 +1,6 @@
 # Platform Watcher — Cycle 3 Implementation Plan
 
-**Goal:** Implementar o watcher in-process do Ciclo 3 conforme a spec [`2026-05-16-platform-watcher-cycle3-design.md`](../specs/2026-05-16-platform-watcher-cycle3-design.md). MVP sem persistência — watches são in-memory only e perdidos no restart.
+**Goal:** Implementar o watcher in-process do Ciclo 3 conforme a spec [`2026-05-16-platform-watcher-cycle3-design.md`](../../specs/archived/2026-05-16-platform-watcher-cycle3-design.md). MVP sem persistência — watches são in-memory only e perdidos no restart.
 
 **Approach:** TDD strict (red-green-refactor). Cobertura 100% verificada com `pytest --cov`. Cada Task termina com `ruff check .` limpo e commit conventional.
 

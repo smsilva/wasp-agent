@@ -1,6 +1,7 @@
 # Platform Provisioning — Design
 
-**Date:** 2026-05-15
+**Date:** 2026-05-15  
+**Status:** Implemented  
 **Scope:** Fase 1 (extração) + Fase 2 (commit GitOps). Watcher assíncrono fica para o próximo ciclo.
 
 ---

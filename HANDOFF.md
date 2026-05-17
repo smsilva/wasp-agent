@@ -16,7 +16,7 @@ Ciclos 1–3 completos e em `main`. A próxima feature em andamento é **OpenTel
 - System prompt reforçado: `"Pronto!"` adicionado à lista de filler words; ArgoCD/Crossplane/GitHub/Kubernetes explicitamente proibidos nas respostas do bot — `d80f994`.
 - Lint limpo (F401, E402 preexistentes corrigidos em test files e provision.py).
 - `dev` mergeado em `main` — `7b6518d`.
-- Spec OTel escrito e commitado em `docs/superpowers/specs/2026-05-17-opentelemetry-design.md` — `e530d61`.
+- Spec OTel escrito e commitado em `docs/specs/2026-05-17-opentelemetry-design.md` — `e530d61`.
 - Aprendizados sobre decorator order com `@tool` e limitações de hooks do agno adicionados em `docs/references/agno.md` — `045cc0b`.
 
 ### Estado dos ciclos
@@ -39,7 +39,7 @@ Ciclos 1–3 completos e em `main`. A próxima feature em andamento é **OpenTel
 
 ## Next Steps
 
-1. **Usuário revisa o spec OTel** — `docs/superpowers/specs/2026-05-17-opentelemetry-design.md`. Confirmar se o design está ok antes de criar o plano.
+1. **Usuário revisa o spec OTel** — `docs/specs/2026-05-17-opentelemetry-design.md`. Confirmar se o design está ok antes de criar o plano.
 2. **Criar plano de implementação** — invocar `writing-plans` skill com o spec aprovado.
 3. **Implementar Ciclo 4 (OTel)** — `telemetry.py`, instrumentação de `provision.py` e `watcher.py`, rota `/metrics`, testes.
 4. **Merge `dev` → `main`** após testes passando e cobertura 100%.

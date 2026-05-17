@@ -6,7 +6,7 @@ LATAM"*), extrai parâmetros estruturados, comita um manifesto Crossplane
 no repo GitOps, e monitora o recurso até `Ready: True`, retornando ao
 usuário a URL de acesso quando estiver pronto.
 
-Continuação do plano em `agno-multi-channel-agent.md`.
+Continuação do plano em [`2026-05-13-multi-channel-agent.md`](./2026-05-13-multi-channel-agent.md).
 
 ---
 

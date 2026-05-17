@@ -1,6 +1,7 @@
 # Multi-channel Agent — Cycle 1 Design
 
 **Date:** 2026-05-13  
+**Status:** Implemented  
 **Scope:** Telegram + Claude + SQLite, single agent, no tools. Validates the development cycle.
 
 ---

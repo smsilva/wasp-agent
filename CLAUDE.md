@@ -70,14 +70,35 @@ This project uses primarily Python. For formatting code, use `ruff`.
 
 For dependencies we use `uv`.
 
-## 7. Brainstorming and specification
+## 7. Documentation structure (`docs/`)
 
-Flow: brainstorm → spec → plan
+Single source of current state: `HANDOFF.md` at the repo root.
 
-All files stored in `docs/`, named `<YYYY-MM-DD>-<topic>.md`:
-1. `brainstorms/` — session context, decisions, alternatives
-2. `specs/` — approved design (what to build)
-3. `plans/` — implementation plan (how to build, step-by-step)
+Flow for new features: **brainstorm → spec → plan → implementation**.
+
+Each subfolder uses an `archived/` subdirectory for completed/superseded items, same pattern as `docs/security/issues/archived/` (see §9).
+
+| Folder | Purpose | Naming | Archive when |
+|---|---|---|---|
+| `brainstorms/` | Session context, decisions, alternatives | `<YYYY-MM-DD>-<topic>.md` | Brainstorm became an approved spec |
+| `specs/` | Approved designs (what to build) | `<YYYY-MM-DD>-<topic>.md` | Implementation merged to `main` |
+| `plans/` | Step-by-step implementation plans (how to build) | `<YYYY-MM-DD>-<topic>.md` | Implementation merged to `main` |
+| `architecture/` | Living docs about the current system | `<topic>.md` | Never — update in place |
+| `references/` | Living docs about external tools/APIs | `<topic>.md` | Never — update in place |
+| `runbooks/` | Manual procedures (setup, troubleshooting) | `<topic>.md` | Never — update in place |
+| `security/issues/` | Security findings (see §9) | `SEC-NNN-<slug>.md` | Resolved (per §9) |
+
+**Spec `Status` field** (header, right after `**Date:**`):
+
+| Status | Meaning |
+|---|---|
+| `Idea` | Problem statement only; not designed yet |
+| `Draft` | Design in progress |
+| `Approved` | Ready to plan and implement |
+| `Implemented` | Merged to `main` — archive the file |
+| `Deferred` | Postponed or superseded by another spec |
+
+Lightweight reminders (one line, no context) belong in the **Backlog** section of `HANDOFF.md`, not in `specs/`.
 
 ## 8. agno
 

@@ -1,7 +1,8 @@
 # Platform Watcher — Cycle 3 Design
 
-**Date:** 2026-05-16
-**Scope:** MVP do watcher assíncrono — notificação proativa no Telegram quando a Platform alcança `Ready: True`. Restart resilience fica para depois (ver [`2026-05-16-platform-watcher-restart-resilience.md`](./2026-05-16-platform-watcher-restart-resilience.md)).
+**Date:** 2026-05-16  
+**Status:** Implemented  
+**Scope:** MVP do watcher assíncrono — notificação proativa no Telegram quando a Platform alcança `Ready: True`. Restart resilience fica para depois (ver [`2026-05-16-platform-watcher-restart-resilience.md`](../2026-05-16-platform-watcher-restart-resilience.md)).
 
 ---
 

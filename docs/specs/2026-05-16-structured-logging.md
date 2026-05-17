@@ -1,8 +1,9 @@
 # Structured logging
 
-## Status
+**Date:** 2026-05-16  
+**Status:** Deferred  
 
-Pendente
+Será consolidado com OTel logs no Ciclo 4 (ver [`2026-05-17-opentelemetry-design.md`](./2026-05-17-opentelemetry-design.md)).
 
 ## Problema
 

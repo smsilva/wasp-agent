@@ -1,8 +1,9 @@
 # Platform watcher — restart resilience
 
-## Status
+**Date:** 2026-05-16  
+**Status:** Deferred  
 
-Deferred — implementar após o MVP do watcher do Ciclo 3.
+Implementar após o MVP do watcher do Ciclo 3.
 
 ## Contexto
 

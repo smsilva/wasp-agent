@@ -1,6 +1,6 @@
 # OpenTelemetry Instrumentation — Design Spec
 
-**Date:** 2026-05-17
+**Date:** 2026-05-17  
 **Status:** Approved
 
 ## Goal
