@@ -1,9 +1,12 @@
 import asyncio
+import logging
 import time
 
 import httpx
 from kubernetes import client, config
 from kubernetes.client import ApiException
+
+log = logging.getLogger(__name__)
 
 PLATFORM_GROUP = "wasp.silvios.me"
 PLATFORM_VERSION = "v1alpha1"
@@ -47,6 +50,14 @@ async def notify_telegram(chat_id: str, token: str, text: str) -> None:
 
 
 async def watch_platform(name: str, chat_id: str, token: str) -> None:
+    log.info("Watcher started for %s", name)
+    try:
+        await _watch_platform_inner(name, chat_id, token)
+    except Exception:
+        log.exception("Watcher failed for %s", name)
+
+
+async def _watch_platform_inner(name: str, chat_id: str, token: str) -> None:
     api = load_kube_config_auto()
     deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
 
@@ -60,17 +71,21 @@ async def watch_platform(name: str, chat_id: str, token: str) -> None:
             )
         except ApiException as e:
             if e.status == 404:
-                await notify_telegram(chat_id, token, f"Platform '{name}' não encontrada no cluster.")
-                return
+                log.debug("Platform %s not in cluster yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
+                await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                continue
             raise
 
         condition = _find_condition(platform, "Ready")
         if condition and condition.get("status") == "True":
+            log.info("Platform %s is Ready — notifying", name)
             await notify_telegram(chat_id, token, ready_message(name, platform))
             return
 
+        log.debug("Platform %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
+    log.warning("Watcher timeout for %s", name)
     await notify_telegram(
         chat_id,
         token,

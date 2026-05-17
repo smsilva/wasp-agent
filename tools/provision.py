@@ -1,12 +1,15 @@
 import asyncio
+import logging
 import os
+import threading
 
 import yaml
 from agno.tools import tool
 from github import Github
 from pydantic import BaseModel, Field
-
 from tools.watcher import extract_chat_id, watch_platform
+
+log = logging.getLogger(__name__)
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
@@ -32,16 +35,20 @@ class PlatformSpec(BaseModel):
     )
 
 
+class MetadataSpec(BaseModel):
+    name: str
+
+
 class PlatformManifest(BaseModel):
     apiVersion: str = "wasp.silvios.me/v1alpha1"
     kind: str = "Platform"
-    name: str
+    metadata: MetadataSpec
     spec: PlatformSpec
 
     @classmethod
     def build(cls, name: str, domain: str, regions: list[str]) -> "PlatformManifest":
         return cls(
-            name=name,
+            metadata=MetadataSpec(name=name),
             spec=PlatformSpec(
                 domain=domain,
                 regions=[
@@ -95,11 +102,12 @@ def provision_platform_instance(
         chat_id = extract_chat_id(run_context)
         token = os.getenv("TELEGRAM_TOKEN")
         if chat_id and token:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(watch_platform(name, chat_id, token))
-            except RuntimeError:
-                pass
+            threading.Thread(
+                target=asyncio.run,
+                args=(watch_platform(name, chat_id, token),),
+                daemon=True,
+            ).start()
+            log.info("Watcher spawned for %s (chat_id=%s)", name, chat_id)
 
         return {
             "status": "provisioning",

@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_extract_chat_id_from_telegram_session():
     from tools.watcher import extract_chat_id
 
@@ -122,7 +119,8 @@ async def test_watch_platform_notifies_when_ready(monkeypatch):
     assert "https://gateway.us-east-1.wp2.wasp.silvios.me" in args[2]
 
 
-async def test_watch_platform_notifies_on_404(monkeypatch):
+async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
+    from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
     import tools.watcher as w
 
@@ -131,7 +129,6 @@ async def test_watch_platform_notifies_on_404(monkeypatch):
             self.status = status
             self.reason = reason
 
-    # ApiException must be a real Exception subclass for raise/except to work with mocked module
     monkeypatch.setattr(w, "ApiException", FakeApiException)
 
     api = MagicMock()
@@ -139,11 +136,17 @@ async def test_watch_platform_notifies_on_404(monkeypatch):
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
     notify = AsyncMock()
     monkeypatch.setattr(w, "notify_telegram", notify)
+    monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
+
+    # [0, 0]: first for deadline calc, second for while condition (enters loop once)
+    # then repeat(601): exits loop on next while check
+    times = chain([0, 0], repeat(w.WATCH_TIMEOUT_SECONDS + 1))
+    monkeypatch.setattr(w.time, "monotonic", lambda: next(times))
 
     await w.watch_platform("wp2", "12345", "fake-token")
 
     notify.assert_awaited_once()
-    assert "não encontrada" in notify.await_args.args[2]
+    assert "10 minutos" in notify.await_args.args[2]
 
 
 async def test_watch_platform_timeout(monkeypatch):
@@ -191,8 +194,8 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     api.get_cluster_custom_object.side_effect = FakeApiException(status=500, reason="InternalServerError")
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
 
-    with pytest.raises(FakeApiException):
-        await w.watch_platform("wp2", "12345", "fake-token")
+    # Non-404 exceptions are caught, logged, and do not propagate from watch_platform
+    await w.watch_platform("wp2", "12345", "fake-token")
 
 
 async def test_watch_platform_retries_until_ready(monkeypatch):

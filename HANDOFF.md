@@ -6,80 +6,44 @@ Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provis
 
 ## Current Progress
 
-**Ciclos 1, 2 e 3 completos e em `main`.** 22 testes, 100% cobertura. Próxima ação: smoke test end-to-end do watcher.
+**Ciclos 1, 2 e 3 completos. Smoke test end-to-end do watcher validado em 2026-05-16.** O loop completo (Telegram → GitHub commit → ArgoCD sync → Crossplane reconcile → watcher detecta Ready → notificação Telegram) fecha em < 1 min.
 
-### Ciclo 1 (mergeado em `main`)
-- `main.py` — Agent + Telegram interface + SQLite storage (agno 2.6.5 API)
-- `tests/conftest.py` + `tests/test_main.py` — 3 testes, 100% cobertura
-- Smoke test validado: bot respondeu no Telegram, memória de sessão funcionando
+Há correções pós-smoke **não commitadas** em `dev` (5 arquivos modificados). 22 testes, 100% cobertura mantida.
 
-### Ciclo 2 (mergeado em `main`)
-- `tools/provision.py` — modelos Pydantic + `provision_platform_instance` tool
-- `tools/__init__.py` — re-exporta `provision_platform_instance`
-- `tests/test_provision.py` — testes, 100% cobertura
-- `main.py` — tool registrada, system prompt refinado (tom, escopo, confirmação)
-- Commit real confirmado em `smsilva/wasp-gitops` branch `dev`
+### Estado dos ciclos
+- **Ciclo 1** — mergeado em `main`. Agent + Telegram interface + SQLite.
+- **Ciclo 2** — mergeado em `main`. `provision_platform_instance` tool + Pydantic models + commit GitOps.
+- **Ciclo 3** — mergeado em `main` (commits `8e11be8` → `c335345`). Watcher async, polling de Platform CR, notificação Telegram.
 
-### Pipeline Crossplane local — validado
-- XRD `apiextensions.crossplane.io/v2`, `scope: Cluster`
-- Composition Pipeline com `function-patch-and-transform:v0.10.5`; cria `Namespace` + `ConfigMap`
-- `DeploymentRuntimeConfig` pinando SA `provider-kubernetes`; `ProviderConfig` InjectedIdentity + `ClusterRoleBinding cluster-admin`
-- Teste end-to-end OK: tenant `example` reconcilia → Namespace + ConfigMap criados
-
-### Ciclo 3 — Watcher assíncrono (mergeado em `main`)
-- `tools/watcher.py` — `load_kube_config_auto` (in-cluster → kubeconfig fallback), `extract_chat_id` (parse `tg:{entity}:{chat_id}`), `ready_message`, `notify_telegram` (httpx async POST), `watch_platform` (polling 10s, timeout 10min)
-- `tools/provision.py` — `run_context=None`; spawna `loop.create_task(watch_platform(...))` após commit bem-sucedido
-- `pyproject.toml` — deps `kubernetes>=29.0.0`, `httpx>=0.27.0`; dev `pytest-asyncio>=0.23.0`; `asyncio_mode = "auto"`
-- `tests/test_watcher.py` — 12 testes, 100% cobertura
-- `tests/test_provision.py` — 7 testes, 100% cobertura
-- Total: 22 testes, 100% cobertura
-- Commits: `8e11be8` → `c335345`
+### Correções pós-smoke (uncommitted em `dev`)
+- `tools/provision.py` — spawn do watcher via `threading.Thread(target=asyncio.run, args=(coro,), daemon=True).start()`. Substitui `asyncio.get_running_loop().create_task(...)`, que falhava silenciosamente porque agno chama tools sync em thread executor sem event loop ativo.
+- `tools/provision.py` — `PlatformManifest` usa `metadata: MetadataSpec` (padrão Kubernetes), não `name` top-level. YAMLs em `wasp-gitops/infrastructure/tenants/` corrigidos no mesmo padrão.
+- `tools/watcher.py` — 404 do k8s API agora é retry (ArgoCD demora a sincronizar). Só notifica em timeout final.
+- `tools/watcher.py` — wrapper `watch_platform` com `try/except Exception: log.exception(...)` (fire-and-forget em thread daemon engole exceções).
+- `tests/test_provision.py` e `tests/test_watcher.py` — atualizados para a nova arquitetura (mock de `threading.Thread`, novos cenários de 404).
+- `CLAUDE.md` §13 — atualizado com aprendizados pós-smoke.
 
 ## What Worked
 
-- `agno[anthropic,os,telegram]` como extra único cobre todas as deps runtime
-- `Telegram(agent=agent, token=token)` — agent passado no construtor da interface
-- Mock de `dotenv.load_dotenv` no conftest evita que `.env` real interfira nos testes
-- ngrok + `setWebhook` com `secret_token` para desenvolvimento local
-- `yaml.safe_dump()` previne injeção de objetos Python arbitrários em manifests GitOps
-- PAT fine-grained com escopo mínimo: apenas `smsilva/wasp-gitops`, apenas Contents write
-- Confirmação via LLM (system prompt) funciona bem no Telegram
-- Tool retornando dict com apenas `status` e `message` — LLM não vaza detalhes internos
-- Composition Pipeline com `function-patch-and-transform`: patches FromCompositeFieldPath funcionam idênticos ao modo resources legacy
-- `DeploymentRuntimeConfig` + `Provider.spec.runtimeConfigRef` pina SA: `ClusterRoleBinding` estável entre reinstalações
-- `kubectl annotate object <name> reconcile=$(date +%s) --overwrite` força reconciliação imediata no provider-kubernetes
-- `asyncio_mode = "auto"` no `[tool.pytest.ini_options]` evita `@pytest.mark.asyncio` em cada teste async
-- `itertools.chain([v1], repeat(vN))` em mocks de `time.monotonic` — nunca exaure o iterator mesmo com chamadas extras no teardown do event loop
-- Criar `FakeConfigException(Exception)` / `FakeApiException(Exception)` e patchear via `monkeypatch.setattr` para usar em `raise`/`except` com módulos mockados
+- `threading.Thread(target=asyncio.run, args=(coro,), daemon=True)` para spawnar work async de dentro de uma tool agno síncrona — cria event loop próprio na thread daemon.
+- Tratar 404 como "ainda não criado" (sleep+retry) em vez de fatal: ArgoCD leva alguns segundos para sincronizar após o commit.
+- Wrapper `_watch_platform_inner` + `try/except` no `watch_platform` público: garante que falhas em thread daemon apareçam nos logs.
+- Logging explícito (`log.info("Watcher started"`, `log.info("Platform Ready — notifying")`) — única forma viável de debugar fire-and-forget threads.
+- Mock de `threading.Thread` nos testes (`patch("tools.provision.threading.Thread", mock_thread_cls)`) — permite asserir spawn sem executar a coroutine.
 
 ## What Didn't Work
 
-- Declarar `anthropic`, `fastapi`, `uvicorn` como deps individuais — agno não os encontra; usar extras
-- `Telegram(token=token)` sem `agent=` — lança `ValueError` em runtime
-- `SqliteAgentStorage` / `add_history_to_messages` — não existem no agno 2.6.5; usar `SqliteDb` / `add_history_to_context`
-- `DEFAULT_REGIONS = ["us-east-1"]` como default de função — lista mutável é Python gotcha; usar tupla + `None`
-- `@tool(requires_confirmation=True)` com Telegram — agno emite `RunPausedEvent` mas Telegram não tem handler; usar confirmação via LLM no system prompt
-- Retornar campos técnicos no dict da tool (`commit_sha`, `file_path`) — LLM os surfacia ao usuário; incluir só `status` e `message`
-- `apiextensions.crossplane.io/v1` na XRD — usar `/v2`; `scope` é imutável (exige delete/recreate)
-- Composition `spec.resources` — REMOVIDO no Crossplane v2; usar `spec.mode: Pipeline`
-- `ClusterRoleBinding` com SA runtime-generated — quebra em reinstalações; pinar via DRC
-- `monkeypatch.setattr("tools.provision.asyncio.get_running_loop", ...)` — dotted string falha; usar `monkeypatch.setattr(asyncio, "get_running_loop", ...)` com módulo real importado no teste
-- `iter([v1, v2])` ao mockar `time.monotonic` em testes async — esgota no teardown; usar `chain+repeat`
-- `MagicMock` como classe de exceção em `raise`/`except` — não herda de `BaseException`; criar classe real e patchear
+- `asyncio.get_running_loop().create_task(...)` em tool agno sync — agno chama via `run_in_executor` (sem loop ativo). Captura silenciosa em `except RuntimeError: pass` mascarava o problema. Watcher nunca executava.
+- `asyncio.get_event_loop()` como fallback — Python 3.14 levanta `RuntimeError` se não houver loop. Mesma falha.
+- Notificar erro "Platform não encontrada" no primeiro 404 — usuário viu mensagem de erro segundos depois do commit, antes do ArgoCD sincronizar. Deve apenas retry.
+- Edits em arquivos durante `uvicorn --reload` (dev): `watchfiles` reinicia o processo e mata watchers em voo. Dev-only — em produção sem `--reload` não acontece.
 
 ## Next Steps
 
-### Task 5 — Smoke test end-to-end do watcher (próxima ação)
+1. **Merge `dev` → `main`** — 5 commits prontos: fixes pós-smoke, system prompt reforçado, lint limpo.
 
-1. Subir agente local: ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Garantir `KUBECONFIG` apontando para cluster k3d.
-2. Pedir `cria plataforma wp-smoke em us-east-1` no Telegram.
-3. Confirmar:
-   - Bot responde com status de provisioning
-   - ~1 min depois: notificação proativa "Plataforma 'wp-smoke' está pronta..." com endpoint
-4. Limpeza: deletar `infrastructure/tenants/wp-smoke.yaml` no `smsilva/wasp-gitops` branch `dev`.
-
-### Backlog (depois do smoke test)
-- **Restart resilience do watcher** — persistir `platform_watches` em SQLite. Ver `docs/specs/2026-05-16-platform-watcher-restart-resilience.md`
-- **Logging estruturado** — suporte opcional a JSONL via `LOG_FILE` env var. Ver `docs/specs/2026-05-16-structured-logging.md`
-- **Status check manual** — tool para perguntar o estado de uma Platform sem depender do watcher
-- **Operações além de criar** — update, delete, list de tenants
+### Backlog (depois)
+- **Restart resilience do watcher** — persistir `platform_watches` em SQLite. Spec: `docs/specs/2026-05-16-platform-watcher-restart-resilience.md`.
+- **Logging estruturado** — JSONL opcional via `LOG_FILE`. Spec: `docs/specs/2026-05-16-structured-logging.md`.
+- **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
+- **Operações além de criar** — update, delete, list de tenants.
