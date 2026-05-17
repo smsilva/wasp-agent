@@ -3,9 +3,11 @@ import logging
 import os
 import threading
 
+import telemetry
 import yaml
 from agno.tools import tool
 from github import Github
+from opentelemetry import trace
 from pydantic import BaseModel, Field
 from tools.watcher import extract_chat_id, watch_platform
 
@@ -63,6 +65,7 @@ class PlatformManifest(BaseModel):
 
 
 @tool
+@telemetry.instrument("provision_platform_instance")
 def provision_platform_instance(
     name: str,
     domain: str = DEFAULT_DOMAIN,
@@ -99,12 +102,19 @@ def provision_platform_instance(
             branch="dev",
         )
 
+        current_span = trace.get_current_span()
+        current_span.set_attribute("platform.name", name)
+
+        telemetry.provisioning_counter.add(1, {"outcome": "started"})
+
         chat_id = extract_chat_id(run_context)
         token = os.getenv("TELEGRAM_TOKEN")
         if chat_id and token:
+            current_span.set_attribute("watcher.spawned", True)
+            parent_span_ctx = current_span.get_span_context()
             threading.Thread(
                 target=asyncio.run,
-                args=(watch_platform(name, chat_id, token),),
+                args=(watch_platform(name, chat_id, token, parent_span_ctx),),
                 daemon=True,
             ).start()
             log.info("Watcher spawned for %s (chat_id=%s)", name, chat_id)
@@ -117,6 +127,7 @@ def provision_platform_instance(
             ),
         }
     except Exception:
+        telemetry.provisioning_counter.add(1, {"outcome": "error"})
         return {
             "status": "error",
             "message": "Provisioning failed. Please try again later.",

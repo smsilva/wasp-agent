@@ -131,6 +131,58 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
     assert result["status"] == "provisioning"
 
 
+def test_provision_creates_span(monkeypatch):
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    import telemetry
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    from unittest.mock import MagicMock
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.threading.Thread", MagicMock())
+
+    from tools.provision import provision_platform_instance
+    provision_platform_instance(name="wp-test")
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "provision_platform_instance" for s in spans)
+
+
+def test_provision_records_provisioning_started(monkeypatch):
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+    import telemetry
+    reader = InMemoryMetricReader()
+    telemetry.configure(metric_reader=reader)
+
+    from unittest.mock import MagicMock
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.threading.Thread", MagicMock())
+
+    from tools.provision import provision_platform_instance
+    provision_platform_instance(name="wp-test")
+
+    metrics_data = reader.get_metrics_data()
+    all_points = [
+        dp
+        for rm in metrics_data.resource_metrics
+        for sm in rm.scope_metrics
+        for m in sm.metrics
+        if m.name == "agent.provisioning.total"
+        for dp in m.data.data_points
+    ]
+    assert any(dp.attributes.get("outcome") == "started" for dp in all_points)
+
+
 def test_provision_missing_pat(monkeypatch):
     from unittest.mock import MagicMock
     from tools.provision import provision_platform_instance

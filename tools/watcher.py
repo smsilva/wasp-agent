@@ -49,15 +49,17 @@ async def notify_telegram(chat_id: str, token: str, text: str) -> None:
         await http.post(url, json={"chat_id": chat_id, "text": text})
 
 
-async def watch_platform(name: str, chat_id: str, token: str) -> None:
+async def watch_platform(name: str, chat_id: str, token: str, parent_span_ctx=None) -> None:
     log.info("Watcher started for %s", name)
     try:
-        await _watch_platform_inner(name, chat_id, token)
+        await _watch_platform_inner(name, chat_id, token, parent_span_ctx)
     except Exception:
         log.exception("Watcher failed for %s", name)
 
 
-async def _watch_platform_inner(name: str, chat_id: str, token: str) -> None:
+async def _watch_platform_inner(
+    name: str, chat_id: str, token: str, parent_span_ctx=None
+) -> None:
     api = load_kube_config_auto()
     deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
 
