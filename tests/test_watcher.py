@@ -1,8 +1,17 @@
-def test_extract_chat_id_from_telegram_session():
+def test_extract_chat_id_from_agno_session_with_suffix():
     from tools.watcher import extract_chat_id
 
     class FakeCtx:
-        session_id = "tg:5621932873:5621932873"
+        session_id = "tg:wasp-agent:5621932873:8ec68b0f"
+
+    assert extract_chat_id(FakeCtx()) == "5621932873"
+
+
+def test_extract_chat_id_from_agno_session_no_suffix():
+    from tools.watcher import extract_chat_id
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:5621932873"
 
     assert extract_chat_id(FakeCtx()) == "5621932873"
 
