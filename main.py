@@ -71,7 +71,7 @@ async def metrics_endpoint(request: Request) -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-app.routes.append(Route("/metrics", metrics_endpoint))
+app.routes.append(Route("/telemetry/prometheus", metrics_endpoint))
 
 if __name__ == "__main__":  # pragma: no cover
     agent_os.serve(app="main:app", reload=True)

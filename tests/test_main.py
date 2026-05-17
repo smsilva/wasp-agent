@@ -43,7 +43,7 @@ def test_metrics_route_exists():
     import main
     appended = [call.args[0] for call in main.app.routes.append.call_args_list]
     paths = [r.path for r in appended if hasattr(r, "path")]
-    assert "/metrics" in paths
+    assert "/telemetry/prometheus" in paths
 
 
 async def test_metrics_endpoint_returns_prometheus_format():
