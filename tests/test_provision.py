@@ -72,7 +72,6 @@ def test_provision_commits(monkeypatch):
 
 
 def test_provision_spawns_watcher(monkeypatch):
-    import threading
     from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 

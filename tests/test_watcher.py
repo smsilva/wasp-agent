@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_extract_chat_id_from_telegram_session():
     from tools.watcher import extract_chat_id
 

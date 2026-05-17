@@ -7,10 +7,9 @@ import yaml
 from agno.tools import tool
 from github import Github
 from pydantic import BaseModel, Field
+from tools.watcher import extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
-
-from tools.watcher import extract_chat_id, watch_platform
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
