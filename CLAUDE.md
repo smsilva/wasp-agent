@@ -100,6 +100,8 @@ Each subfolder uses an `archived/` subdirectory for completed/superseded items, 
 
 Lightweight reminders (one line, no context) belong in the **Backlog** section of `HANDOFF.md`, not in `specs/`.
 
+**Header block formatting:** when stacking multiple `**Field:**` lines without blank lines between them (e.g., `**Date:**`, `**Status:**`, `**Scope:**`), end each line with **two trailing spaces** so Markdown renders a line break instead of collapsing them onto one line.
+
 ## 8. agno
 
 See `docs/references/agno.md`.
