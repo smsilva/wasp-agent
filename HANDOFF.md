@@ -53,7 +53,7 @@ fe9ea4c test(conftest): reset telemetry module between tests
 | Arquivo | Status |
 |---|---|
 | `docs/specs/2026-05-17-opentelemetry-design.md` | Approved (implementado, arquivar no merge) |
-| `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` | Idea (avaliar `openinference-instrumentation-agno` pós-merge) |
+| `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` | Draft (investigação concluída; aguarda aprovação para planejar implementação) |
 | `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
 | `docs/specs/2026-05-16-structured-logging.md` | Deferred (será consolidado com OTel) |
 
@@ -80,7 +80,7 @@ fe9ea4c test(conftest): reset telemetry module between tests
 ## Next Steps
 
 1. **Task 8: Merge `dev` → `main`** — usuário vai conduzir. Depois arquivar `docs/specs/2026-05-17-opentelemetry-design.md` e `docs/plans/2026-05-17-opentelemetry-cycle4.md` em `archived/` (per CLAUDE.md §7).
-2. **Promover spec idea → draft** — `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md`. Avaliar `openinference-instrumentation-agno`: investigar relação com `agno.setup_tracing()`, atributos emitidos por default, privacy/redacting de prompts, e custo em performance.
+2. **Aprovar spec draft** — `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md`. Investigação concluída: adotar com `hide_inputs/outputs=True` por default, `BatchSpanProcessor`, ativar só quando `OTEL_EXPORTER_OTLP_ENDPOINT` presente. Aguarda sinal verde do usuário para criar plano de implementação.
 3. **Smoke test do endpoint `/telemetry/prometheus`** — não validado E2E ainda. Após o merge:
    - Subir o agente, provisionar uma Platform via Telegram (ou ngrok local)
    - `curl http://localhost:7777/telemetry/prometheus` durante e após o provisionamento
