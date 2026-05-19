@@ -116,7 +116,7 @@ def test_instrument_records_duration_histogram():
 
 
 def test_configure_with_otlp_endpoint(monkeypatch):
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
     monkeypatch.setattr(
         "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
@@ -126,10 +126,72 @@ def test_configure_with_otlp_endpoint(monkeypatch):
         "opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter",
         MagicMock(),
     )
-    import telemetry
-    telemetry.configure()
+    with patch("openinference.instrumentation.agno.AgnoInstrumentor", MagicMock()):
+        import telemetry
+        telemetry.configure()
     assert telemetry.tracer is not None
     assert telemetry.meter is not None
+
+
+def test_configure_instruments_agno_when_endpoint_set(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter",
+        MagicMock(),
+    )
+    mock_instrumentor = MagicMock()
+    mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
+    with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
+        import telemetry  # noqa: F401
+
+    mock_instrumentor.instrument.assert_called_once()
+    call_kwargs = mock_instrumentor.instrument.call_args.kwargs
+    assert "tracer_provider" in call_kwargs
+    from openinference.instrumentation import TraceConfig
+    config = call_kwargs["config"]
+    assert isinstance(config, TraceConfig)
+    assert config.hide_inputs is True
+    assert config.hide_outputs is True
+
+
+def test_configure_skips_agno_without_endpoint(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+    mock_instrumentor = MagicMock()
+    mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
+    with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
+        import telemetry  # noqa: F401
+
+    mock_instrumentor.instrument.assert_not_called()
+
+
+def test_configure_agno_hide_io_false(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
+    monkeypatch.setenv("OTEL_AGNO_HIDE_IO", "false")
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+        MagicMock(),
+    )
+    monkeypatch.setattr(
+        "opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter",
+        MagicMock(),
+    )
+    mock_instrumentor = MagicMock()
+    mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
+    with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
+        import telemetry  # noqa: F401
+
+    from openinference.instrumentation import TraceConfig
+    config = mock_instrumentor.instrument.call_args.kwargs["config"]
+    assert isinstance(config, TraceConfig)
+    assert config.hide_inputs is False
+    assert config.hide_outputs is False
 
 
 def test_watcher_metrics_exist_after_configure():

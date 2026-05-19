@@ -32,9 +32,19 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
         tp.add_span_processor(SimpleSpanProcessor(span_exporter))
     elif endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-        tp.add_span_processor(SimpleSpanProcessor(OTLPSpanExporter()))
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        tp.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     _trace_api.set_tracer_provider(tp)
     tracer = tp.get_tracer(service_name)
+
+    if endpoint:
+        from openinference.instrumentation import TraceConfig
+        from openinference.instrumentation.agno import AgnoInstrumentor
+        hide = os.getenv("OTEL_AGNO_HIDE_IO", "true").lower() != "false"
+        AgnoInstrumentor().instrument(
+            tracer_provider=tp,
+            config=TraceConfig(hide_inputs=hide, hide_outputs=hide),
+        )
 
     # Meter provider
     readers = []
