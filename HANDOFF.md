@@ -4,91 +4,55 @@
 
 Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão e suporte futuro a Discord/Slack.
 
-Ciclos 1–3 completos em `main`. **Ciclo 4 (OpenTelemetry)** implementado, validado E2E e estabilizado em `dev`. Pronto pro merge — usuário vai conduzir.
+Ciclos 1–5 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1, 2 e 3 em `main`.** Smoke test end-to-end do Ciclo 4 validado em 2026-05-17 (Telegram → GitHub → ArgoCD → Crossplane → watcher → notificação proativa).
+**Ciclos 1–5 em `main`.** Smoke test end-to-end do Ciclo 4 validado em 2026-05-17 (Telegram → GitHub → ArgoCD → Crossplane → watcher → notificação proativa). Ciclo 5 validado em 2026-05-19 com `make smoke` (spans AGENT + LLM chegando ao Jaeger).
 
-### Esta sessão (2026-05-17)
+### Esta sessão (2026-05-19)
 
-- **Plano OTel Ciclo 4 criado** (`4c4020c`) e implementado via subagent (Tasks 1–7), TDD estrito, cobertura 100%, ruff clean.
-  - `telemetry.py` (providers + `@instrument` decorator)
-  - Metric globals: provisioning_counter, watcher_duration, watcher_polls_counter
-  - `provision.py` instrumentado (span + counter); `watcher.py` com `agent.watcher.lifecycle` linkado via `Link(parent_span_ctx)` ao span da tool
-  - `main.py` expõe Prometheus endpoint (path final `/telemetry/prometheus` — ver fix abaixo)
-- **Quick fix de logging** (`24ce281`): `logging.basicConfig(level=LOG_LEVEL)` em `main.py`. Destravou diagnóstico.
-- **Bug crítico do `chat_id`** (`dc381fe`): agno 2.0+ usa `session_id = tg:<agent>:<chat_id>:<message_short_id>` (4 partes). `extract_chat_id` pegava `parts[-1]` (o hash) → `notify_telegram` recebia chat_id inválido → HTTP 400 silencioso. Corrigido para `parts[2]`, dois testes cobrindo ambos os formatos.
-- **Smoke test E2E validado**: provisionou `wp-smoke2` via Telegram, watcher detectou Ready e enviou notificação. Cleanup feito no gitops repo (`cb9c15e` em wasp-gitops).
-- **Fix `/metrics` shadow** (`f2f199a`): agno reserva `/metrics` e `/metrics/refresh` pro dashboard REST. Movido nosso Prometheus para `/telemetry/prometheus`.
-- **Fix `DeprecationWarning`** (`940a4ac`): `asyncio.iscoroutinefunction` → `inspect.iscoroutinefunction` em `telemetry.py:83`. Validado com `pytest -W error::DeprecationWarning` (40 testes passam, zero warnings de deprecation).
-- **Novo spec idea** (`098e2a5`): `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` — avaliar `openinference-instrumentation-agno` para ganhar spans de LLM/agent run conectados na mesma trace dos spans de domínio.
-- **Learnings persistidos**:
-  - `docs/references/agno.md` (`94eadfe`): formato do `session_id` com suffix opcional + reserva de `/metrics` e `/metrics/refresh`.
-  - Memória pessoal: `feedback-no-suppressing-warnings.md` — nunca usar `-W ignore::<Warning>` sem antes investigar.
-
-### Commits no `dev` ainda não em `main`
-
-```
-87fa5f2 feat(smoke): add Jaeger docker-compose and make smoke target for OTel validation
-587c577 docs(specs): approve agno otel autoinstrumentation spec and add cycle 5 plan
-afb0f73 feat(telemetry): integrate openinference-instrumentation-agno for LLM/AGENT/TOOL spans
-90327d9 fix(provision): defer coroutine creation to _run_watcher closure
-94eadfe docs(agno): note session_id format and /metrics reservation
-940a4ac fix(telemetry): use inspect.iscoroutinefunction (asyncio variant deprecated)
-098e2a5 docs(specs): add idea to evaluate openinference-instrumentation-agno
-f2f199a fix(main): move Prometheus endpoint to /telemetry/prometheus
-dc381fe fix(watcher): extract chat_id from parts[2], not parts[-1]
-24ce281 feat(main): configure root logger to surface app INFO logs
-c2d710c feat(main): import telemetry and add /metrics route
-8945a7a feat(watcher): instrument lifecycle span and poll/duration metrics
-2e2cca8 feat(provision): instrument with OTel span and provisioning counter
-fe9ea4c test(conftest): reset telemetry module between tests
-9e03ed6 feat(telemetry): add provisioning and watcher metric globals
-25c1863 feat(telemetry): add OTel providers and instrument decorator
-9c0207c chore(deps): add opentelemetry packages for Cycle 4
-4c4020c docs(plans): add OTel cycle 4 implementation plan and update HANDOFF
-+ commits anteriores de reorganização docs (452ca56, 39f0870, 42592ab, 045cc0b, e530d61)
-```
+- **Fix `RuntimeWarning`** (`90327d9`): coroutine de `watch_platform` criada dentro de `_run_watcher` (closure) — só criada quando a thread executa, não na hora do provisionamento.
+- **Ciclo 5 — `openinference-instrumentation-agno`** (`afb0f73`):
+  - `BatchSpanProcessor` substituiu `SimpleSpanProcessor` no path OTLP (não bloqueia thread)
+  - `AgnoInstrumentor().instrument(tracer_provider=tp, config=TraceConfig(...))` ativado quando `OTEL_EXPORTER_OTLP_ENDPOINT` presente
+  - `OTEL_AGNO_HIDE_IO=false` re-expõe prompts para debug local (default: redactado)
+  - 3 novos testes, cobertura 100%, ruff clean
+- **Smoke test + infra** (`87fa5f2`): `docker-compose.yml` (Jaeger), `make smoke`, `smoke_agno_otel.py`
+- **Specs/plans arquivados**: Ciclos 4 e 5 movidos para `archived/`
 
 ### Specs ativos
 
 | Arquivo | Status |
 |---|---|
-| `docs/specs/2026-05-17-opentelemetry-design.md` | Approved (implementado, arquivar no merge) |
-| `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` | Approved (implementado, arquivar no merge) |
 | `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
-| `docs/specs/2026-05-16-structured-logging.md` | Deferred (será consolidado com OTel) |
+| `docs/specs/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs) |
 
 ### Plans ativos
 
-| Arquivo | Status |
-|---|---|
-| `docs/plans/2026-05-17-opentelemetry-cycle4.md` | Tasks 1–7 done; Task 8 (merge) deixada com o usuário |
+Nenhum.
 
 ## What Worked
 
-- **TDD via subagent** para Tasks 1–7: cobertura 100% mantida desde o início, ruff clean a cada commit.
-- **`SpanLink`** (não `set_attribute("parent_span_ctx", ...)`) para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget.
-- **Logging via env var** (`LOG_LEVEL`) como quick fix antes do spec completo de structured logging — destravou diagnóstico em minutos.
-- **`pytest -W error::DeprecationWarning` sem filtros adicionais** — confirma que o fix realmente eliminou o warning sem mascarar nada.
+- **TDD via subagent** para Ciclos 4 e 5: cobertura 100% mantida desde o início, ruff clean a cada commit.
+- **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget.
+- **`pytest -W error::DeprecationWarning` sem filtros adicionais** — confirma fixes sem mascarar nada.
+- **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente.
 
 ## What Didn't Work
 
-- **Rota `/metrics`**: agno reserva esse path pra dashboard REST. `app.routes.append(...)` foi silenciosamente sombreado. Corrigido pra `/telemetry/prometheus` em `f2f199a`.
-- **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test — investigação cega até adicionar `basicConfig`.
-- **Suposição errada sobre `session_id`**: assumi 3 partes baseado em código histórico; agno 2.0+ adiciona suffix de message hash. Lição: `peek` no `agent.db` antes de confiar no formato.
-- **Tentativa de suprimir warning de teste** com `-W ignore::DeprecationWarning:unittest.mock` — usuário cobrou. Filtro era inútil mas o hábito é perigoso (pode mascarar DeprecationWarning real). Persistido em `feedback-no-suppressing-warnings.md`.
+- **Rota `/metrics`**: agno reserva esse path. Movido para `/telemetry/prometheus`.
+- **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test.
+- **Suposição errada sobre `session_id`**: agno 2.0+ adiciona suffix de message hash (4 partes, não 3).
+- **Tentativa de suprimir DeprecationWarning** com `-W ignore` — hábito perigoso. Persistido em `feedback-no-suppressing-warnings.md`.
 
 ## Next Steps
 
-1. **Task 8: Merge `dev` → `main`** — usuário vai conduzir. Depois arquivar `docs/specs/2026-05-17-opentelemetry-design.md` e `docs/plans/2026-05-17-opentelemetry-cycle4.md` em `archived/` (per CLAUDE.md §7).
-2. **Arquivar specs/plans do Ciclo 5** — `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` e `docs/plans/2026-05-19-agno-otel-autoinstrumentation.md` → mover para `archived/` no merge (junto com os do Ciclo 4).
-3. **Smoke test do endpoint `/telemetry/prometheus`** — não validado E2E ainda. Após o merge:
-   - Subir o agente, provisionar uma Platform via Telegram (ou ngrok local)
-   - `curl http://localhost:7777/telemetry/prometheus` durante e após o provisionamento
-   - Conferir que aparecem: `agent_tool_calls_total{tool="provision_platform_instance",status="ok"}`, `agent_watcher_polls_total{result="pending|ready"}`, `agent_watcher_duration_seconds_*`, `provisioning_total{outcome="started"}`
-   - Validar formato Prometheus (sample, type, help) e que counters incrementam entre chamadas
+1. **Smoke test do endpoint `/telemetry/prometheus`** — não validado E2E ainda:
+   - `docker compose up -d` + subir o agente com `OTEL_EXPORTER_OTLP_ENDPOINT` e `PROMETHEUS_PORT`
+   - Provisionar uma Platform via Telegram
+   - `curl http://localhost:7777/telemetry/prometheus`
+   - Conferir: `agent_tool_calls_total{tool="provision_platform_instance",status="ok"}`, `agent_watcher_polls_total`, `agent_watcher_duration_seconds_*`, `agent_provisioning_total{outcome="started"}`
 
 ### Brainstorms abertos
 
@@ -96,7 +60,7 @@ fe9ea4c test(conftest): reset telemetry module between tests
 
 ### Backlog
 
-- **Structured logging completo** (`docs/specs/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar se ainda faz sentido após Ciclo 4 ou consolidar com OTel logs.
+- **Structured logging completo** (`docs/specs/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar consolidação com OTel logs do Ciclo 5.
 - **Restart resilience do watcher** (`docs/specs/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite para sobreviver a restarts.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
