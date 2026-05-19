@@ -30,6 +30,9 @@ Ciclos 1–3 completos em `main`. **Ciclo 4 (OpenTelemetry)** implementado, vali
 ### Commits no `dev` ainda não em `main`
 
 ```
+87fa5f2 feat(smoke): add Jaeger docker-compose and make smoke target for OTel validation
+587c577 docs(specs): approve agno otel autoinstrumentation spec and add cycle 5 plan
+afb0f73 feat(telemetry): integrate openinference-instrumentation-agno for LLM/AGENT/TOOL spans
 90327d9 fix(provision): defer coroutine creation to _run_watcher closure
 94eadfe docs(agno): note session_id format and /metrics reservation
 940a4ac fix(telemetry): use inspect.iscoroutinefunction (asyncio variant deprecated)
@@ -53,7 +56,7 @@ fe9ea4c test(conftest): reset telemetry module between tests
 | Arquivo | Status |
 |---|---|
 | `docs/specs/2026-05-17-opentelemetry-design.md` | Approved (implementado, arquivar no merge) |
-| `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` | Draft (investigação concluída; aguarda aprovação para planejar implementação) |
+| `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` | Approved (implementado, arquivar no merge) |
 | `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
 | `docs/specs/2026-05-16-structured-logging.md` | Deferred (será consolidado com OTel) |
 
@@ -80,7 +83,7 @@ fe9ea4c test(conftest): reset telemetry module between tests
 ## Next Steps
 
 1. **Task 8: Merge `dev` → `main`** — usuário vai conduzir. Depois arquivar `docs/specs/2026-05-17-opentelemetry-design.md` e `docs/plans/2026-05-17-opentelemetry-cycle4.md` em `archived/` (per CLAUDE.md §7).
-2. **Aprovar spec draft** — `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md`. Investigação concluída: adotar com `hide_inputs/outputs=True` por default, `BatchSpanProcessor`, ativar só quando `OTEL_EXPORTER_OTLP_ENDPOINT` presente. Aguarda sinal verde do usuário para criar plano de implementação.
+2. **Arquivar specs/plans do Ciclo 5** — `docs/specs/2026-05-17-agno-otel-autoinstrumentation.md` e `docs/plans/2026-05-19-agno-otel-autoinstrumentation.md` → mover para `archived/` no merge (junto com os do Ciclo 4).
 3. **Smoke test do endpoint `/telemetry/prometheus`** — não validado E2E ainda. Após o merge:
    - Subir o agente, provisionar uma Platform via Telegram (ou ngrok local)
    - `curl http://localhost:7777/telemetry/prometheus` durante e após o provisionamento
