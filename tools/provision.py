@@ -112,11 +112,10 @@ def provision_platform_instance(
         if chat_id and token:
             current_span.set_attribute("watcher.spawned", True)
             parent_span_ctx = current_span.get_span_context()
-            threading.Thread(
-                target=asyncio.run,
-                args=(watch_platform(name, chat_id, token, parent_span_ctx),),
-                daemon=True,
-            ).start()
+            def _run_watcher():
+                asyncio.run(watch_platform(name, chat_id, token, parent_span_ctx))
+
+            threading.Thread(target=_run_watcher, daemon=True).start()
             log.info("Watcher spawned for %s (chat_id=%s)", name, chat_id)
 
         return {
