@@ -19,9 +19,11 @@ provisioning_counter = None
 watcher_duration = None
 watcher_polls_counter = None
 
+_prometheus_registry = None
+
 
 def configure(*, span_exporter=None, metric_reader=None) -> None:
-    global tracer, meter, _tool_calls_counter, _tool_calls_duration
+    global tracer, meter, _tool_calls_counter, _tool_calls_duration, _prometheus_registry
 
     service_name = os.getenv("OTEL_SERVICE_NAME", "wasp-agent")
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
@@ -49,11 +51,20 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
     # Meter provider
     readers = []
     if metric_reader is not None:
+        _prometheus_registry = None
         readers.append(metric_reader)
-    elif endpoint:
-        from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-        from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-        readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
+    else:
+        if os.getenv("PROMETHEUS_PORT"):
+            import prometheus_client as _prom
+            from opentelemetry.exporter.prometheus import PrometheusMetricReader
+            _prometheus_registry = _prom.REGISTRY
+            readers.append(PrometheusMetricReader())
+        else:
+            _prometheus_registry = None
+        if endpoint:
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+            readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
     mp = MeterProvider(metric_readers=readers)
     _metrics_api.set_meter_provider(mp)
     meter = mp.get_meter(service_name)

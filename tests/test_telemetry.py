@@ -203,6 +203,43 @@ def test_watcher_metrics_exist_after_configure():
     assert telemetry.watcher_polls_counter is not None
 
 
+def test_configure_default_has_no_prometheus_registry(monkeypatch):
+    monkeypatch.delenv("PROMETHEUS_PORT", raising=False)
+    import telemetry
+    telemetry.configure()
+    assert telemetry._prometheus_registry is None
+
+
+def test_configure_with_prometheus_port_creates_registry(monkeypatch):
+    monkeypatch.setenv("PROMETHEUS_PORT", "9999")
+    import telemetry
+    telemetry.configure()
+    assert telemetry._prometheus_registry is not None
+
+
+def test_prometheus_output_includes_tool_calls_metric(monkeypatch):
+    from prometheus_client import generate_latest
+    monkeypatch.setenv("PROMETHEUS_PORT", "9999")
+    import telemetry
+    telemetry.configure()
+
+    @telemetry.instrument("my.probe")
+    def probe():
+        return "ok"
+
+    probe()
+
+    output = generate_latest(telemetry._prometheus_registry).decode()
+    assert "agent_tool_calls_total" in output
+
+
+def test_configure_with_explicit_reader_skips_prometheus_registry():
+    import telemetry
+    reader = InMemoryMetricReader()
+    telemetry.configure(metric_reader=reader)
+    assert telemetry._prometheus_registry is None
+
+
 @pytest.mark.asyncio
 async def test_instrument_async_records_error_status():
     import telemetry

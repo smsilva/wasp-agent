@@ -32,7 +32,7 @@ pythonpath = ["."]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-omit = ["tests/*"]
+omit = ["tests/*", "smoke_*.py"]
 
 [tool.coverage.report]
 fail_under = 100

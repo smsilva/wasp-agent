@@ -51,3 +51,16 @@ async def test_metrics_endpoint_returns_prometheus_format():
     response = await main.metrics_endpoint(request=None)
     assert response.status_code == 200
     assert "text/plain" in response.media_type
+
+
+async def test_metrics_endpoint_uses_prometheus_registry(monkeypatch):
+    from unittest.mock import patch
+    import prometheus_client
+    fake_data = b"# HELP agent_tool_calls_total Tool invocations\nagent_tool_calls_total 1.0\n"
+    with patch("prometheus_client.generate_latest", return_value=fake_data) as mock_gen:
+        import main
+        import telemetry
+        telemetry._prometheus_registry = prometheus_client.REGISTRY
+        response = await main.metrics_endpoint(request=None)
+    mock_gen.assert_called_once_with(prometheus_client.REGISTRY)
+    assert response.body == fake_data

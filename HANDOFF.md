@@ -20,6 +20,11 @@ Ciclos 1–5 completos e em `main`.
   - 3 novos testes, cobertura 100%, ruff clean
 - **Smoke test + infra** (`87fa5f2`): `docker-compose.yml` (Jaeger), `make smoke`, `smoke_agno_otel.py`
 - **Specs/plans arquivados**: Ciclos 4 e 5 movidos para `archived/`
+- **`/telemetry/prometheus` validado** (`smoke_prometheus.py` + `make smoke-prometheus`):
+  - `PrometheusMetricReader` adicionado a `telemetry.configure()` quando `PROMETHEUS_PORT` está definido
+  - `metrics_endpoint` passa `telemetry._prometheus_registry` para `generate_latest()`
+  - Smoke script verifica `agent_tool_calls_total`, `agent_provisioning_total`, `agent_watcher_polls_total`, `agent_watcher_duration_seconds`
+  - 49 testes, 100% cobertura, ruff clean
 
 ### Specs ativos
 
@@ -47,12 +52,6 @@ Nenhum.
 - **Tentativa de suprimir DeprecationWarning** com `-W ignore` — hábito perigoso. Persistido em `feedback-no-suppressing-warnings.md`.
 
 ## Next Steps
-
-1. **Smoke test do endpoint `/telemetry/prometheus`** — não validado E2E ainda:
-   - `docker compose up -d` + subir o agente com `OTEL_EXPORTER_OTLP_ENDPOINT` e `PROMETHEUS_PORT`
-   - Provisionar uma Platform via Telegram
-   - `curl http://localhost:7777/telemetry/prometheus`
-   - Conferir: `agent_tool_calls_total{tool="provision_platform_instance",status="ok"}`, `agent_watcher_polls_total`, `agent_watcher_duration_seconds_*`, `agent_provisioning_total{outcome="started"}`
 
 ### Brainstorms abertos
 
