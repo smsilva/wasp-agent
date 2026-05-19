@@ -30,6 +30,7 @@ Ciclos 1–3 completos em `main`. **Ciclo 4 (OpenTelemetry)** implementado, vali
 ### Commits no `dev` ainda não em `main`
 
 ```
+90327d9 fix(provision): defer coroutine creation to _run_watcher closure
 94eadfe docs(agno): note session_id format and /metrics reservation
 940a4ac fix(telemetry): use inspect.iscoroutinefunction (asyncio variant deprecated)
 098e2a5 docs(specs): add idea to evaluate openinference-instrumentation-agno
@@ -85,7 +86,6 @@ fe9ea4c test(conftest): reset telemetry module between tests
    - `curl http://localhost:7777/telemetry/prometheus` durante e após o provisionamento
    - Conferir que aparecem: `agent_tool_calls_total{tool="provision_platform_instance",status="ok"}`, `agent_watcher_polls_total{result="pending|ready"}`, `agent_watcher_duration_seconds_*`, `provisioning_total{outcome="started"}`
    - Validar formato Prometheus (sample, type, help) e que counters incrementam entre chamadas
-4. **Investigar `RuntimeWarning: coroutine 'watch_platform' was never awaited`** em `test_provision_skips_watcher_without_chat_id` — coroutine órfã quando `threading.Thread` é mockado. Cosmético, pré-existe ao Ciclo 4, mas vale limpar.
 
 ### Brainstorms abertos
 
