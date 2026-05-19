@@ -14,7 +14,7 @@
 - The LLM surfaces **all fields** from a tool's returned dict. Include only fields with value to the end user; exclude `commit_sha`, `file_path`, internal system names (e.g., "ArgoCD").
 - `GH_PAT`: fine-grained PAT on GitHub with minimum scope (`smsilva/wasp-gitops`, Contents: write). See `docs/runbooks/github-pat-setup.md`.
 
-For the complete design, see `docs/specs/2026-05-15-platform-provisioning-design.md`.
+For the complete design, see `docs/sdlc/02-design/2026-05-15-platform-provisioning-design.md`.
 
 To create a k3d cluster with ArgoCD, Crossplane, and the `wasp-gitops` Application syncing `infrastructure/tenants` from `smsilva/wasp-gitops` (branch `dev`), see `docs/runbooks/k3d-argocd-wasp-gitops.md`. The Application manifest is at `manifests/argocd/wasp-gitops-application.yaml`. The cluster creation script is at `~/git/kubernetes/lab/argo/argocd/run` (`smsilva/kubernetes` repo) — it orchestrates: k3d-cluster-creation → argocd-install → argocd-notification → crossplane-install → argocd-get-initial-password.
 

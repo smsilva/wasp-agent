@@ -25,8 +25,8 @@ Ciclos 1–5 completos e em `main`.
 
 | Arquivo | Status |
 |---|---|
-| `docs/specs/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
-| `docs/specs/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs) |
+| `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
+| `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs) |
 
 ### Plans ativos
 
@@ -56,11 +56,11 @@ Nenhum.
 
 ### Brainstorms abertos
 
-- `docs/brainstorms/2026-05-17-e2e-testing-without-external-chats.md` — pipeline E2E em cluster efêmero (k3d/vcluster), gitops mock, Telegram mock, validação de métricas. Próximo: decidir cluster + gitops mock, depois virar spec.
+- `docs/sdlc/01-exploration/2026-05-17-e2e-testing-without-external-chats.md` — pipeline E2E em cluster efêmero (k3d/vcluster), gitops mock, Telegram mock, validação de métricas. Próximo: decidir cluster + gitops mock, depois virar spec.
 
 ### Backlog
 
-- **Structured logging completo** (`docs/specs/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar consolidação com OTel logs do Ciclo 5.
-- **Restart resilience do watcher** (`docs/specs/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite para sobreviver a restarts.
+- **Structured logging completo** (`docs/sdlc/02-design/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar consolidação com OTel logs do Ciclo 5.
+- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite para sobreviver a restarts.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.

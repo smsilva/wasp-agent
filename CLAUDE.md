@@ -74,15 +74,15 @@ For dependencies we use `uv`.
 
 Single source of current state: `HANDOFF.md` at the repo root.
 
-Flow for new features: **brainstorm → spec → plan → implementation**.
+Flow for new features: **exploration → design → execution**.
 
-Each subfolder uses an `archived/` subdirectory for completed/superseded items, same pattern as `docs/security/issues/archived/` (see §9).
+Each SDLC subfolder uses an `archived/` subdirectory for completed/superseded items, same pattern as `docs/security/issues/archived/` (see §9).
 
-| Folder | Purpose | Naming | Archive when |
+| Folder | Answers | Content | Archive when |
 |---|---|---|---|
-| `brainstorms/` | Session context, decisions, alternatives | `<YYYY-MM-DD>-<topic>.md` | Brainstorm became an approved spec |
-| `specs/` | Approved designs (what to build) | `<YYYY-MM-DD>-<topic>.md` | Implementation merged to `main` |
-| `plans/` | Step-by-step implementation plans (how to build) | `<YYYY-MM-DD>-<topic>.md` | Implementation merged to `main` |
+| `sdlc/01-exploration/` | *What and why?* | Problem context, alternatives, technical spikes | Exploration led to a design |
+| `sdlc/02-design/` | *How will it look?* | Solution spec: architecture, interfaces, expected behavior | Implementation merged to `main` |
+| `sdlc/03-execution/` | *How will we build it?* | Step-by-step plan: tasks, order, dependencies, verification criteria | Implementation merged to `main` |
 | `architecture/` | Living docs about the current system | `<topic>.md` | Never — update in place |
 | `references/` | Living docs about external tools/APIs | `<topic>.md` | Never — update in place |
 | `runbooks/` | Manual procedures (setup, troubleshooting) | `<topic>.md` | Never — update in place |
@@ -98,7 +98,7 @@ Each subfolder uses an `archived/` subdirectory for completed/superseded items, 
 | `Implemented` | Merged to `main` — archive the file |
 | `Deferred` | Postponed or superseded by another spec |
 
-Lightweight reminders (one line, no context) belong in the **Backlog** section of `HANDOFF.md`, not in `specs/`.
+Lightweight reminders (one line, no context) belong in the **Backlog** section of `HANDOFF.md`, not in `sdlc/02-design/`.
 
 **Header block formatting:** when stacking multiple `**Field:**` lines without blank lines between them (e.g., `**Date:**`, `**Status:**`, `**Scope:**`), end each line with **two trailing spaces** so Markdown renders a line break instead of collapsing them onto one line.
 
