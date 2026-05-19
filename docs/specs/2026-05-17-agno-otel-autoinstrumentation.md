@@ -1,7 +1,7 @@
 # Avaliar `openinference-instrumentation-agno` como complemento ao Ciclo 4
 
 **Date:** 2026-05-17  
-**Status:** Draft  
+**Status:** Approved  
 **Scope:** Observabilidade do agente — auto-instrumentação OTel via biblioteca oficial agno.
 
 ## Problema
