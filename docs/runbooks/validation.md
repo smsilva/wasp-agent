@@ -73,6 +73,24 @@ curl http://localhost:7777/telemetry/prometheus | grep agent_
 
 ---
 
+## D. Local chat — manual, **sem Telegram**
+
+Equivalente ao path B (smoke Telegram), mas usando `curl` / `scripts/local-chat`. Ver [`local-chat.md`](local-chat.md).
+
+Útil para iteração rápida em system prompt, memória de sessão e fluxo de confirmação sem montar ngrok + bot.
+
+```bash
+unset TELEGRAM_TOKEN
+make run
+
+# em outro terminal
+make local-chat
+```
+
+Para o happy-path com notificação `Ready` (passos 4-5 do roteiro chegam a `provision_platform_instance` rodando de verdade), o setup de infra é o do apêndice abaixo.
+
+---
+
 ## Apêndice: validação completa do ciclo GitOps (raro)
 
 Quando você mudou `wasp/provision.py`, `wasp/watcher.py` ou a Composition do Crossplane, pode querer validar o ciclo real: Telegram → commit em `wasp-gitops` → ArgoCD sync → Crossplane reconcile → notificação `Ready` no Telegram.
