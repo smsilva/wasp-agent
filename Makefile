@@ -1,4 +1,4 @@
-.PHONY: run test e2e k3d-up k3d-down build lint format smoke smoke-prometheus local-chat
+.PHONY: run test e2e k3d-up k3d-down gitops-up gitops-down build lint format smoke smoke-prometheus local-chat
 
 K3D_CLUSTER ?= wasp-local
 
@@ -16,6 +16,12 @@ k3d-up:
 
 k3d-down:
 	scripts/k3d-down $(K3D_CLUSTER)
+
+gitops-up:
+	scripts/gitops-up
+
+gitops-down:
+	scripts/gitops-down
 
 build:
 	uv sync

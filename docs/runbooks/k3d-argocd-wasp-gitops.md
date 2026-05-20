@@ -2,6 +2,8 @@
 
 Como criar um cluster k3d com ArgoCD instalado e a Application `wasp-gitops` apontando para o repositório GitOps do Wasp.
 
+> **Atalho**: `make gitops-up` executa todos os passos abaixo (`scripts/gitops-up`). Use este runbook para entender o que cada passo faz ou para rodar manualmente.
+
 > **Escopo**: cluster GitOps completo para validação fim-a-fim do ciclo real de provisionamento (ver "Apêndice" em [`validation.md`](validation.md)). **Não é necessário para o smoke test do Telegram** — esse roda só com `make run` + ngrok. Também **não confundir com `make k3d-up`**, que sobe o cluster barebones do pipeline E2E.
 
 ---
@@ -19,7 +21,7 @@ git clone https://github.com/smsilva/kubernetes ~/git/kubernetes
 
 ---
 
-## 1. Criar o cluster e instalar o ArgoCD
+## 1. Criar o cluster, instalar o ArgoCD e o Crossplane
 
 Script: `/home/silvios/git/kubernetes/lab/argo/argocd/run`
 
@@ -33,25 +35,12 @@ O script `run` executa em sequência:
 1. `k3d-cluster-creation.sh` — cria o cluster com 3 servidores, ports 9080/9443 expostos
 2. `argocd-install.sh` — instala ArgoCD via Helm e aguarda todos os deployments ficarem Available
 3. `argocd-notification.sh` — configura notificações
-4. `argocd-get-initial-password.sh` — exibe a senha inicial do admin
+4. `crossplane-install.sh` — instala Crossplane 2.2.1 via Helm no namespace `crossplane-system` e aguarda os deployments ficarem Available
+5. `argocd-get-initial-password.sh` — exibe a senha inicial do admin
 
 ---
 
-## 2. Instalar o Crossplane
-
-Script: `/home/silvios/git/kubernetes/lab/argo/argocd/crossplane-install.sh`
-
-```bash
-cd ~/git/kubernetes/lab/argo/argocd
-
-bash crossplane-install.sh
-```
-
-Instala o Crossplane 2.2.1 via Helm no namespace `crossplane-system` e aguarda os deployments ficarem Available.
-
----
-
-## 3. Aplicar a Application wasp-gitops
+## 2. Aplicar a Application wasp-gitops
 
 O manifesto está em `manifests/argocd/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
 
@@ -74,7 +63,7 @@ Aponta para:
 
 ---
 
-## 4. Instalar o Kubernetes provider do Crossplane
+## 3. Instalar o Kubernetes provider do Crossplane
 
 O Crossplane precisa do provider `upbound/provider-kubernetes` para criar os objetos (`Object`) que a Composition usa.
 
@@ -102,7 +91,7 @@ kubectl apply \
 
 ---
 
-## 5. Instalar a function-patch-and-transform
+## 4. Instalar a function-patch-and-transform
 
 Crossplane v2 removeu o modo `spec.resources` (patch-and-transform legacy) das Compositions. A Composition de Platform usa `spec.mode: Pipeline` com `function-patch-and-transform`, que precisa estar instalada antes.
 
@@ -121,7 +110,7 @@ kubectl wait function/function-patch-and-transform \
 
 ---
 
-## 6. Aplicar os manifestos Crossplane locais
+## 5. Aplicar os manifestos Crossplane locais
 
 XRD em `apiextensions.crossplane.io/v2` (`scope: Cluster`) e Composition em modo Pipeline.
 
@@ -135,7 +124,7 @@ kubectl apply \
 
 ---
 
-## 7. Verificar sincronização e testar
+## 6. Verificar sincronização e testar
 
 ```bash
 argocd app get wasp-gitops
@@ -161,5 +150,7 @@ kubectl get configmap example --namespace example --output yaml
 ## Remover o cluster
 
 ```bash
-k3d cluster delete --all
+make gitops-down
 ```
+
+Equivale a `k3d cluster delete k3s-default` (o nome default usado pelo `k3d-cluster-creation.sh`).

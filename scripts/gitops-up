@@ -1,0 +1,54 @@
+#!/bin/bash
+set -e
+
+repo_dir="$(cd "$(dirname "${0}")/.." && pwd)"
+kubernetes_repo="${KUBERNETES_REPO:-${HOME}/git/kubernetes}"
+argocd_lab="${kubernetes_repo}/lab/argo/argocd"
+
+if [[ ! -d "${argocd_lab}" ]]; then
+  echo "Diretório não encontrado: ${argocd_lab}" >&2
+  echo "Clone https://github.com/smsilva/kubernetes em \${KUBERNETES_REPO} (default: ~/git/kubernetes)." >&2
+  exit 1
+fi
+
+echo "==> [1/6] Cluster k3d + ArgoCD + Crossplane (via ${argocd_lab}/run)"
+cd "${argocd_lab}"
+bash run
+
+cd "${repo_dir}"
+
+echo "==> [2/6] Application wasp-gitops"
+kubectl apply \
+  --filename manifests/argocd/wasp-gitops-application.yaml
+
+echo "==> [3/6] Provider upbound/provider-kubernetes"
+kubectl apply \
+  --filename manifests/crossplane/providers/kubernetes.yaml
+
+kubectl wait provider/provider-kubernetes \
+  --for=condition=Healthy \
+  --timeout=120s
+
+echo "==> [4/6] ProviderConfig + ClusterRoleBinding"
+kubectl apply \
+  --filename manifests/crossplane/providerconfigs/kubernetes.yaml
+
+echo "==> [5/6] function-patch-and-transform"
+kubectl apply \
+  --filename manifests/crossplane/functions/patch-and-transform.yaml
+
+kubectl wait function/function-patch-and-transform \
+  --for=condition=Healthy \
+  --timeout=120s
+
+echo "==> [6/6] XRD + Composition de Platform"
+kubectl apply \
+  --filename manifests/crossplane/xrd/platform.yaml
+
+kubectl apply \
+  --filename manifests/crossplane/compositions/platform.yaml
+
+echo
+echo "Pronto. Verifique com:"
+echo "  argocd app get wasp-gitops"
+echo "  kubectl get providers,functions,xrds,compositions"

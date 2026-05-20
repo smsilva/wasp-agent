@@ -159,4 +159,4 @@ Três caminhos distintos — detalhes em `docs/runbooks/validation.md`.
 - **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
 - **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
 
-Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com ArgoCD + Crossplane via `docs/runbooks/k3d-argocd-wasp-gitops.md` e confirmar o provisionamento no smoke test. Isso é validação pesada, não smoke test.
+Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) e derrubar com `make gitops-down`. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`. Isso é validação pesada, não smoke test.

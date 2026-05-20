@@ -12,6 +12,8 @@ Ciclos 1–5 completos e em `main`.
 
 **Path D — Local chat** implementado em 2026-05-20 (7 commits TDD, cobertura 100%, ruff clean). Conversa via `curl` sem Telegram: `make local-chat`, `scripts/local-chat`. Base para `waspctl` futura. Script de roteiro renomeado para `scripts/local-chat-scenario` (era `local-chat-roteiro`) e mensagens traduzidas para inglês.
 
+**Automação GitOps cluster** (2026-05-20, ainda non-commit em `dev`): `make gitops-up` / `make gitops-down` automatizam todos os passos do runbook `docs/runbooks/k3d-argocd-wasp-gitops.md` (cluster k3d `k3s-default` + ArgoCD + Crossplane + Application `wasp-gitops` + provider-kubernetes + function-patch-and-transform + XRD/Composition). Validado fim-a-fim — `wasp-gitops` ficou `Synced/Healthy` com `Platform/test-smoke` provisionada. Runbook colapsou a §2 redundante (o `run` do repo `smsilva/kubernetes` já chama `crossplane-install.sh`).
+
 ### Specs ativos
 
 | Arquivo | Status |
@@ -73,7 +75,7 @@ Independente do Telegram:
 
 ### 3. PR `dev` → `main`
 
-`dev` tem 10 commits à frente. Abrir PR para acionar workflow E2E em CI e mover o path D para `main`. Após merge, arquivar `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` para `archived/`.
+`dev` está vários commits à frente (path D + multi-LLM provider + log no provision + automação GitOps). Abrir PR para acionar workflow E2E em CI e mover tudo para `main`. Após merge, arquivar `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` para `archived/`.
 
 ### 4. Próximo spec — chat-id allowlist (prioridade alta)
 
