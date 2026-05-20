@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Protocol
 
 import httpx
@@ -29,3 +30,11 @@ class RecordingNotifier:
     async def wait_for_message(self) -> None:
         while not self.messages:
             await asyncio.sleep(0.1)
+
+
+log = logging.getLogger(__name__)
+
+
+class ConsoleNotifier:
+    async def send(self, chat_id: str, text: str) -> None:
+        log.info("[NOTIFIER chat_id=%s] %s", chat_id, text)

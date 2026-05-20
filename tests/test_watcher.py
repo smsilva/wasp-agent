@@ -361,3 +361,17 @@ async def test_watch_platform_retries_until_ready(monkeypatch):
     assert api.get_cluster_custom_object.call_count == 2
     assert len(notifier.messages) == 1
     assert "pronta" in notifier.messages[0]["text"]
+
+
+async def test_console_notifier_logs_message(caplog):
+    import logging
+    from wasp.notifier import ConsoleNotifier
+
+    caplog.set_level(logging.INFO, logger="wasp.notifier")
+    notifier = ConsoleNotifier()
+    await notifier.send("abc123", "Plataforma test está pronta.")
+
+    assert any(
+        "[NOTIFIER chat_id=abc123]" in r.message and "Plataforma test está pronta." in r.message
+        for r in caplog.records
+    )
