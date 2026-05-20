@@ -54,27 +54,33 @@ Nenhum plano em andamento.
 
 ## Next Steps
 
-### 1. Arquivar spec e plano do pipeline E2E
+Para o mapa completo dos três caminhos de validação, ver `docs/runbooks/validation.md`.
 
-Mover para `archived/`:
-- `docs/sdlc/02-design/2026-05-19-e2e-testing-pipeline.md`
-- `docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md`
-- `docs/sdlc/01-exploration/2026-05-17-e2e-testing-without-external-chats.md`
+### 1. Pipeline E2E — validar em CI
 
-### 2. Smoke test Telegram + Prometheus
+Workflow `.github/workflows/e2e.yaml` pronto. Pendente: rodar em PR real para `dev` (CI usa o mesmo modelo via secrets).
 
-Validar o fluxo completo com Telegram e checar métricas Prometheus depois das mudanças recentes:
+### 2. Smoke test Telegram (manual)
 
-1. `make k3d-up` — cluster local persistente
-2. `PROMETHEUS_METRICS_ACTIVE=true` no `.env`
-3. `make run` — agente local
-4. ngrok para webhook Telegram (ver `docs/runbooks/telegram-local-dev.md`)
-5. Testar via Telegram: provisionar plataforma, verificar notificação
-6. `curl http://localhost:7777/telemetry/prometheus | grep agent_provisioning`
+Validar o canal Telegram + comportamento do LLM após as mudanças recentes (system prompt de confirmação). **Não exige cluster.**
 
-### Pipeline E2E — CI
+Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-local-dev.md`.
 
-Workflow `.github/workflows/e2e.yaml` pronto. Pendente: validação em PR real para `dev` (independe do passo 1 acima; CI usa o mesmo modelo via secrets).
+1. `make run` — agente local na porta 7777
+2. No Telegram, exercitar:
+   - Mensagem qualquer → bot responde
+   - `"Meu nome é X"` / `"Qual é o meu nome?"` → memória de sessão
+   - `"Criar uma plataforma chamada test"` → bot **pede confirmação**, não chama a tool sozinho
+   - Recusar → bot não chama a tool
+
+Validação fim-a-fim do ciclo real (com cluster ArgoCD + Crossplane) está no apêndice de `docs/runbooks/validation.md`, não é parte do smoke test.
+
+### 3. Validar Prometheus
+
+Independente do Telegram:
+
+- Standalone: `make smoke-prometheus`
+- Integrado: `PROMETHEUS_METRICS_ACTIVE=true make run` e `curl http://localhost:7777/telemetry/prometheus | grep agent_`
 
 ## Backlog
 
@@ -83,4 +89,3 @@ Workflow `.github/workflows/e2e.yaml` pronto. Pendente: validação em PR real p
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
 - **Autenticação/autorização** — allowlist de `chat_id` no bot; security review após isso.
-- Arquivar `docs/sdlc/01-exploration/2026-05-17-e2e-testing-without-external-chats.md` (supersedido).

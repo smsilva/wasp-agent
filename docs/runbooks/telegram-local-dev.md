@@ -2,6 +2,8 @@
 
 Como testar o bot Telegram localmente usando ngrok como túnel público.
 
+> **Escopo**: setup de Telegram + ngrok para o smoke test do bot (caminho B em [`validation.md`](validation.md)). O smoke test **não exige cluster** — basta `make run`. Cluster GitOps só entra na validação fim-a-fim do ciclo de provisionamento (apêndice em `validation.md`).
+
 ---
 
 ## Pré-requisitos
