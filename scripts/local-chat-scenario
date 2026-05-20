@@ -18,11 +18,11 @@ step() {
 }
 
 echo "session: $(local-chat --new-session)"
-step "1/5 greet" "oi"
-step "2/5 memory write" "Meu nome é João."
-step "3/5 memory recall" "Qual é o meu nome?"
-step "4/5 request" "Crie uma plataforma chamada test-smoke na região us-east-1."
-step "5/5 confirm" "Sim, confirma."
+step "1/5 greet" "hi"
+step "2/5 memory write" "My name is John."
+step "3/5 memory recall" "What is my name?"
+step "4/5 request" "Create a platform named test-smoke in region us-east-1."
+step "5/5 confirm" "Yes, confirm."
 
 echo
-echo "Roteiro concluído. Veja o stdout do servidor (make run) para o ConsoleNotifier."
+echo "Script completed. Check the server stdout (make run) for the ConsoleNotifier."

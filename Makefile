@@ -34,4 +34,4 @@ smoke-prometheus:
 	uv run python tests/smoke/smoke_prometheus.py
 
 local-chat:
-	scripts/local-chat-roteiro
+	scripts/local-chat-scenario

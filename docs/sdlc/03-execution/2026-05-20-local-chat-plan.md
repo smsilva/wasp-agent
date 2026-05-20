@@ -16,7 +16,7 @@
 
 **Create:**
 - `scripts/local-chat` — bash wrapper sobre `curl`, persiste `session_id`
-- `scripts/local-chat-roteiro` — bash, roda roteiro scripted invocando `local-chat`
+- `scripts/local-chat-scenario` — bash, roda roteiro scripted invocando `local-chat`
 - `docs/runbooks/local-chat.md` — runbook manual
 
 **Modify:**
@@ -506,10 +506,10 @@ git commit -m "feat(scripts): add local-chat curl wrapper for agent runs"
 
 ---
 
-### Task 5: `scripts/local-chat-roteiro` + Makefile target
+### Task 5: `scripts/local-chat-scenario` + Makefile target
 
 **Files:**
-- Create: `scripts/local-chat-roteiro`
+- Create: `scripts/local-chat-scenario`
 - Modify: `Makefile`
 
 - [ ] **Step 1: Write the roteiro script**
@@ -548,7 +548,7 @@ echo "Roteiro concluído. Veja o stdout do servidor (make run) para o ConsoleNot
 - [ ] **Step 2: Make it executable**
 
 ```bash
-chmod +x scripts/local-chat-roteiro
+chmod +x scripts/local-chat-scenario
 ```
 
 - [ ] **Step 3: Add Makefile target**
@@ -563,7 +563,7 @@ E adicionar target ao final:
 
 ```makefile
 local-chat:
-	scripts/local-chat-roteiro
+	scripts/local-chat-scenario
 ```
 
 - [ ] **Step 4: Smoke test**
@@ -585,7 +585,7 @@ Expected: imprime 5 turnos, sem erro, último turno é a resposta do agent à co
 - [ ] **Step 5: Commit**
 
 ```bash
-git add scripts/local-chat-roteiro Makefile
+git add scripts/local-chat-scenario Makefile
 git commit -m "feat(make): add 'local-chat' target running scripted roteiro"
 ```
 

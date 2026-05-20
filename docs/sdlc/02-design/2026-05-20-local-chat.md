@@ -105,10 +105,10 @@ Variáveis de ambiente:
 
 ```makefile
 local-chat:
-	scripts/local-chat-roteiro
+	scripts/local-chat-scenario
 ```
 
-`scripts/local-chat-roteiro` invoca `local-chat` em sequência com os passos do roteiro. Extraído para script separado conforme CLAUDE.md §15.
+`scripts/local-chat-scenario` invoca `local-chat` em sequência com os passos do roteiro. Extraído para script separado conforme CLAUDE.md §15.
 
 ## Fora de escopo
 

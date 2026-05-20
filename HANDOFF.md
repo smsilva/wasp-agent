@@ -8,9 +8,9 @@ Ciclos 1–5 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–5 em `main`.** Pipeline E2E completo e validado localmente em 2026-05-20. `dev` está 3 commits à frente de `main` (destravamento E2E + `PROMETHEUS_METRICS_ACTIVE` + scripts k3d) — aguardando PR para acionar workflow E2E em CI.
+**Ciclos 1–5 em `main`.** Pipeline E2E completo e validado localmente em 2026-05-20. `dev` está 10 commits à frente de `main` (3 commits anteriores de destravamento E2E + 7 commits do path D) — aguardando PR para acionar workflow E2E em CI.
 
-**Path D — Local chat** implementado em 2026-05-20. Conversa via `curl` sem Telegram (`make local-chat`, `scripts/local-chat`). Base para `waspctl` futura.
+**Path D — Local chat** implementado em 2026-05-20 (7 commits TDD, cobertura 100%, ruff clean). Conversa via `curl` sem Telegram: `make local-chat`, `scripts/local-chat`. Base para `waspctl` futura. Script de roteiro renomeado para `scripts/local-chat-scenario` (era `local-chat-roteiro`) e mensagens traduzidas para inglês.
 
 ### Specs ativos
 
@@ -24,11 +24,16 @@ Ciclos 1–5 completos e em `main`.
 | `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
 | `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs / audit log) |
 
+### Plans ativos
+
+Nenhum. Plano `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` foi executado nesta sessão — arquivar para `archived/` após merge para `main` (CLAUDE.md §7).
+
 ## What Worked
 
 - **Grilling antes do spec**: fechar todas as decisões de design antes de escrever código eliminou retrabalho
-- **Notifier Protocol**: desacopla o watcher do canal desde o início; `RecordingNotifier` torna os testes limpos sem mocks
+- **Notifier Protocol**: desacopla o watcher do canal desde o início; `RecordingNotifier` torna os testes limpos sem mocks; `ConsoleNotifier` reaproveita o mesmo Protocol para path D sem tocar no watcher
 - **TDD via subagent** para Ciclos 4 e 5: cobertura 100% mantida desde o início, ruff clean a cada commit
+- **TDD passo-a-passo do plano local-chat**: 7 commits pequenos (red → green → lint → commit por task) manteve cobertura 100% durante toda a execução
 - **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget
 - **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente
 - **Instrução de confirmação explícita** no system prompt: `"Never call provision_platform_instance without explicit user confirmation. On the first turn of any creation or deletion request, always ask the user to confirm..."` — formulação mais prescritiva funciona melhor que instrução genérica
@@ -46,15 +51,15 @@ Ciclos 1–5 completos e em `main`.
 
 Validar o canal Telegram + comportamento do LLM após as mudanças recentes (system prompt de confirmação). **Não exige cluster.**
 
-Alternativa rápida sem ngrok/bot: path D (`docs/runbooks/local-chat.md`).
+Alternativa rápida sem ngrok/bot: path D (`docs/runbooks/local-chat.md`) — `unset TELEGRAM_TOKEN && make run` num terminal, `make local-chat` em outro.
 
-Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-local-dev.md`.
+Pré-requisito Telegram: ngrok + webhook — seguir `docs/runbooks/telegram-local-dev.md`.
 
 1. `make run` — agente local na porta 7777
 2. No Telegram, exercitar:
    - Mensagem qualquer → bot responde
-   - `"Meu nome é X"` / `"Qual é o meu nome?"` → memória de sessão
-   - `"Criar uma plataforma chamada test"` → bot **pede confirmação**, não chama a tool sozinho
+   - `"My name is X"` / `"What is my name?"` → memória de sessão
+   - `"Create a platform named test"` → bot **pede confirmação**, não chama a tool sozinho
    - Recusar → bot não chama a tool
 
 Validação fim-a-fim do ciclo real (com cluster ArgoCD + Crossplane) está no apêndice de `docs/runbooks/validation.md`, não é parte do smoke test.
@@ -66,10 +71,21 @@ Independente do Telegram:
 - Standalone: `make smoke-prometheus`
 - Integrado: `PROMETHEUS_METRICS_ACTIVE=true make run` e `curl http://localhost:7777/telemetry/prometheus | grep agent_`
 
+### 3. PR `dev` → `main`
+
+`dev` tem 10 commits à frente. Abrir PR para acionar workflow E2E em CI e mover o path D para `main`. Após merge, arquivar `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` para `archived/`.
+
+### 4. Próximo spec — chat-id allowlist (prioridade alta)
+
+`docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` está em `Idea`. Próximo passo: promover a `Draft` (design completo) e depois `Approved` (criar plano em `docs/sdlc/03-execution/`). Pré-requisito para o security review (CLAUDE.md §9).
+
 ## Backlog
 
-- **Structured logging completo** (`docs/sdlc/02-design/2026-05-16-structured-logging.md`) — JSONL via `LOG_FILE`, `OTLPLogExporter` integration. Avaliar consolidação com OTel logs do Ciclo 5.
-- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite para sobreviver a restarts.
+- **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt.
+- **Persistent audit log** (`docs/sdlc/02-design/2026-05-20-persistent-audit-log.md`, Idea) — OTel logs export permanente. Pode consolidar com structured-logging deferred.
+- **Token/cost budget alerts** (`docs/sdlc/02-design/2026-05-20-token-cost-budget.md`, Idea).
+- **Structured logging completo** (`docs/sdlc/02-design/2026-05-16-structured-logging.md`, Deferred) — JSONL via `LOG_FILE`, `OTLPLogExporter`. Avaliar consolidação com OTel logs / audit log.
+- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
-- **Autenticação/autorização** — allowlist de `chat_id` no bot; security review após isso.
+- **Security review** — após implementar chat-id allowlist (CLAUDE.md §9).
