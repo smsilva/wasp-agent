@@ -17,11 +17,14 @@ step() {
   echo "${reply}"
 }
 
+readonly TENANT="test-smoke-$(date +%Y%m%d-%H%M%S)"
+
 echo "session: $(local-chat --new-session)"
+echo "tenant: ${TENANT}"
 step "1/5 greet" "hi"
 step "2/5 memory write" "My name is John."
 step "3/5 memory recall" "What is my name?"
-step "4/5 request" "Create a platform named test-smoke in region us-east-1."
+step "4/5 request" "Create a platform named ${TENANT} in region us-east-1."
 step "5/5 confirm" "Yes, confirm."
 
 echo
