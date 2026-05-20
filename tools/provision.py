@@ -6,9 +6,9 @@ import threading
 import telemetry
 import yaml
 from agno.tools import tool
-from github import Github
 from opentelemetry import trace
 from pydantic import BaseModel, Field
+from tools.git_client import PyGithubClient
 from tools.notifier import TelegramNotifier
 from tools.watcher import extract_chat_id, watch_platform
 
@@ -93,12 +93,12 @@ def provision_platform_instance(
 
         github_base_url = os.getenv("GITHUB_BASE_URL", "https://api.github.com")
         gitops_repo = os.getenv("GITOPS_REPO", "smsilva/wasp-gitops")
-        repo = Github(login_or_token=pat, base_url=github_base_url).get_repo(gitops_repo)
+        client = PyGithubClient(pat=pat, repo=gitops_repo, base_url=github_base_url)
         file_path = f"infrastructure/tenants/{name}.yaml"
         safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
         commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
 
-        repo.create_file(
+        client.create_file(
             path=file_path,
             message=commit_message,
             content=yaml_content,

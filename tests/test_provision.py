@@ -43,15 +43,11 @@ def test_provision_commits(monkeypatch):
     from unittest.mock import MagicMock
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_commit = MagicMock()
-    mock_commit.sha = "abc123def456"
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
-    mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     result = provision_platform_instance(
         name="wp2",
@@ -60,11 +56,10 @@ def test_provision_commits(monkeypatch):
         requested_by="alice",
     )
 
-    mock_github_cls.assert_called_once_with(
-        login_or_token="fake-pat", base_url="https://api.github.com"
+    mock_client_cls.assert_called_once_with(
+        pat="fake-pat", repo="smsilva/wasp-gitops", base_url="https://api.github.com"
     )
-    mock_github_cls.return_value.get_repo.assert_called_once_with("smsilva/wasp-gitops")
-    call_kwargs = mock_repo.create_file.call_args.kwargs
+    call_kwargs = mock_client.create_file.call_args.kwargs
     assert call_kwargs["path"] == "infrastructure/tenants/wp2.yaml"
     assert call_kwargs["branch"] == "dev"
     assert "feat(tenants): provision wp2" in call_kwargs["message"]
@@ -77,16 +72,11 @@ def test_provision_spawns_watcher(monkeypatch):
     from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_commit = MagicMock()
-    mock_commit.sha = "abc"
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
-    mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -108,16 +98,11 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
     from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_commit = MagicMock()
-    mock_commit.sha = "abc"
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
-    mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -142,16 +127,11 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
     from unittest.mock import MagicMock, patch
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_commit = MagicMock()
-    mock_commit.sha = "abc"
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
-    mock_repo.create_file.return_value = {"commit": mock_commit, "content": MagicMock()}
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     mock_thread_cls = MagicMock()
 
@@ -174,12 +154,10 @@ def test_provision_creates_span(monkeypatch):
     telemetry.configure(span_exporter=exporter)
 
     from unittest.mock import MagicMock
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
     monkeypatch.setattr("tools.provision.threading.Thread", MagicMock())
 
     from tools.provision import provision_platform_instance
@@ -196,12 +174,10 @@ def test_provision_records_provisioning_started(monkeypatch):
     telemetry.configure(metric_reader=reader)
 
     from unittest.mock import MagicMock
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
     monkeypatch.setattr("tools.provision.threading.Thread", MagicMock())
 
     from tools.provision import provision_platform_instance
@@ -223,18 +199,16 @@ def test_provision_uses_custom_github_base_url(monkeypatch):
     from unittest.mock import MagicMock
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("GITHUB_BASE_URL", "http://localhost:3000/api/v3")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     provision_platform_instance(name="wp2")
 
-    mock_github_cls.assert_called_once_with(
-        login_or_token="fake-pat", base_url="http://localhost:3000/api/v3"
+    mock_client_cls.assert_called_once_with(
+        pat="fake-pat", repo="smsilva/wasp-gitops", base_url="http://localhost:3000/api/v3"
     )
 
 
@@ -242,17 +216,17 @@ def test_provision_uses_gitops_repo_env_var(monkeypatch):
     from unittest.mock import MagicMock
     from tools.provision import provision_platform_instance
 
-    mock_github_cls = MagicMock()
-    mock_repo = MagicMock()
-    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     provision_platform_instance(name="wp2")
 
-    mock_github_cls.return_value.get_repo.assert_called_once_with("myorg/my-gitops")
+    mock_client_cls.assert_called_once_with(
+        pat="fake-pat", repo="myorg/my-gitops", base_url="https://api.github.com"
+    )
 
 
 def test_provision_missing_pat(monkeypatch):
@@ -260,11 +234,11 @@ def test_provision_missing_pat(monkeypatch):
     from tools.provision import provision_platform_instance
 
     monkeypatch.delenv("GH_PAT", raising=False)
-    mock_github_cls = MagicMock()
-    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+    mock_client_cls = MagicMock()
+    monkeypatch.setattr("tools.provision.PyGithubClient", mock_client_cls)
 
     result = provision_platform_instance(name="wp2")
 
     assert result["status"] == "error"
     assert result["message"] == "Provisioning failed. Please try again later."
-    mock_github_cls.assert_not_called()
+    mock_client_cls.assert_not_called()
