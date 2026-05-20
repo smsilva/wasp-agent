@@ -8,7 +8,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-cache
 
 COPY main.py ./
-COPY tools/ ./tools/
+COPY wasp/ ./wasp/
 
 ENV PATH="/app/.venv/bin:$PATH"
 
