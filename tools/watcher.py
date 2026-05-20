@@ -2,11 +2,11 @@ import asyncio
 import logging
 import time
 
-import httpx
 import telemetry
 from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
+from tools.notifier import Notifier
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,6 @@ PLATFORM_VERSION = "v1alpha1"
 PLATFORM_PLURAL = "platforms"
 POLL_INTERVAL_SECONDS = 10
 WATCH_TIMEOUT_SECONDS = 600
-TELEGRAM_API_BASE = "https://api.telegram.org"
 
 
 def load_kube_config_auto() -> "client.CustomObjectsApi":
@@ -46,22 +45,16 @@ def _find_condition(platform: dict, type_: str) -> dict | None:
     return None
 
 
-async def notify_telegram(chat_id: str, token: str, text: str) -> None:
-    url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
-    async with httpx.AsyncClient(timeout=10.0) as http:
-        await http.post(url, json={"chat_id": chat_id, "text": text})
-
-
-async def watch_platform(name: str, chat_id: str, token: str, parent_span_ctx=None) -> None:
+async def watch_platform(name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None) -> None:
     log.info("Watcher started for %s", name)
     try:
-        await _watch_platform_inner(name, chat_id, token, parent_span_ctx)
+        await _watch_platform_inner(name, chat_id, notifier, parent_span_ctx)
     except Exception:
         log.exception("Watcher failed for %s", name)
 
 
 async def _watch_platform_inner(
-    name: str, chat_id: str, token: str, parent_span_ctx=None
+    name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
 ) -> None:
     links = []
     if parent_span_ctx and parent_span_ctx.is_valid:
@@ -103,7 +96,7 @@ async def _watch_platform_inner(
                 span.set_attribute("poll_count", poll_count)
                 span.set_attribute("duration_seconds", elapsed)
                 log.info("Platform %s is Ready — notifying", name)
-                await notify_telegram(chat_id, token, ready_message(name, platform))
+                await notifier.send(chat_id, ready_message(name, platform))
                 return
 
             telemetry.watcher_polls_counter.add(1, {"result": "pending"})
@@ -116,9 +109,8 @@ async def _watch_platform_inner(
         span.set_attribute("poll_count", poll_count)
         span.set_attribute("duration_seconds", elapsed)
         log.warning("Watcher timeout for %s", name)
-        await notify_telegram(
+        await notifier.send(
             chat_id,
-            token,
             f"Provisionamento de '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
         )
 

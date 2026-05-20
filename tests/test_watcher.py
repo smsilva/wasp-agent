@@ -87,17 +87,18 @@ def test_load_kube_config_auto_fallback_local(monkeypatch):
     local.assert_called_once()
 
 
-async def test_notify_telegram_posts_message(monkeypatch):
+async def test_telegram_notifier_send_posts_message(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
-    import tools.watcher as w
+    import tools.notifier as n
 
     fake_client = AsyncMock()
     fake_client.__aenter__.return_value = fake_client
     fake_client.__aexit__.return_value = False
     cm = MagicMock(return_value=fake_client)
-    monkeypatch.setattr(w.httpx, "AsyncClient", cm)
+    monkeypatch.setattr(n.httpx, "AsyncClient", cm)
 
-    await w.notify_telegram("12345", "fake-token", "hello")
+    notifier = n.TelegramNotifier(token="fake-token")
+    await notifier.send("12345", "hello")
 
     cm.assert_called_once()
     fake_client.post.assert_awaited_once_with(
@@ -106,9 +107,23 @@ async def test_notify_telegram_posts_message(monkeypatch):
     )
 
 
+async def test_recording_notifier_captures_messages():
+    from tools.notifier import RecordingNotifier
+
+    n = RecordingNotifier()
+    await n.send("123", "hello")
+    await n.send("456", "world")
+
+    assert n.messages == [
+        {"chat_id": "123", "text": "hello"},
+        {"chat_id": "456", "text": "world"},
+    ]
+
+
 async def test_watch_platform_notifies_when_ready(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     import tools.watcher as w
+    from tools.notifier import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
@@ -116,22 +131,21 @@ async def test_watch_platform_notifies_when_ready(monkeypatch):
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    notify = AsyncMock()
-    monkeypatch.setattr(w, "notify_telegram", notify)
+    notifier = RecordingNotifier()
 
-    await w.watch_platform("wp2", "12345", "fake-token")
+    await w.watch_platform("wp2", "12345", notifier)
 
-    notify.assert_awaited_once()
-    args = notify.await_args.args
-    assert args[0] == "12345"
-    assert "wp2" in args[2]
-    assert "https://gateway.us-east-1.wp2.wasp.silvios.me" in args[2]
+    assert len(notifier.messages) == 1
+    assert notifier.messages[0]["chat_id"] == "12345"
+    assert "wp2" in notifier.messages[0]["text"]
+    assert "https://gateway.us-east-1.wp2.wasp.silvios.me" in notifier.messages[0]["text"]
 
 
 async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
     import tools.watcher as w
+    from tools.notifier import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -143,42 +157,37 @@ async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
     api = MagicMock()
     api.get_cluster_custom_object.side_effect = FakeApiException(status=404, reason="NotFound")
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    notify = AsyncMock()
-    monkeypatch.setattr(w, "notify_telegram", notify)
     monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
 
-    # [0, 0]: first for deadline calc, second for while condition (enters loop once)
-    # then repeat(601): exits loop on next while check
     times = chain([0, 0], repeat(w.WATCH_TIMEOUT_SECONDS + 1))
     monkeypatch.setattr(w.time, "monotonic", lambda: next(times))
 
-    await w.watch_platform("wp2", "12345", "fake-token")
+    notifier = RecordingNotifier()
+    await w.watch_platform("wp2", "12345", notifier)
 
-    notify.assert_awaited_once()
-    assert "10 minutos" in notify.await_args.args[2]
+    assert len(notifier.messages) == 1
+    assert "10 minutos" in notifier.messages[0]["text"]
 
 
 async def test_watch_platform_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
     import tools.watcher as w
+    from tools.notifier import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {"status": {"conditions": []}}
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    notify = AsyncMock()
-    monkeypatch.setattr(w, "notify_telegram", notify)
 
     monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
-    # First call returns 0 (deadline = 600), all subsequent calls return 601 (> deadline → exit loop).
-    # Use repeat so teardown calls to time.monotonic() don't exhaust the iterator.
     times = chain([0], repeat(w.WATCH_TIMEOUT_SECONDS + 1))
     monkeypatch.setattr(w.time, "monotonic", lambda: next(times))
 
-    await w.watch_platform("wp2", "12345", "fake-token")
+    notifier = RecordingNotifier()
+    await w.watch_platform("wp2", "12345", notifier)
 
-    notify.assert_awaited_once()
-    assert "10 minutos" in notify.await_args.args[2]
+    assert len(notifier.messages) == 1
+    assert "10 minutos" in notifier.messages[0]["text"]
 
 
 def test_find_condition_returns_none_when_not_found():
@@ -191,6 +200,7 @@ def test_find_condition_returns_none_when_not_found():
 async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     from unittest.mock import MagicMock
     import tools.watcher as w
+    from tools.notifier import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -204,12 +214,13 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
 
     # Non-404 exceptions are caught, logged, and do not propagate from watch_platform
-    await w.watch_platform("wp2", "12345", "fake-token")
+    await w.watch_platform("wp2", "12345", RecordingNotifier())
 
 
 async def test_watcher_records_polls_counter(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+    from tools.notifier import RecordingNotifier
     import telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
@@ -221,9 +232,8 @@ async def test_watcher_records_polls_counter(monkeypatch):
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
 
-    await w.watch_platform("wp1", "123", "tok")
+    await w.watch_platform("wp1", "123", RecordingNotifier())
 
     metrics_data = reader.get_metrics_data()
     metric_names = {
@@ -236,8 +246,9 @@ async def test_watcher_records_polls_counter(monkeypatch):
 
 
 async def test_watcher_records_duration_on_ready(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+    from tools.notifier import RecordingNotifier
     import telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
@@ -249,9 +260,8 @@ async def test_watcher_records_duration_on_ready(monkeypatch):
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
 
-    await w.watch_platform("wp1", "123", "tok")
+    await w.watch_platform("wp1", "123", RecordingNotifier())
 
     metrics_data = reader.get_metrics_data()
     metric_names = {
@@ -264,9 +274,10 @@ async def test_watcher_records_duration_on_ready(monkeypatch):
 
 
 async def test_watcher_links_to_parent_span(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     from opentelemetry.trace import SpanContext, TraceFlags
+    from tools.notifier import RecordingNotifier
     import telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
@@ -278,7 +289,6 @@ async def test_watcher_links_to_parent_span(monkeypatch):
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
 
     parent_ctx = SpanContext(
         trace_id=0x1234,
@@ -286,7 +296,7 @@ async def test_watcher_links_to_parent_span(monkeypatch):
         is_remote=False,
         trace_flags=TraceFlags(TraceFlags.SAMPLED),
     )
-    await w.watch_platform("wp1", "123", "tok", parent_ctx)
+    await w.watch_platform("wp1", "123", RecordingNotifier(), parent_ctx)
 
     spans = exporter.get_finished_spans()
     lifecycle = next(s for s in spans if s.name == "agent.watcher.lifecycle")
@@ -294,8 +304,9 @@ async def test_watcher_links_to_parent_span(monkeypatch):
 
 
 async def test_watcher_creates_lifecycle_span(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from tools.notifier import RecordingNotifier
     import telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
@@ -307,9 +318,8 @@ async def test_watcher_creates_lifecycle_span(monkeypatch):
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    monkeypatch.setattr(w, "notify_telegram", AsyncMock())
 
-    await w.watch_platform("wp1", "123", "tok")
+    await w.watch_platform("wp1", "123", RecordingNotifier())
 
     spans = exporter.get_finished_spans()
     assert any(s.name == "agent.watcher.lifecycle" for s in spans)
@@ -318,6 +328,7 @@ async def test_watcher_creates_lifecycle_span(monkeypatch):
 async def test_watch_platform_retries_until_ready(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
     import tools.watcher as w
+    from tools.notifier import RecordingNotifier
 
     api = MagicMock()
     not_ready = {"status": {"conditions": []}}
@@ -327,12 +338,11 @@ async def test_watch_platform_retries_until_ready(monkeypatch):
     }
     api.get_cluster_custom_object.side_effect = [not_ready, ready]
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
-    notify = AsyncMock()
-    monkeypatch.setattr(w, "notify_telegram", notify)
     monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
 
-    await w.watch_platform("wp2", "12345", "fake-token")
+    notifier = RecordingNotifier()
+    await w.watch_platform("wp2", "12345", notifier)
 
     assert api.get_cluster_custom_object.call_count == 2
-    notify.assert_awaited_once()
-    assert "pronta" in notify.await_args.args[2]
+    assert len(notifier.messages) == 1
+    assert "pronta" in notifier.messages[0]["text"]

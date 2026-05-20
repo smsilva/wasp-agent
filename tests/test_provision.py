@@ -60,7 +60,9 @@ def test_provision_commits(monkeypatch):
         requested_by="alice",
     )
 
-    mock_github_cls.assert_called_once_with("fake-pat")
+    mock_github_cls.assert_called_once_with(
+        login_or_token="fake-pat", base_url="https://api.github.com"
+    )
     mock_github_cls.return_value.get_repo.assert_called_once_with("smsilva/wasp-gitops")
     call_kwargs = mock_repo.create_file.call_args.kwargs
     assert call_kwargs["path"] == "infrastructure/tenants/wp2.yaml"
@@ -215,6 +217,42 @@ def test_provision_records_provisioning_started(monkeypatch):
         for dp in m.data.data_points
     ]
     assert any(dp.attributes.get("outcome") == "started" for dp in all_points)
+
+
+def test_provision_uses_custom_github_base_url(monkeypatch):
+    from unittest.mock import MagicMock
+    from tools.provision import provision_platform_instance
+
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITHUB_BASE_URL", "http://localhost:3000/api/v3")
+    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+
+    provision_platform_instance(name="wp2")
+
+    mock_github_cls.assert_called_once_with(
+        login_or_token="fake-pat", base_url="http://localhost:3000/api/v3"
+    )
+
+
+def test_provision_uses_gitops_repo_env_var(monkeypatch):
+    from unittest.mock import MagicMock
+    from tools.provision import provision_platform_instance
+
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setattr("tools.provision.Github", mock_github_cls)
+
+    provision_platform_instance(name="wp2")
+
+    mock_github_cls.return_value.get_repo.assert_called_once_with("myorg/my-gitops")
 
 
 def test_provision_missing_pat(monkeypatch):

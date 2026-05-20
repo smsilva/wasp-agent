@@ -9,6 +9,7 @@ from agno.tools import tool
 from github import Github
 from opentelemetry import trace
 from pydantic import BaseModel, Field
+from tools.notifier import TelegramNotifier
 from tools.watcher import extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
@@ -90,7 +91,9 @@ def provision_platform_instance(
         manifest = PlatformManifest.build(name=name, domain=domain, regions=regions)
         yaml_content = yaml.safe_dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
 
-        repo = Github(pat).get_repo("smsilva/wasp-gitops")
+        github_base_url = os.getenv("GITHUB_BASE_URL", "https://api.github.com")
+        gitops_repo = os.getenv("GITOPS_REPO", "smsilva/wasp-gitops")
+        repo = Github(login_or_token=pat, base_url=github_base_url).get_repo(gitops_repo)
         file_path = f"infrastructure/tenants/{name}.yaml"
         safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
         commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
@@ -112,8 +115,9 @@ def provision_platform_instance(
         if chat_id and token:
             current_span.set_attribute("watcher.spawned", True)
             parent_span_ctx = current_span.get_span_context()
+            notifier = TelegramNotifier(token=token)
             def _run_watcher():
-                asyncio.run(watch_platform(name, chat_id, token, parent_span_ctx))
+                asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
 
             threading.Thread(target=_run_watcher, daemon=True).start()
             log.info("Watcher spawned for %s (chat_id=%s)", name, chat_id)
