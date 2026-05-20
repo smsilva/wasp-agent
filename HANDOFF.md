@@ -19,11 +19,17 @@ Ciclos 1–5 completos e em `main`.
   - `tools/notifier.py`: `Notifier` Protocol, `TelegramNotifier(token, base_url)`, `RecordingNotifier`
   - `tools/watcher.py`: `watch_platform` recebe `notifier: Notifier` em vez de `token`; `notify_telegram` removido
   - `tools/provision.py`: injeta `TelegramNotifier(token=token)` ao spawnar watcher
-  - 52 testes, 100% cobertura, ruff clean
+  - 53 testes, 100% cobertura, ruff clean
 - **Passo 2 — Configurabilidade git** (`d8441f7`):
   - `GITHUB_BASE_URL` e `GITOPS_REPO` como env vars em `provision.py`
   - `Github(login_or_token=pat, base_url=github_base_url).get_repo(gitops_repo)`
   - Habilita apontar para Gitea local nos testes E2E
+- **GitClient abstraction** (`tools/git_client.py`):
+  - `GitClient` Protocol + `PyGithubClient` (GitHub) + `GiteaClient` (Gitea via httpx direto)
+  - `provision.py` deixa de usar `github.Github` diretamente; instancia `PyGithubClient`
+  - E2E injeta `GiteaClient` via monkeypatch — padrão simétrico ao `TelegramNotifier`/`RecordingNotifier`
+  - Motivo: PyGithub é incompatível com Gitea 1.22 (assertion de porta + PUT vs POST). Ver `docs/references/gitea.md`
+  - 57 testes (4 novos em `tests/test_git_client.py`), 100% cobertura, ruff clean
 
 ### Specs ativos
 
@@ -37,7 +43,7 @@ Ciclos 1–5 completos e em `main`.
 
 | Arquivo | Status |
 |---|---|
-| `docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md` | In Progress — passos 1–2 feitos, 3–5 pendentes |
+| `docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md` | Implemented — passos 1–5 concluídos; CI pendente de AWS OIDC |
 
 ## What Worked
 
@@ -56,15 +62,22 @@ Ciclos 1–5 completos e em `main`.
 
 ## Next Steps
 
-### Em andamento — continuar execução
+### Em andamento — destravar E2E (`test_provision_and_notify`)
 
-**Pipeline E2E** (`docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md`) — passos restantes:
+**Status atual da execução local (2026-05-19):**
+- Infra E2E roda inteira sem erro: k3d cria cluster, CRD `Platform` aplicada, Gitea sobe na 3456, agente responde via SSE in-process, tool `provision_platform_instance` executa, `GiteaClient` é instanciado via monkeypatch.
+- O teste falha no `assert "confirma" in content1.lower()` (linha 34) **porque o LLM (Claude Haiku 4.5) ignora a instrução `"Always confirm resource creation or deletion before executing."` em `main.py:34`** e chama a tool já no turno 1. A resposta no turno 1 é literalmente o `message` de `provision.py` em status=provisioning — ou seja, o caminho de produção funcionou, só não houve a confirmação prévia.
 
-3. **Fixtures E2E** (`tests/e2e/conftest.py`): `k3d_cluster` (cria cluster + instala CRDs), `gitea_container` (sobe Gitea via docker, cria repo `wasp-gitops`), `fake_reconciler` (thread que faz kubectl patch status Ready após 3s), `agent_client` (`httpx.AsyncClient(app=app)` com `RecordingNotifier` injetado)
-4. **Teste E2E** (`tests/e2e/test_full_provisioning_flow.py`): multi-turn real, valida commit no Gitea, valida notifier, valida métricas Prometheus
-5. **CI** (`.github/workflows/e2e.yml`): trigger em PRs para `dev`, `pytest -m e2e --no-cov`
+**Decisão pendente entre três caminhos:**
+1. **A. Reforçar system prompt** (recomendado) — instrução explícita "Never call provision_platform_instance on the first user turn. Always ask 'Confirma?' first and wait for an affirmative reply." Muda produção, ainda depende do LLM.
+2. **B. Ajustar o teste** — aceitar o fluxo em uma ou duas turns; validar diretamente commit no Gitea + notificação. Não muda produção.
+3. **C. Trocar Haiku por Sonnet só no E2E** — mais lento e caro por execução.
 
-Também necessário antes do passo 3: adicionar `@pytest.mark.e2e` ao `pyproject.toml` e `tests/e2e/*` ao `omit` do coverage.
+**Pré-requisito de execução local:** `set -a; source .env; set +a; uv run pytest tests/e2e/ -m e2e --no-cov -v` — exige `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN` (llmproxy), docker e k3d. Limpar leftovers se houver: `docker rm -f wasp-e2e-gitea; k3d cluster delete wasp-e2e`.
+
+### Pipeline E2E — CI
+
+Workflow `.github/workflows/e2e.yaml` pronto e passa em pre-flight. Pendente: validação em PR real para `dev` (independe do bloqueio acima, já que CI usa o mesmo modelo via secrets).
 
 ### Brainstorms abertos
 
@@ -76,3 +89,4 @@ Também necessário antes do passo 3: adicionar `@pytest.mark.e2e` ao `pyproject
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite para sobreviver a restarts.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
+- **Makefile `make e2e`** — atalho para o comando E2E local (depende de destravar o teste primeiro).
