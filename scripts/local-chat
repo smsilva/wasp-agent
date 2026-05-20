@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -e
+
+readonly SESSION_FILE=".wasp-cli/session"
+readonly WASP_AGENT_URL="${WASP_AGENT_URL:-http://localhost:7777}"
+readonly WASP_AGENT_ID="${WASP_AGENT_ID:-wasp-agent}"
+
+usage() {
+  cat <<'EOF'
+local-chat — wrapper sobre POST /agents/<id>/runs
+
+Usage:
+  local-chat MESSAGE            send message, print agent reply
+  local-chat --new-session      generate a new session_id (local:<agent>:<uuid8>)
+  local-chat --session          print current session_id
+  local-chat --help             this help
+
+Env:
+  WASP_AGENT_URL   default http://localhost:7777
+  WASP_AGENT_ID    default wasp-agent
+
+Session_id persisted in .wasp-cli/session (cwd-local).
+EOF
+}
+
+new_session() {
+  local chat_id session_id
+  chat_id="$(uuidgen | tr -d '-' | cut -c1-8)"
+  session_id="local:${WASP_AGENT_ID}:${chat_id}"
+  mkdir -p "$(dirname "${SESSION_FILE}")"
+  echo "${session_id}" > "${SESSION_FILE}"
+  echo "${session_id}"
+}
+
+ensure_session() {
+  if [[ ! -f "${SESSION_FILE}" ]]; then
+    new_session > /dev/null
+  fi
+  cat "${SESSION_FILE}"
+}
+
+send_message() {
+  local message="${1?}" session_id
+  session_id="$(ensure_session)"
+  curl --silent --show-error --fail \
+    "${WASP_AGENT_URL}/agents/${WASP_AGENT_ID}/runs" \
+    --form "message=${message}" \
+    --form "session_id=${session_id}" \
+    --form "stream=false" \
+    | jq -r '.content'
+}
+
+case "${1:-}" in
+  --help|-h|"")
+    usage
+    ;;
+  --new-session)
+    new_session
+    ;;
+  --session)
+    ensure_session
+    ;;
+  --*)
+    echo "Unknown option: $1" >&2
+    usage >&2
+    exit 1
+    ;;
+  *)
+    send_message "$1"
+    ;;
+esac
