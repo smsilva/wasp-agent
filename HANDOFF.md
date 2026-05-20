@@ -10,21 +10,19 @@ Ciclos 1–5 completos e em `main`.
 
 **Ciclos 1–5 em `main`.** Pipeline E2E completo e validado localmente em 2026-05-20. `dev` está 3 commits à frente de `main` (destravamento E2E + `PROMETHEUS_METRICS_ACTIVE` + scripts k3d) — aguardando PR para acionar workflow E2E em CI.
 
+**Path D — Local chat** implementado em 2026-05-20. Conversa via `curl` sem Telegram (`make local-chat`, `scripts/local-chat`). Base para `waspctl` futura.
+
 ### Specs ativos
 
 | Arquivo | Status |
 |---|---|
-| `docs/sdlc/02-design/2026-05-20-local-chat.md` | Draft — plano pronto, aguardando execução |
+| `docs/sdlc/02-design/2026-05-20-local-chat.md` | Implemented (2026-05-20) |
 | `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Idea — **prioridade alta** |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
 | `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` | Idea |
 | `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` | Idea |
 | `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
 | `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs / audit log) |
-
-### Plans ativos
-
-- `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` — local-chat (path D em `validation.md`). Conversa com o agent via curl/script, sem Telegram. Execução recomendada via subagent-driven-development.
 
 ## What Worked
 
@@ -44,15 +42,11 @@ Ciclos 1–5 completos e em `main`.
 
 ## Next Steps
 
-### 1. Executar plano local-chat
-
-`docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` — 7 tasks bite-sized (TDD + 1 commit cada). Habilita `make local-chat` / `scripts/local-chat` para conversar com o agent via `curl`, evolução do smoke Telegram. Recomendado: subagent-driven-development.
-
-Para o mapa completo dos caminhos de validação, ver `docs/runbooks/validation.md`.
-
-### 2. Smoke test Telegram (manual)
+### 1. Smoke test Telegram (manual)
 
 Validar o canal Telegram + comportamento do LLM após as mudanças recentes (system prompt de confirmação). **Não exige cluster.**
+
+Alternativa rápida sem ngrok/bot: path D (`docs/runbooks/local-chat.md`).
 
 Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-local-dev.md`.
 
@@ -65,7 +59,7 @@ Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-loca
 
 Validação fim-a-fim do ciclo real (com cluster ArgoCD + Crossplane) está no apêndice de `docs/runbooks/validation.md`, não é parte do smoke test.
 
-### 3. Validar Prometheus
+### 2. Validar Prometheus
 
 Independente do Telegram:
 

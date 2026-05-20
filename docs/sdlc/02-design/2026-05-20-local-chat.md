@@ -1,7 +1,7 @@
 # Local chat — interagir com o agent via curl
 
 **Date:** 2026-05-20  
-**Status:** Draft  
+**Status:** Implemented  
 **Scope:** Habilita validação manual interativa do agent sem Telegram, evolução do smoke test Telegram e base inicial para uma CLI futura (`waspctl agent --chat "..."`).
 
 ## Contexto
