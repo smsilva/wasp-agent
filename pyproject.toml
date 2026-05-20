@@ -30,9 +30,10 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+markers = ["e2e: end-to-end tests requiring k3d and Gitea"]
 
 [tool.coverage.run]
-omit = ["tests/*", "smoke_*.py"]
+omit = ["tests/*", "smoke_*.py", "tests/e2e/*"]
 
 [tool.coverage.report]
 fail_under = 100

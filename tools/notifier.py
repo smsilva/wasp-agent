@@ -1,3 +1,4 @@
+import asyncio
 from typing import Protocol
 
 import httpx
@@ -24,3 +25,7 @@ class RecordingNotifier:
 
     async def send(self, chat_id: str, text: str) -> None:
         self.messages.append({"chat_id": chat_id, "text": text})
+
+    async def wait_for_message(self) -> None:
+        while not self.messages:
+            await asyncio.sleep(0.1)

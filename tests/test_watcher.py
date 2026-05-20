@@ -120,6 +120,21 @@ async def test_recording_notifier_captures_messages():
     ]
 
 
+async def test_recording_notifier_wait_for_message_resolves_after_send():
+    import asyncio
+    from tools.notifier import RecordingNotifier
+
+    n = RecordingNotifier()
+
+    async def _send_after_delay():
+        await asyncio.sleep(0.05)
+        await n.send("1", "msg")
+
+    asyncio.create_task(_send_after_delay())
+    await asyncio.wait_for(n.wait_for_message(), timeout=2)
+    assert len(n.messages) == 1
+
+
 async def test_watch_platform_notifies_when_ready(monkeypatch):
     from unittest.mock import MagicMock
     import tools.watcher as w

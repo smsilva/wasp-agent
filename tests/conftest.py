@@ -2,6 +2,15 @@ import sys
 from unittest.mock import MagicMock
 import pytest
 
+
+def pytest_collection_modifyitems(config, items):
+    """Skip E2E tests unless -m e2e is explicitly requested."""
+    if "e2e" not in config.option.markexpr:
+        skip = pytest.mark.skip(reason="use 'pytest tests/e2e/ -m e2e --no-cov' to run E2E tests")
+        for item in items:
+            if item.get_closest_marker("e2e"):
+                item.add_marker(skip)
+
 AGNO_MODULES = [
     "agno",
     "agno.agent",
@@ -24,7 +33,11 @@ KUBE_MODULES = [
 
 
 @pytest.fixture(autouse=True)
-def mock_agno(monkeypatch):
+def mock_agno(monkeypatch, request):
+    if request.node.get_closest_marker("e2e"):
+        yield {}
+        return
+
     # Clear cached modules so each test gets a fresh import with current mocks.
     for mod in ("main", "tools", "tools.provision", "tools.watcher", "telemetry"):
         sys.modules.pop(mod, None)
