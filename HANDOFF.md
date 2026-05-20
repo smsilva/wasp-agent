@@ -14,6 +14,7 @@ Ciclos 1–5 completos e em `main`.
 
 | Arquivo | Status |
 |---|---|
+| `docs/sdlc/02-design/2026-05-20-local-chat.md` | Draft — plano pronto, aguardando execução |
 | `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Idea — **prioridade alta** |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
 | `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` | Idea |
@@ -23,7 +24,7 @@ Ciclos 1–5 completos e em `main`.
 
 ### Plans ativos
 
-Nenhum plano em andamento.
+- `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` — local-chat (path D em `validation.md`). Conversa com o agent via curl/script, sem Telegram. Execução recomendada via subagent-driven-development.
 
 ## What Worked
 
@@ -43,9 +44,13 @@ Nenhum plano em andamento.
 
 ## Next Steps
 
-Para o mapa completo dos três caminhos de validação, ver `docs/runbooks/validation.md`.
+### 1. Executar plano local-chat
 
-### 1. Smoke test Telegram (manual)
+`docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` — 7 tasks bite-sized (TDD + 1 commit cada). Habilita `make local-chat` / `scripts/local-chat` para conversar com o agent via `curl`, evolução do smoke Telegram. Recomendado: subagent-driven-development.
+
+Para o mapa completo dos caminhos de validação, ver `docs/runbooks/validation.md`.
+
+### 2. Smoke test Telegram (manual)
 
 Validar o canal Telegram + comportamento do LLM após as mudanças recentes (system prompt de confirmação). **Não exige cluster.**
 
@@ -60,7 +65,7 @@ Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-loca
 
 Validação fim-a-fim do ciclo real (com cluster ArgoCD + Crossplane) está no apêndice de `docs/runbooks/validation.md`, não é parte do smoke test.
 
-### 2. Validar Prometheus
+### 3. Validar Prometheus
 
 Independente do Telegram:
 
