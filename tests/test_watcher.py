@@ -363,6 +363,24 @@ async def test_watch_platform_retries_until_ready(monkeypatch):
     assert "pronta" in notifier.messages[0]["text"]
 
 
+def test_extract_chat_id_from_local_session():
+    from wasp.watcher import extract_chat_id
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345"
+
+    assert extract_chat_id(FakeCtx()) == "abc12345"
+
+
+def test_extract_chat_id_from_local_session_with_suffix():
+    from wasp.watcher import extract_chat_id
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345:8ec68b0f"
+
+    assert extract_chat_id(FakeCtx()) == "abc12345"
+
+
 async def test_console_notifier_logs_message(caplog):
     import logging
     from wasp.notifier import ConsoleNotifier

@@ -32,8 +32,9 @@ def extract_chat_id(run_context) -> str | None:
     if not session_id:
         return None
     parts = session_id.split(":")
-    # agno session_id: tg:<agent-name>:<chat_id>[:<message_short_id>]
-    if len(parts) >= 3 and parts[0] == "tg":
+    # agno session_id: <prefix>:<agent-name>:<chat_id>[:<message_short_id>]
+    # prefix: "tg" (Telegram) | "local" (curl/CLI)
+    if len(parts) >= 3 and parts[0] in ("tg", "local"):
         return parts[2]
     return None
 
