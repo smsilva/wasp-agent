@@ -14,9 +14,12 @@ Ciclos 1–5 completos e em `main`.
 
 | Arquivo | Status |
 |---|---|
-| `docs/sdlc/02-design/2026-05-19-e2e-testing-pipeline.md` | Implemented |
+| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Idea — **prioridade alta** |
+| `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
+| `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` | Idea |
+| `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` | Idea |
 | `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
-| `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs) |
+| `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs / audit log) |
 
 ### Plans ativos
 
