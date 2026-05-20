@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+export OTEL_EXPORTER_OTLP_ENDPOINT="${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318}"
+export OTEL_SERVICE_NAME="${OTEL_SERVICE_NAME:-wasp-agent}"
+export OTEL_AGNO_HIDE_IO="${OTEL_AGNO_HIDE_IO:-false}"
+
+uv run python tests/smoke/smoke_agno_otel.py

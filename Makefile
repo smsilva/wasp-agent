@@ -1,4 +1,4 @@
-.PHONY: run test e2e k3d-up k3d-down build smoke smoke-prometheus
+.PHONY: run test e2e k3d-up k3d-down build lint format smoke smoke-prometheus
 
 K3D_CLUSTER ?= wasp-local
 
@@ -20,11 +20,14 @@ k3d-down:
 build:
 	uv sync
 
+lint:
+	uv run ruff check .
+
+format:
+	uv run ruff format .
+
 smoke:
-	OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
-	OTEL_SERVICE_NAME=wasp-agent \
-	OTEL_AGNO_HIDE_IO=false \
-	uv run python tests/smoke/smoke_agno_otel.py
+	scripts/smoke
 
 smoke-prometheus:
 	PROMETHEUS_METRICS_ACTIVE=true \
