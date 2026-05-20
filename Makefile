@@ -1,4 +1,4 @@
-.PHONY: run test e2e k3d-up k3d-down build lint format smoke smoke-prometheus
+.PHONY: run test e2e k3d-up k3d-down build lint format smoke smoke-prometheus local-chat
 
 K3D_CLUSTER ?= wasp-local
 
@@ -32,3 +32,6 @@ smoke:
 smoke-prometheus:
 	PROMETHEUS_METRICS_ACTIVE=true \
 	uv run python tests/smoke/smoke_prometheus.py
+
+local-chat:
+	scripts/local-chat-roteiro

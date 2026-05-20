@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Replays the Telegram smoke roteiro via local-chat: greet → memory → request → confirm.
+# No asserts on LLM content (non-deterministic) — only that each request returned 200.
+set -e
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATH="${SCRIPT_DIR}:${PATH}"
+export PATH
+
+step() {
+  local label="${1?}" message="${2?}" reply
+  echo
+  echo "─── ${label} ───"
+  echo "> ${message}"
+  echo
+  reply="$(local-chat "${message}")"
+  echo "${reply}"
+}
+
+echo "session: $(local-chat --new-session)"
+step "1/5 greet" "oi"
+step "2/5 memory write" "Meu nome é João."
+step "3/5 memory recall" "Qual é o meu nome?"
+step "4/5 request" "Crie uma plataforma chamada test-smoke na região us-east-1."
+step "5/5 confirm" "Sim, confirma."
+
+echo
+echo "Roteiro concluído. Veja o stdout do servidor (make run) para o ConsoleNotifier."
