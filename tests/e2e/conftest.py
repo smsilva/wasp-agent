@@ -173,7 +173,7 @@ def gitea_container():
 
 @pytest.fixture
 def recording_notifier():
-    from tools.notifier import RecordingNotifier
+    from wasp.notifier import RecordingNotifier
     return RecordingNotifier()
 
 
@@ -187,15 +187,15 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     monkeypatch.setenv("TELEGRAM_TOKEN", "123456789:AAHfiqksKZ8WmR2zggAY0gUMQyxFAq0k8I0")
     monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "true")
 
-    import tools.provision
+    import wasp.provision
     import main  # noqa: F401
-    import telemetry as _telemetry
+    import wasp.telemetry as _telemetry
     _telemetry.configure()  # force reconfigure now that PROMETHEUS_PORT is set
-    from tools.git_client import GiteaClient
+    from wasp.git_client import GiteaClient
 
-    monkeypatch.setattr(tools.provision, "TelegramNotifier", lambda token, **kw: recording_notifier)
+    monkeypatch.setattr(wasp.provision, "TelegramNotifier", lambda token, **kw: recording_notifier)
     monkeypatch.setattr(
-        tools.provision, "PyGithubClient",
+        wasp.provision, "PyGithubClient",
         lambda **_kw: GiteaClient(
             token=gitea_container.token,
             repo=f"{GITEA_ADMIN}/wasp-gitops",

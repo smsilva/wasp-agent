@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 
 def test_pygithub_client_init_calls_get_repo(monkeypatch):
-    from tools import git_client
+    from wasp import git_client
 
     mock_github_cls = MagicMock()
     mock_repo = MagicMock()
@@ -23,7 +23,7 @@ def test_pygithub_client_init_calls_get_repo(monkeypatch):
 
 
 def test_pygithub_client_create_file_delegates(monkeypatch):
-    from tools import git_client
+    from wasp import git_client
 
     mock_github_cls = MagicMock()
     mock_repo = MagicMock()
@@ -39,7 +39,7 @@ def test_pygithub_client_create_file_delegates(monkeypatch):
 
 
 def test_gitea_client_create_file_posts_base64(monkeypatch):
-    from tools import git_client
+    from wasp import git_client
 
     captured = {}
 
@@ -72,7 +72,7 @@ def test_gitea_client_create_file_posts_base64(monkeypatch):
 def test_gitea_client_raises_on_http_error(monkeypatch):
     import httpx as real_httpx
 
-    from tools import git_client
+    from wasp import git_client
 
     def fake_post(*_args, **_kwargs):
         r = MagicMock()

@@ -149,7 +149,7 @@ When a Makefile target needs more than a single command, extract the commands to
 
 ## 14. Notifier abstraction
 
-`tools/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `tools/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
+`wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `wasp/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
 
 ## 16. Validação
 
@@ -159,4 +159,4 @@ Três caminhos distintos — detalhes em `docs/runbooks/validation.md`.
 - **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
 - **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
 
-Para validar o ciclo GitOps real (raro — mudanças em `tools/provision.py`, `tools/watcher.py` ou na Composition), subir cluster com ArgoCD + Crossplane via `docs/runbooks/k3d-argocd-wasp-gitops.md` e confirmar o provisionamento no smoke test. Isso é validação pesada, não smoke test.
+Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com ArgoCD + Crossplane via `docs/runbooks/k3d-argocd-wasp-gitops.md` e confirmar o provisionamento no smoke test. Isso é validação pesada, não smoke test.

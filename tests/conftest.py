@@ -39,7 +39,7 @@ def mock_agno(monkeypatch, request):
         return
 
     # Clear cached modules so each test gets a fresh import with current mocks.
-    for mod in ("main", "tools", "tools.provision", "tools.watcher", "telemetry"):
+    for mod in ("main", "wasp", "wasp.provision", "wasp.watcher", "wasp.telemetry"):
         sys.modules.pop(mod, None)
 
     mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES}
@@ -52,5 +52,5 @@ def mock_agno(monkeypatch, request):
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     yield mocks
 
-    for mod in ("main", "tools", "tools.provision", "tools.watcher", "telemetry"):
+    for mod in ("main", "wasp", "wasp.provision", "wasp.watcher", "wasp.telemetry"):
         sys.modules.pop(mod, None)

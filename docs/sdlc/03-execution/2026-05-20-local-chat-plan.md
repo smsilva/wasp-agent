@@ -20,9 +20,9 @@
 - `docs/runbooks/local-chat.md` — runbook manual
 
 **Modify:**
-- `tools/notifier.py` — adiciona `ConsoleNotifier`
-- `tools/watcher.py` — `extract_chat_id` aceita prefixo `local:`
-- `tools/provision.py` — `_select_notifier()` factory + uso no spawn do watcher
+- `wasp/notifier.py` — adiciona `ConsoleNotifier`
+- `wasp/watcher.py` — `extract_chat_id` aceita prefixo `local:`
+- `wasp/provision.py` — `_select_notifier()` factory + uso no spawn do watcher
 - `tests/test_watcher.py` — teste para `local:`
 - `tests/test_provision.py` — testes para `_select_notifier` e caminho console
 - `Makefile` — target `local-chat`
@@ -32,10 +32,10 @@
 
 ---
 
-### Task 1: `ConsoleNotifier` em `tools/notifier.py`
+### Task 1: `ConsoleNotifier` em `wasp/notifier.py`
 
 **Files:**
-- Modify: `tools/notifier.py`
+- Modify: `wasp/notifier.py`
 - Test: `tests/test_watcher.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -67,7 +67,7 @@ Expected: FAIL com `ImportError: cannot import name 'ConsoleNotifier'`.
 
 - [ ] **Step 3: Implement `ConsoleNotifier`**
 
-Em `tools/notifier.py`, no topo (após `import asyncio`):
+Em `wasp/notifier.py`, no topo (após `import asyncio`):
 
 ```python
 import logging
@@ -103,7 +103,7 @@ Expected: clean.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/notifier.py tests/test_watcher.py
+git add wasp/notifier.py tests/test_watcher.py
 git commit -m "feat(notifier): add ConsoleNotifier for local dev"
 ```
 
@@ -112,7 +112,7 @@ git commit -m "feat(notifier): add ConsoleNotifier for local dev"
 ### Task 2: `extract_chat_id` aceita prefixo `local:`
 
 **Files:**
-- Modify: `tools/watcher.py:23`
+- Modify: `wasp/watcher.py:23`
 - Test: `tests/test_watcher.py`
 
 - [ ] **Step 1: Write failing test**
@@ -148,7 +148,7 @@ Expected: FAIL (retorna `None`).
 
 - [ ] **Step 3: Update `extract_chat_id`**
 
-Em `tools/watcher.py`, substitua a linha 23:
+Em `wasp/watcher.py`, substitua a linha 23:
 
 ```python
     if len(parts) >= 3 and parts[0] == "tg":
@@ -186,16 +186,16 @@ Expected: clean.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/watcher.py tests/test_watcher.py
+git add wasp/watcher.py tests/test_watcher.py
 git commit -m "feat(watcher): accept 'local:' prefix in extract_chat_id"
 ```
 
 ---
 
-### Task 3: `_select_notifier` factory em `tools/provision.py`
+### Task 3: `_select_notifier` factory em `wasp/provision.py`
 
 **Files:**
-- Modify: `tools/provision.py`
+- Modify: `wasp/provision.py`
 - Test: `tests/test_provision.py`
 
 - [ ] **Step 1: Write failing tests**
@@ -292,7 +292,7 @@ Expected: FAIL com `ImportError: cannot import name '_select_notifier'`.
 
 - [ ] **Step 3: Implement `_select_notifier` and refactor spawn**
 
-Em `tools/provision.py`, substituir o import:
+Em `wasp/provision.py`, substituir o import:
 
 ```python
 from tools.notifier import TelegramNotifier
@@ -369,7 +369,7 @@ Expected: clean.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/provision.py tests/test_provision.py
+git add wasp/provision.py tests/test_provision.py
 git commit -m "feat(provision): NOTIFIER env var selects console or telegram"
 ```
 

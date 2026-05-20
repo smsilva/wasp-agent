@@ -1,5 +1,5 @@
 def test_extract_chat_id_from_agno_session_with_suffix():
-    from tools.watcher import extract_chat_id
+    from wasp.watcher import extract_chat_id
 
     class FakeCtx:
         session_id = "tg:wasp-agent:5621932873:8ec68b0f"
@@ -8,7 +8,7 @@ def test_extract_chat_id_from_agno_session_with_suffix():
 
 
 def test_extract_chat_id_from_agno_session_no_suffix():
-    from tools.watcher import extract_chat_id
+    from wasp.watcher import extract_chat_id
 
     class FakeCtx:
         session_id = "tg:wasp-agent:5621932873"
@@ -17,7 +17,7 @@ def test_extract_chat_id_from_agno_session_no_suffix():
 
 
 def test_extract_chat_id_returns_none_for_non_telegram():
-    from tools.watcher import extract_chat_id
+    from wasp.watcher import extract_chat_id
 
     class FakeCtx:
         session_id = "web:abc:def"
@@ -31,7 +31,7 @@ def test_extract_chat_id_returns_none_for_non_telegram():
 
 
 def test_ready_message_includes_endpoints():
-    from tools.watcher import ready_message
+    from wasp.watcher import ready_message
 
     platform = {
         "spec": {
@@ -50,7 +50,7 @@ def test_ready_message_includes_endpoints():
 
 def test_load_kube_config_auto_incluster(monkeypatch):
     from unittest.mock import MagicMock
-    import tools.watcher as w
+    import wasp.watcher as w
 
     incluster = MagicMock()
     local = MagicMock()
@@ -65,7 +65,7 @@ def test_load_kube_config_auto_incluster(monkeypatch):
 
 def test_load_kube_config_auto_fallback_local(monkeypatch):
     from unittest.mock import MagicMock
-    import tools.watcher as w
+    import wasp.watcher as w
 
     class FakeConfigException(Exception):
         pass
@@ -89,7 +89,7 @@ def test_load_kube_config_auto_fallback_local(monkeypatch):
 
 async def test_telegram_notifier_send_posts_message(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
-    import tools.notifier as n
+    import wasp.notifier as n
 
     fake_client = AsyncMock()
     fake_client.__aenter__.return_value = fake_client
@@ -108,7 +108,7 @@ async def test_telegram_notifier_send_posts_message(monkeypatch):
 
 
 async def test_recording_notifier_captures_messages():
-    from tools.notifier import RecordingNotifier
+    from wasp.notifier import RecordingNotifier
 
     n = RecordingNotifier()
     await n.send("123", "hello")
@@ -122,7 +122,7 @@ async def test_recording_notifier_captures_messages():
 
 async def test_recording_notifier_wait_for_message_resolves_after_send():
     import asyncio
-    from tools.notifier import RecordingNotifier
+    from wasp.notifier import RecordingNotifier
 
     n = RecordingNotifier()
 
@@ -137,8 +137,8 @@ async def test_recording_notifier_wait_for_message_resolves_after_send():
 
 async def test_watch_platform_notifies_when_ready(monkeypatch):
     from unittest.mock import MagicMock
-    import tools.watcher as w
-    from tools.notifier import RecordingNotifier
+    import wasp.watcher as w
+    from wasp.notifier import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
@@ -159,8 +159,8 @@ async def test_watch_platform_notifies_when_ready(monkeypatch):
 async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
-    import tools.watcher as w
-    from tools.notifier import RecordingNotifier
+    import wasp.watcher as w
+    from wasp.notifier import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -187,8 +187,8 @@ async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
 async def test_watch_platform_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
-    import tools.watcher as w
-    from tools.notifier import RecordingNotifier
+    import wasp.watcher as w
+    from wasp.notifier import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {"status": {"conditions": []}}
@@ -206,7 +206,7 @@ async def test_watch_platform_timeout(monkeypatch):
 
 
 def test_find_condition_returns_none_when_not_found():
-    from tools.watcher import _find_condition
+    from wasp.watcher import _find_condition
 
     assert _find_condition({"status": {"conditions": [{"type": "Synced", "status": "True"}]}}, "Ready") is None
     assert _find_condition({}, "Ready") is None
@@ -214,8 +214,8 @@ def test_find_condition_returns_none_when_not_found():
 
 async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     from unittest.mock import MagicMock
-    import tools.watcher as w
-    from tools.notifier import RecordingNotifier
+    import wasp.watcher as w
+    from wasp.notifier import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -235,12 +235,12 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
 async def test_watcher_records_polls_counter(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-    from tools.notifier import RecordingNotifier
-    import telemetry
+    from wasp.notifier import RecordingNotifier
+    import wasp.telemetry as telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
 
-    import tools.watcher as w
+    import wasp.watcher as w
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -263,12 +263,12 @@ async def test_watcher_records_polls_counter(monkeypatch):
 async def test_watcher_records_duration_on_ready(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-    from tools.notifier import RecordingNotifier
-    import telemetry
+    from wasp.notifier import RecordingNotifier
+    import wasp.telemetry as telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
 
-    import tools.watcher as w
+    import wasp.watcher as w
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -292,12 +292,12 @@ async def test_watcher_links_to_parent_span(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     from opentelemetry.trace import SpanContext, TraceFlags
-    from tools.notifier import RecordingNotifier
-    import telemetry
+    from wasp.notifier import RecordingNotifier
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
-    import tools.watcher as w
+    import wasp.watcher as w
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -321,12 +321,12 @@ async def test_watcher_links_to_parent_span(monkeypatch):
 async def test_watcher_creates_lifecycle_span(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-    from tools.notifier import RecordingNotifier
-    import telemetry
+    from wasp.notifier import RecordingNotifier
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
-    import tools.watcher as w
+    import wasp.watcher as w
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -342,8 +342,8 @@ async def test_watcher_creates_lifecycle_span(monkeypatch):
 
 async def test_watch_platform_retries_until_ready(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
-    import tools.watcher as w
-    from tools.notifier import RecordingNotifier
+    import wasp.watcher as w
+    from wasp.notifier import RecordingNotifier
 
     api = MagicMock()
     not_ready = {"status": {"conditions": []}}

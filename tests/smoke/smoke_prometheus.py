@@ -19,7 +19,7 @@ if not os.environ.get("PROMETHEUS_METRICS_ACTIVE"):
 
 print(f"PROMETHEUS_METRICS_ACTIVE: {os.environ['PROMETHEUS_METRICS_ACTIVE']}\n")
 
-import telemetry  # noqa: E402 — must come after env check
+import wasp.telemetry as telemetry  # noqa: E402 — must come after env check
 
 from prometheus_client import generate_latest  # noqa: E402
 

@@ -27,7 +27,7 @@ print(f"OTLP endpoint: {endpoint}")
 print(f"Service name:  {os.environ.get('OTEL_SERVICE_NAME', 'wasp-agent')}")
 print(f"Hide IO:       {os.environ.get('OTEL_AGNO_HIDE_IO', 'true')}\n")
 
-import telemetry  # noqa: F401,E402 — side-effect: configure() + AgnoInstrumentor
+import wasp.telemetry as telemetry  # noqa: F401,E402 — side-effect: configure() + AgnoInstrumentor
 
 from agno.agent import Agent  # noqa: E402
 from agno.models.anthropic import Claude  # noqa: E402

@@ -75,7 +75,7 @@ curl http://localhost:7777/telemetry/prometheus | grep agent_
 
 ## Apêndice: validação completa do ciclo GitOps (raro)
 
-Quando você mudou `tools/provision.py`, `tools/watcher.py` ou a Composition do Crossplane, pode querer validar o ciclo real: Telegram → commit em `wasp-gitops` → ArgoCD sync → Crossplane reconcile → notificação `Ready` no Telegram.
+Quando você mudou `wasp/provision.py`, `wasp/watcher.py` ou a Composition do Crossplane, pode querer validar o ciclo real: Telegram → commit em `wasp-gitops` → ArgoCD sync → Crossplane reconcile → notificação `Ready` no Telegram.
 
 Passos:
 

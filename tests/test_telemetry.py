@@ -5,14 +5,14 @@ from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 
 def test_configure_noop_by_default(monkeypatch):
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
-    import telemetry
+    import wasp.telemetry as telemetry
     telemetry.configure()
     assert telemetry.tracer is not None
     assert telemetry.meter is not None
 
 
 def test_configure_with_in_memory_exporters():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     reader = InMemoryMetricReader()
     telemetry.configure(span_exporter=exporter, metric_reader=reader)
@@ -21,7 +21,7 @@ def test_configure_with_in_memory_exporters():
 
 
 def test_instrument_sync_records_span():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
@@ -38,7 +38,7 @@ def test_instrument_sync_records_span():
 
 
 def test_instrument_sync_records_error_status():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
@@ -57,7 +57,7 @@ def test_instrument_sync_records_error_status():
 
 @pytest.mark.asyncio
 async def test_instrument_async_records_span():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
@@ -74,7 +74,7 @@ async def test_instrument_async_records_span():
 
 
 def test_instrument_records_tool_call_counter():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     reader = InMemoryMetricReader()
     telemetry.configure(span_exporter=exporter, metric_reader=reader)
@@ -95,7 +95,7 @@ def test_instrument_records_tool_call_counter():
 
 
 def test_instrument_records_duration_histogram():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     reader = InMemoryMetricReader()
     telemetry.configure(span_exporter=exporter, metric_reader=reader)
@@ -127,7 +127,7 @@ def test_configure_with_otlp_endpoint(monkeypatch):
         MagicMock(),
     )
     with patch("openinference.instrumentation.agno.AgnoInstrumentor", MagicMock()):
-        import telemetry
+        import wasp.telemetry as telemetry
         telemetry.configure()
     assert telemetry.tracer is not None
     assert telemetry.meter is not None
@@ -147,7 +147,7 @@ def test_configure_instruments_agno_when_endpoint_set(monkeypatch):
     mock_instrumentor = MagicMock()
     mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
     with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
-        import telemetry  # noqa: F401
+        import wasp.telemetry as telemetry  # noqa: F401
 
     mock_instrumentor.instrument.assert_called_once()
     call_kwargs = mock_instrumentor.instrument.call_args.kwargs
@@ -165,7 +165,7 @@ def test_configure_skips_agno_without_endpoint(monkeypatch):
     mock_instrumentor = MagicMock()
     mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
     with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
-        import telemetry  # noqa: F401
+        import wasp.telemetry as telemetry  # noqa: F401
 
     mock_instrumentor.instrument.assert_not_called()
 
@@ -185,7 +185,7 @@ def test_configure_agno_hide_io_false(monkeypatch):
     mock_instrumentor = MagicMock()
     mock_instrumentor_cls = MagicMock(return_value=mock_instrumentor)
     with patch("openinference.instrumentation.agno.AgnoInstrumentor", mock_instrumentor_cls):
-        import telemetry  # noqa: F401
+        import wasp.telemetry as telemetry  # noqa: F401
 
     from openinference.instrumentation import TraceConfig
     config = mock_instrumentor.instrument.call_args.kwargs["config"]
@@ -195,7 +195,7 @@ def test_configure_agno_hide_io_false(monkeypatch):
 
 
 def test_watcher_metrics_exist_after_configure():
-    import telemetry
+    import wasp.telemetry as telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
     assert telemetry.provisioning_counter is not None
@@ -205,14 +205,14 @@ def test_watcher_metrics_exist_after_configure():
 
 def test_configure_default_has_no_prometheus_registry(monkeypatch):
     monkeypatch.delenv("PROMETHEUS_METRICS_ACTIVE", raising=False)
-    import telemetry
+    import wasp.telemetry as telemetry
     telemetry.configure()
     assert telemetry._prometheus_registry is None
 
 
 def test_configure_with_prometheus_port_creates_registry(monkeypatch):
     monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "9999")
-    import telemetry
+    import wasp.telemetry as telemetry
     telemetry.configure()
     assert telemetry._prometheus_registry is not None
 
@@ -220,7 +220,7 @@ def test_configure_with_prometheus_port_creates_registry(monkeypatch):
 def test_prometheus_output_includes_tool_calls_metric(monkeypatch):
     from prometheus_client import generate_latest
     monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "9999")
-    import telemetry
+    import wasp.telemetry as telemetry
     telemetry.configure()
 
     @telemetry.instrument("my.probe")
@@ -234,7 +234,7 @@ def test_prometheus_output_includes_tool_calls_metric(monkeypatch):
 
 
 def test_configure_with_explicit_reader_skips_prometheus_registry():
-    import telemetry
+    import wasp.telemetry as telemetry
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
     assert telemetry._prometheus_registry is None
@@ -242,7 +242,7 @@ def test_configure_with_explicit_reader_skips_prometheus_registry():
 
 @pytest.mark.asyncio
 async def test_instrument_async_records_error_status():
-    import telemetry
+    import wasp.telemetry as telemetry
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 

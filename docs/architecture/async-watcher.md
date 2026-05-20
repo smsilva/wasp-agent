@@ -1,6 +1,6 @@
 # Async watcher
 
-- `tools/watcher.py` — `watch_platform(name, chat_id, token)`: polls Platform CR via `kubernetes.client.CustomObjectsApi`, 10s/poll, 10min timeout, notifies via `httpx.AsyncClient` POST directly to the Telegram API.
+- `wasp/watcher.py` — `watch_platform(name, chat_id, token)`: polls Platform CR via `kubernetes.client.CustomObjectsApi`, 10s/poll, 10min timeout, notifies via `httpx.AsyncClient` POST directly to the Telegram API.
 - Spawn: agno calls synchronous tools in a thread executor (no active event loop), so `asyncio.get_running_loop()` and `get_event_loop()` fail. Use `threading.Thread(target=asyncio.run, args=(watch_platform(...),), daemon=True).start()` — creates its own event loop in the daemon thread.
 - k8s API 404 when fetching the freshly committed Platform CR is expected (ArgoCD hasn't synced yet). Treat as "not created yet": `sleep(POLL_INTERVAL)` and `continue`, do not notify error or return. Only notify timeout after `WATCH_TIMEOUT_SECONDS`.
 - The watcher is fire-and-forget in a daemon thread — exceptions are silently swallowed. Wrap internal logic in `_watch_platform_inner` called via `try/except Exception: log.exception(...)` in the public wrapper.

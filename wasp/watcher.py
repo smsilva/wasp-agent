@@ -2,11 +2,11 @@ import asyncio
 import logging
 import time
 
-import telemetry
+import wasp.telemetry as telemetry
 from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
-from tools.notifier import Notifier
+from wasp.notifier import Notifier
 
 log = logging.getLogger(__name__)
 

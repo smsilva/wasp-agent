@@ -13,7 +13,7 @@
 - Provisioning tool errors must return a generic dict `{"status": "error", "message": "..."}` — never `raise`, to avoid leaking internals to the user via LLM.
 - The LLM surfaces **all fields** from a tool's returned dict. Include only fields with value to the end user; exclude `commit_sha`, `file_path`, internal system names (e.g., "ArgoCD").
 - `GH_PAT`: fine-grained PAT on GitHub with minimum scope (`smsilva/wasp-gitops`, Contents: write). See `docs/runbooks/github-pat-setup.md`.
-- Git push é abstraído por `tools/git_client.py`: `GitClient` Protocol + `PyGithubClient` (produção, GitHub via PyGithub) + `GiteaClient` (E2E, httpx direto). `provision.py` instancia `PyGithubClient`; testes E2E injetam `GiteaClient` via monkeypatch. Padrão simétrico ao `Notifier` em `tools/notifier.py`. Motivo: PyGithub é incompatível com Gitea (porta interna em response URLs + método PUT vs POST para criação de arquivo) — ver `docs/references/gitea.md`.
+- Git push é abstraído por `wasp/git_client.py`: `GitClient` Protocol + `PyGithubClient` (produção, GitHub via PyGithub) + `GiteaClient` (E2E, httpx direto). `provision.py` instancia `PyGithubClient`; testes E2E injetam `GiteaClient` via monkeypatch. Padrão simétrico ao `Notifier` em `wasp/notifier.py`. Motivo: PyGithub é incompatível com Gitea (porta interna em response URLs + método PUT vs POST para criação de arquivo) — ver `docs/references/gitea.md`.
 
 For the complete design, see `docs/sdlc/02-design/2026-05-15-platform-provisioning-design.md`.
 

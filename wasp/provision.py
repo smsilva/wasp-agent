@@ -3,14 +3,14 @@ import logging
 import os
 import threading
 
-import telemetry
+import wasp.telemetry as telemetry
 import yaml
 from agno.tools import tool
 from opentelemetry import trace
 from pydantic import BaseModel, Field
-from tools.git_client import PyGithubClient
-from tools.notifier import TelegramNotifier
-from tools.watcher import extract_chat_id, watch_platform
+from wasp.git_client import PyGithubClient
+from wasp.notifier import TelegramNotifier
+from wasp.watcher import extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
 

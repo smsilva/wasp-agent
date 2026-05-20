@@ -38,7 +38,7 @@ PyGithub **não funciona** contra Gitea para criação de arquivos. Dois bugs:
 1. **Assertion de porta** (`PyGithub/Requester.py:902`): PyGithub valida que toda URL retornada pela API tem a mesma porta do `base_url`. Gitea inclui a porta interna `3000` nas response URLs mesmo quando exposto em outra porta externa (ex.: `3456`), causando `AssertionError: 3000` antes de qualquer request sair.
 2. **Método HTTP**: Gitea 1.22 (e 1.21) usa `POST /repos/.../contents/{path}` para **criar** arquivos e `PUT` para **atualizar**. PyGithub `create_file()` usa `PUT`, e Gitea responde `422 "SHA Required"` para arquivos novos. GitHub aceita `PUT` em ambos os casos.
 
-Por isso o código de produção usa `tools.git_client.PyGithubClient` (GitHub), e o E2E injeta `tools.git_client.GiteaClient` (httpx POST direto). Ver `tools/git_client.py`.
+Por isso o código de produção usa `wasp.git_client.PyGithubClient` (GitHub), e o E2E injeta `wasp.git_client.GiteaClient` (httpx POST direto). Ver `wasp/git_client.py`.
 
 O repo deve ser inicializado com `auto_init: true` e o `default_branch` correto (ex.: `"dev"`) para o primeiro push funcionar imediatamente.
 

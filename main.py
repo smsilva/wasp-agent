@@ -12,14 +12,14 @@ logging.basicConfig(
 
 os.umask(0o077)  # agent.db created with 600 permissions
 
-import telemetry  # noqa: E402 — must come after load_dotenv so env vars are set
+import wasp.telemetry as telemetry  # noqa: E402 — must come after load_dotenv so env vars are set
 
 from agno.agent import Agent  # noqa: E402
 from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
-from tools import provision_platform_instance  # noqa: E402
+from wasp import provision_platform_instance  # noqa: E402
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",

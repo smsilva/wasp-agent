@@ -28,7 +28,7 @@ Reusar o endpoint que o `AgentOS` já expõe (`POST /agents/wasp-agent/runs`, mu
 
 1. **`ConsoleNotifier`** — implementação de `Notifier` Protocol que escreve no log do servidor (`make run`), substituindo o `TelegramNotifier` quando não há token.
 2. **Seleção dinâmica do notifier** via env var `NOTIFIER=console|telegram`. Default: `telegram` se `TELEGRAM_TOKEN` setado, senão `console`.
-3. **`session_id` no formato `local:wasp-agent:<chat_id>`**, simétrico ao `tg:<agent>:<chat_id>` do Telegram. `extract_chat_id` em `tools/watcher.py` aceita ambos os prefixos.
+3. **`session_id` no formato `local:wasp-agent:<chat_id>`**, simétrico ao `tg:<agent>:<chat_id>` do Telegram. `extract_chat_id` em `wasp/watcher.py` aceita ambos os prefixos.
 4. **Script `scripts/local-chat`** — wrapper bash sobre `curl`, persiste `session_id` em `.wasp-cli/session` (cwd-local). Subcomandos:
    - `local-chat MESSAGE` — envia mensagem, imprime resposta
    - `local-chat --new-session` — gera novo `session_id` com `chat_id` UUID
@@ -38,7 +38,7 @@ Reusar o endpoint que o `AgentOS` já expõe (`POST /agents/wasp-agent/runs`, mu
 
 ## Arquitetura
 
-### `tools/notifier.py`
+### `wasp/notifier.py`
 
 Adiciona `ConsoleNotifier`:
 
@@ -48,7 +48,7 @@ class ConsoleNotifier:
         log.info("[NOTIFIER chat_id=%s] %s", chat_id, text)
 ```
 
-### `tools/provision.py`
+### `wasp/provision.py`
 
 Substituir o bloco atual de seleção:
 
@@ -73,7 +73,7 @@ if chat_id and notifier is not None:
 - Lê `NOTIFIER`. Se ausente: `telegram` se `TELEGRAM_TOKEN` setado, senão `console`.
 - Retorna instância configurada, ou `None` se `NOTIFIER=telegram` sem `TELEGRAM_TOKEN` (caso degenerado — mesmo comportamento atual, sem watcher).
 
-### `tools/watcher.py`
+### `wasp/watcher.py`
 
 `extract_chat_id` aceita prefixos `tg` ou `local`:
 
