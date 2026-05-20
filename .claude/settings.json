@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(uv sync *)",
+      "Bash(xxd)",
+      "Bash(python -m pytest tests/test_main.py -v)",
+      "Bash(python3 -m pytest tests/test_main.py -v)",
+      "Bash(uv --version)",
+      "Bash(ruff check *)",
+      "Bash(make run *)",
+      "Skill(conventional-commits)",
+      "Bash(mcp --list)",
+      "Bash(tmux list-panes *)",
+      "Bash(tmux capture-pane *)"
+    ]
+  }
+}
