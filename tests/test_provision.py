@@ -229,6 +229,92 @@ def test_provision_uses_gitops_repo_env_var(monkeypatch):
     )
 
 
+def test_select_notifier_console_when_env_explicit(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.setenv("NOTIFIER", "console")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_telegram_when_env_explicit(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.setenv("NOTIFIER", "telegram")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_default_telegram_when_token(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_default_console_without_token(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
+    from wasp.provision import _select_notifier
+
+    monkeypatch.setenv("NOTIFIER", "telegram")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+
+    assert _select_notifier() is None
+
+
+def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
+    from wasp.provision import _select_notifier
+
+    monkeypatch.setenv("NOTIFIER", "discord")
+    assert _select_notifier() is None
+
+
+def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_platform_instance
+
+    mock_client_cls = MagicMock()
+
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+
+    mock_thread = MagicMock()
+    mock_thread_cls = MagicMock(return_value=mock_thread)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345"
+
+    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+        result = provision_platform_instance(
+            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+        )
+
+    mock_thread_cls.assert_called_once()
+    mock_thread.start.assert_called_once()
+    assert result["status"] == "provisioning"
+
+
 def test_provision_missing_pat(monkeypatch):
     from unittest.mock import MagicMock
     from wasp.provision import provision_platform_instance

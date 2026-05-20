@@ -9,10 +9,22 @@ from agno.tools import tool
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 from wasp.git_client import PyGithubClient
-from wasp.notifier import TelegramNotifier
+from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
 from wasp.watcher import extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
+
+
+def _select_notifier() -> Notifier | None:
+    kind = os.getenv("NOTIFIER")
+    token = os.getenv("TELEGRAM_TOKEN")
+    if kind is None:
+        kind = "telegram" if token else "console"
+    if kind == "console":
+        return ConsoleNotifier()
+    if kind == "telegram":
+        return TelegramNotifier(token=token) if token else None
+    return None
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
@@ -111,11 +123,10 @@ def provision_platform_instance(
         telemetry.provisioning_counter.add(1, {"outcome": "started"})
 
         chat_id = extract_chat_id(run_context)
-        token = os.getenv("TELEGRAM_TOKEN")
-        if chat_id and token:
+        notifier = _select_notifier()
+        if chat_id and notifier is not None:
             current_span.set_attribute("watcher.spawned", True)
             parent_span_ctx = current_span.get_span_context()
-            notifier = TelegramNotifier(token=token)
             def _run_watcher():
                 asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
 
