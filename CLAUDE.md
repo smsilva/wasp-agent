@@ -106,7 +106,12 @@ Lightweight reminders (one line, no context) belong in the **Backlog** section o
 
 See `docs/references/agno.md`.
 
-## 9. Security tracking
+## 9. Security — próximos passos
+
+- **Autenticação/autorização de usuários**: implementar mecanismo para limitar quais usuários podem usar o bot (allowlist de `chat_id`, por exemplo).
+- **Security review**: realizar após implementar autenticação — cobrir autorizações, inputs não sanitizados, exposição de tokens.
+
+## 9a. Security tracking
 
 Active security issues live in `docs/security/issues/SEC-NNN-<slug>.md`.
 When resolved, move to `docs/security/issues/archived/`.
