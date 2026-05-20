@@ -8,21 +8,7 @@ Ciclos 1–5 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–5 em `main`.** Pipeline E2E completo e validado em 2026-05-20.
-
-### Esta sessão (2026-05-20) — destravar E2E + qualidade
-
-Mudanças locais ainda não commitadas:
-
-- **System prompt reforçado** (`main.py`): instrução explícita de confirmação antes de qualquer tool call — resolve o bloqueio de LLM que fazia Claude Haiku 4.5 provisionar sem pedir confirmação
-- **`PROMETHEUS_PORT` → `PROMETHEUS_METRICS_ACTIVE`**: variável renomeada em `telemetry.py`, `smoke_prometheus.py`, `tests/test_telemetry.py`, `Makefile`; semântica mais clara (flag booleano, não número de porta)
-- **`make e2e`, `make k3d-up`, `make k3d-down`** adicionados ao `Makefile`; `scripts/k3d-up` e `scripts/k3d-down` criados
-- **Fixtures E2E melhoradas** (`tests/e2e/conftest.py`):
-  - Cleanup explícito no início (`docker rm -f wasp-e2e-gitea`, `k3d cluster delete`) para ambientes sujos
-  - Session IDs únicos por teste (`uuid4`) para evitar contaminação do `agent.db` entre execuções
-  - `_telemetry.configure()` explícito depois do `monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE")` — necessário porque o módulo já executou `configure()` no import
-- **Assertion error messages** incluem o SSE response completo para facilitar diagnóstico
-- **`CLAUDE.md §15`**: convenção "multi-line Makefile → scripts/" documentada
+**Ciclos 1–5 em `main`.** Pipeline E2E completo e validado localmente em 2026-05-20. `dev` está 3 commits à frente de `main` (destravamento E2E + `PROMETHEUS_METRICS_ACTIVE` + scripts k3d) — aguardando PR para acionar workflow E2E em CI.
 
 ### Specs ativos
 
@@ -56,11 +42,7 @@ Nenhum plano em andamento.
 
 Para o mapa completo dos três caminhos de validação, ver `docs/runbooks/validation.md`.
 
-### 1. Pipeline E2E — validar em CI
-
-Workflow `.github/workflows/e2e.yaml` pronto. Pendente: rodar em PR real para `dev` (CI usa o mesmo modelo via secrets).
-
-### 2. Smoke test Telegram (manual)
+### 1. Smoke test Telegram (manual)
 
 Validar o canal Telegram + comportamento do LLM após as mudanças recentes (system prompt de confirmação). **Não exige cluster.**
 
@@ -75,7 +57,7 @@ Pré-requisito: ngrok + webhook Telegram — seguir `docs/runbooks/telegram-loca
 
 Validação fim-a-fim do ciclo real (com cluster ArgoCD + Crossplane) está no apêndice de `docs/runbooks/validation.md`, não é parte do smoke test.
 
-### 3. Validar Prometheus
+### 2. Validar Prometheus
 
 Independente do Telegram:
 
