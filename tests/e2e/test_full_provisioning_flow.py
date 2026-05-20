@@ -6,13 +6,13 @@ Run with: pytest -m e2e --no-cov
 """
 import asyncio
 import subprocess
+import uuid
 
 import pytest
 
 from tests.e2e.conftest import sse_content
 
 
-SESSION = "tg:wasp-agent:12345"
 PLATFORM_NAME = "wp-test"
 
 
@@ -24,19 +24,22 @@ async def test_provision_and_notify(
     fake_reconciler,
     recording_notifier,
 ):
+    session = f"tg:wasp-agent:{uuid.uuid4().hex[:8]}"
     # turn 1 — agent must ask for confirmation before provisioning
     r1 = await agent_client.post(
         "/agents/wasp-agent/runs",
-        data={"message": f"Cria platform {PLATFORM_NAME}", "session_id": SESSION},
+        data={"message": f"Cria platform {PLATFORM_NAME}", "session_id": session},
     )
     assert r1.status_code == 200, r1.text
     content1 = sse_content(r1)
-    assert "confirma" in content1.lower(), f"Expected confirmation, got: {content1!r}"
+    assert "confirma" in content1.lower(), (
+        f"Expected confirmation, got: {content1!r}\nFull SSE response:\n{r1.text}"
+    )
 
     # turn 2 — user confirms; agent calls provision_platform_instance
     r2 = await agent_client.post(
         "/agents/wasp-agent/runs",
-        data={"message": "sim", "session_id": SESSION},
+        data={"message": "sim", "session_id": session},
     )
     assert r2.status_code == 200, r2.text
 

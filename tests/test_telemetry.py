@@ -204,14 +204,14 @@ def test_watcher_metrics_exist_after_configure():
 
 
 def test_configure_default_has_no_prometheus_registry(monkeypatch):
-    monkeypatch.delenv("PROMETHEUS_PORT", raising=False)
+    monkeypatch.delenv("PROMETHEUS_METRICS_ACTIVE", raising=False)
     import telemetry
     telemetry.configure()
     assert telemetry._prometheus_registry is None
 
 
 def test_configure_with_prometheus_port_creates_registry(monkeypatch):
-    monkeypatch.setenv("PROMETHEUS_PORT", "9999")
+    monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "9999")
     import telemetry
     telemetry.configure()
     assert telemetry._prometheus_registry is not None
@@ -219,7 +219,7 @@ def test_configure_with_prometheus_port_creates_registry(monkeypatch):
 
 def test_prometheus_output_includes_tool_calls_metric(monkeypatch):
     from prometheus_client import generate_latest
-    monkeypatch.setenv("PROMETHEUS_PORT", "9999")
+    monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "9999")
     import telemetry
     telemetry.configure()
 

@@ -31,7 +31,10 @@ INSTRUCTIONS = [
     " Be direct and clear. No filler words ('Certo!', 'Pronto!', 'Perfeito!', 'Excelente!'),"
     " no emojis, no exclamation marks. Use short paragraphs separated by blank lines"
     " — avoid bullet lists and bold text unless structure genuinely helps.",
-    "Always confirm resource creation or deletion before executing."
+    "Never call provision_platform_instance without explicit user confirmation."
+    " On the first turn of any creation or deletion request, always ask the user"
+    " to confirm — e.g. 'Confirma a criação?' — and wait for an affirmative reply"
+    " before calling any tool."
     " After a successful provisioning, relay the tool's message as-is —"
     " do not add technical details like commit SHA, file paths, or internal"
     " infrastructure names (ArgoCD, Crossplane, GitHub, Kubernetes).",

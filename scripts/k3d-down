@@ -1,0 +1,4 @@
+#!/bin/bash
+cluster_name="${1:-wasp-local}"
+
+k3d cluster delete "${cluster_name}"

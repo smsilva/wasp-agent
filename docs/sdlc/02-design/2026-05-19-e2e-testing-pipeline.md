@@ -1,7 +1,7 @@
 # E2E Testing Pipeline
 
 **Date:** 2026-05-19  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** Pipeline E2E automatizado e reprodutível, sem dependência de Telegram, ngrok, ArgoCD ou Crossplane reais.
 
 ---

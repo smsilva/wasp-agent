@@ -22,6 +22,18 @@ def sse_content(response) -> str:
         if event == "RunCompleted" and data:
             return json.loads(data).get("content", "") or ""
     return ""
+
+
+def sse_events(response) -> list[dict]:
+    """Return all SSE events as a list of {event, data} dicts — useful for debugging."""
+    events = []
+    for block in response.text.strip().split("\n\n"):
+        lines = block.strip().split("\n")
+        event = next((line[7:] for line in lines if line.startswith("event: ")), None)
+        data = next((line[6:] for line in lines if line.startswith("data: ")), None)
+        if event:
+            events.append({"event": event, "data": json.loads(data) if data else None})
+    return events
 GITEA_PASS = "password123"  # noqa: S105 — test credential only
 
 
@@ -62,6 +74,7 @@ def k3d_cluster():
     cluster_name = external or "wasp-e2e"
 
     if not external:
+        subprocess.run(["k3d", "cluster", "delete", cluster_name], check=False)
         subprocess.run(
             ["k3d", "cluster", "create", cluster_name],
             check=True,
@@ -95,6 +108,7 @@ def k3d_cluster():
 
 @pytest.fixture(scope="session")
 def gitea_container():
+    subprocess.run(["docker", "rm", "--force", GITEA_CONTAINER], check=False)
     subprocess.run(
         [
             "docker", "run", "--detach",
@@ -171,9 +185,12 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     monkeypatch.setenv("GITHUB_BASE_URL", f"{gitea_container.base_url}/api/v1")
     monkeypatch.setenv("GITOPS_REPO", f"{GITEA_ADMIN}/wasp-gitops")
     monkeypatch.setenv("TELEGRAM_TOKEN", "123456789:AAHfiqksKZ8WmR2zggAY0gUMQyxFAq0k8I0")
+    monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "true")
 
     import tools.provision
     import main  # noqa: F401
+    import telemetry as _telemetry
+    _telemetry.configure()  # force reconfigure now that PROMETHEUS_PORT is set
     from tools.git_client import GiteaClient
 
     monkeypatch.setattr(tools.provision, "TelegramNotifier", lambda token, **kw: recording_notifier)

@@ -2,22 +2,22 @@
 """
 Smoke test: verifica que /telemetry/prometheus expõe métricas OTel do agente.
 
-Pré-requisito: PROMETHEUS_PORT deve estar definido (habilita PrometheusMetricReader).
+Pré-requisito: PROMETHEUS_METRICS_ACTIVE deve estar definido (habilita PrometheusMetricReader).
 
 Uso:
     make smoke-prometheus
-    # ou: PROMETHEUS_PORT=7777 uv run python smoke_prometheus.py
+    # ou: PROMETHEUS_METRICS_ACTIVE=7777 uv run python smoke_prometheus.py
 
 Valida que agent_tool_calls_total e agent_provisioning_total aparecem no output.
 """
 import os
 import sys
 
-if not os.environ.get("PROMETHEUS_PORT"):
-    print("ERRO: defina PROMETHEUS_PORT (ex: 7777)")
+if not os.environ.get("PROMETHEUS_METRICS_ACTIVE"):
+    print("ERRO: defina PROMETHEUS_METRICS_ACTIVE (ex: 7777)")
     sys.exit(1)
 
-print(f"PROMETHEUS_PORT: {os.environ['PROMETHEUS_PORT']}\n")
+print(f"PROMETHEUS_METRICS_ACTIVE: {os.environ['PROMETHEUS_METRICS_ACTIVE']}\n")
 
 import telemetry  # noqa: E402 — must come after env check
 

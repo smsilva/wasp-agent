@@ -1,7 +1,7 @@
 # E2E Testing Pipeline — Plano de Execução
 
 **Date:** 2026-05-19  
-**Status:** In Progress  
+**Status:** Completed  
 **Spec:** `docs/sdlc/02-design/2026-05-19-e2e-testing-pipeline.md`
 
 ## Passos

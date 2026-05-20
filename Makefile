@@ -1,10 +1,21 @@
-.PHONY: run test build smoke smoke-prometheus
+.PHONY: run test e2e k3d-up k3d-down build smoke smoke-prometheus
+
+K3D_CLUSTER ?= wasp-local
 
 run:
 	uv run python main.py
 
 test:
 	uv run pytest --cov=. --cov-report=term-missing
+
+e2e:
+	uv run pytest tests/e2e/ -m e2e --no-cov -v
+
+k3d-up:
+	scripts/k3d-up $(K3D_CLUSTER)
+
+k3d-down:
+	scripts/k3d-down $(K3D_CLUSTER)
 
 build:
 	uv sync
@@ -16,5 +27,5 @@ smoke:
 	uv run python smoke_agno_otel.py
 
 smoke-prometheus:
-	PROMETHEUS_PORT=7777 \
+	PROMETHEUS_METRICS_ACTIVE=true \
 	uv run python smoke_prometheus.py

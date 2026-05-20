@@ -54,7 +54,7 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
         _prometheus_registry = None
         readers.append(metric_reader)
     else:
-        if os.getenv("PROMETHEUS_PORT"):
+        if os.getenv("PROMETHEUS_METRICS_ACTIVE"):
             import prometheus_client as _prom
             from opentelemetry.exporter.prometheus import PrometheusMetricReader
             _prometheus_registry = _prom.REGISTRY

@@ -143,6 +143,10 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 
 See `docs/architecture/async-watcher.md`.
 
+## 15. Makefile
+
+When a Makefile target needs more than a single command, extract the commands to a bash script in `scripts/` and call the script from the target.
+
 ## 14. Notifier abstraction
 
 `tools/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `tools/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
