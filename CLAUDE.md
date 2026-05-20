@@ -137,3 +137,7 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 ## 13. Async watcher
 
 See `docs/architecture/async-watcher.md`.
+
+## 14. Notifier abstraction
+
+`tools/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `tools/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.

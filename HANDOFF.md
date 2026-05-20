@@ -12,50 +12,63 @@ Ciclos 1–5 completos e em `main`.
 
 ### Esta sessão (2026-05-19)
 
-- **Fix `RuntimeWarning`** (`90327d9`): coroutine de `watch_platform` criada dentro de `_run_watcher` (closure) — só criada quando a thread executa, não na hora do provisionamento.
-- **Ciclo 5 — `openinference-instrumentation-agno`** (`afb0f73`):
-  - `BatchSpanProcessor` substituiu `SimpleSpanProcessor` no path OTLP (não bloqueia thread)
-  - `AgnoInstrumentor().instrument(tracer_provider=tp, config=TraceConfig(...))` ativado quando `OTEL_EXPORTER_OTLP_ENDPOINT` presente
-  - `OTEL_AGNO_HIDE_IO=false` re-expõe prompts para debug local (default: redactado)
-  - 3 novos testes, cobertura 100%, ruff clean
-- **Smoke test + infra** (`87fa5f2`): `docker-compose.yml` (Jaeger), `make smoke`, `smoke_agno_otel.py`
-- **Specs/plans arquivados**: Ciclos 4 e 5 movidos para `archived/`
-- **`/telemetry/prometheus` validado** (`smoke_prometheus.py` + `make smoke-prometheus`):
-  - `PrometheusMetricReader` adicionado a `telemetry.configure()` quando `PROMETHEUS_PORT` está definido
-  - `metrics_endpoint` passa `telemetry._prometheus_registry` para `generate_latest()`
-  - Smoke script verifica `agent_tool_calls_total`, `agent_provisioning_total`, `agent_watcher_polls_total`, `agent_watcher_duration_seconds`
-  - 49 testes, 100% cobertura, ruff clean
+- **Grilling session** para fechar decisões de design do pipeline E2E (10 perguntas, todas resolvidas)
+- **Spec aprovado** (`docs/sdlc/02-design/2026-05-19-e2e-testing-pipeline.md`): k3d + Gitea + fake reconciler + `RecordingNotifier` + in-process agent
+- **Plano de execução** (`docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md`): 5 passos, passos 1–2 concluídos
+- **Passo 1 — `Notifier` protocol** (`d8441f7`):
+  - `tools/notifier.py`: `Notifier` Protocol, `TelegramNotifier(token, base_url)`, `RecordingNotifier`
+  - `tools/watcher.py`: `watch_platform` recebe `notifier: Notifier` em vez de `token`; `notify_telegram` removido
+  - `tools/provision.py`: injeta `TelegramNotifier(token=token)` ao spawnar watcher
+  - 52 testes, 100% cobertura, ruff clean
+- **Passo 2 — Configurabilidade git** (`d8441f7`):
+  - `GITHUB_BASE_URL` e `GITOPS_REPO` como env vars em `provision.py`
+  - `Github(login_or_token=pat, base_url=github_base_url).get_repo(gitops_repo)`
+  - Habilita apontar para Gitea local nos testes E2E
 
 ### Specs ativos
 
 | Arquivo | Status |
 |---|---|
+| `docs/sdlc/02-design/2026-05-19-e2e-testing-pipeline.md` | Approved — plano em andamento |
 | `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` | Deferred |
 | `docs/sdlc/02-design/2026-05-16-structured-logging.md` | Deferred (avaliar consolidação com OTel logs) |
 
 ### Plans ativos
 
-Nenhum.
+| Arquivo | Status |
+|---|---|
+| `docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md` | In Progress — passos 1–2 feitos, 3–5 pendentes |
 
 ## What Worked
 
-- **TDD via subagent** para Ciclos 4 e 5: cobertura 100% mantida desde o início, ruff clean a cada commit.
-- **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget.
-- **`pytest -W error::DeprecationWarning` sem filtros adicionais** — confirma fixes sem mascarar nada.
-- **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente.
+- **Grilling antes do spec**: fechar todas as decisões de design antes de escrever código eliminou retrabalho
+- **Notifier Protocol**: desacopla o watcher do canal desde o início; `RecordingNotifier` torna os testes limpos sem mocks
+- **TDD via subagent** para Ciclos 4 e 5: cobertura 100% mantida desde o início, ruff clean a cada commit
+- **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget
+- **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente
 
 ## What Didn't Work
 
-- **Rota `/metrics`**: agno reserva esse path. Movido para `/telemetry/prometheus`.
-- **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test.
-- **Suposição errada sobre `session_id`**: agno 2.0+ adiciona suffix de message hash (4 partes, não 3).
-- **Tentativa de suprimir DeprecationWarning** com `-W ignore` — hábito perigoso. Persistido em `feedback-no-suppressing-warnings.md`.
+- **Rota `/metrics`**: agno reserva esse path. Movido para `/telemetry/prometheus`
+- **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test
+- **Suposição errada sobre `session_id`**: agno 2.0+ adiciona suffix de message hash (4 partes, não 3)
+- **Tentativa de suprimir DeprecationWarning** com `-W ignore` — hábito perigoso. Persistido em `feedback-no-suppressing-warnings.md`
 
 ## Next Steps
 
+### Em andamento — continuar execução
+
+**Pipeline E2E** (`docs/sdlc/03-execution/2026-05-19-e2e-testing-pipeline.md`) — passos restantes:
+
+3. **Fixtures E2E** (`tests/e2e/conftest.py`): `k3d_cluster` (cria cluster + instala CRDs), `gitea_container` (sobe Gitea via docker, cria repo `wasp-gitops`), `fake_reconciler` (thread que faz kubectl patch status Ready após 3s), `agent_client` (`httpx.AsyncClient(app=app)` com `RecordingNotifier` injetado)
+4. **Teste E2E** (`tests/e2e/test_full_provisioning_flow.py`): multi-turn real, valida commit no Gitea, valida notifier, valida métricas Prometheus
+5. **CI** (`.github/workflows/e2e.yml`): trigger em PRs para `dev`, `pytest -m e2e --no-cov`
+
+Também necessário antes do passo 3: adicionar `@pytest.mark.e2e` ao `pyproject.toml` e `tests/e2e/*` ao `omit` do coverage.
+
 ### Brainstorms abertos
 
-- `docs/sdlc/01-exploration/2026-05-17-e2e-testing-without-external-chats.md` — pipeline E2E em cluster efêmero (k3d/vcluster), gitops mock, Telegram mock, validação de métricas. Próximo: decidir cluster + gitops mock, depois virar spec.
+- `docs/sdlc/01-exploration/2026-05-17-e2e-testing-without-external-chats.md` — supersedido pelo spec aprovado; pode ser arquivado
 
 ### Backlog
 

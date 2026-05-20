@@ -10,6 +10,7 @@
 - agno has no pre-routing hook that exposes session context: `session_id` (and therefore channel/user_id) is only accessible inside a tool function via `run_context`. Starlette middleware added to the agno app cannot read agno session state before the tool is called.
 - Telegram `session_id` format: `tg:<agent-name>:<chat_id>[:<message_short_id>]`. The optional 4th segment is a message hash, not the chat_id — extract chat_id via `parts[2]`, never `parts[-1]`.
 - agno's AgentOS reserves `/metrics` and `/metrics/refresh` for its dashboard REST API. Appending a Starlette `Route("/metrics", ...)` is silently shadowed (first match wins). Mount Prometheus on a dedicated path (this project uses `/telemetry/prometheus`).
+- REST API for agent runs: `POST /agents/{agent_id}/runs` with body `{"message": "...", "session_id": "..."}`. Reuse the same `session_id` on subsequent POSTs to continue a multi-turn conversation (the SqliteDb stores state by session). In tests, use `httpx.AsyncClient(app=app, base_url="http://test")` to call the app in-process without starting a real server.
 
 For details and future-cycle checklists, see `docs/notes/2026-05-13-agno-api-cycle1.md`.
 
