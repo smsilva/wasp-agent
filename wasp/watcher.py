@@ -39,6 +39,18 @@ def extract_chat_id(run_context) -> str | None:
     return None
 
 
+def extract_channel(run_context) -> str | None:
+    if run_context is None:
+        return None
+    session_id = getattr(run_context, "session_id", None)
+    if not session_id:
+        return None
+    parts = session_id.split(":")
+    if len(parts) >= 3 and parts[0] in ("tg", "local"):
+        return parts[0]
+    return None
+
+
 def _find_condition(platform: dict, type_: str) -> dict | None:
     for c in platform.get("status", {}).get("conditions", []):
         if c.get("type") == type_:

@@ -151,6 +151,8 @@ When a Makefile target needs more than a single command, extract the commands to
 
 `wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `wasp/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
 
+Notifier selection routes by **channel of origin**, not global env: `_select_notifier(channel)` reads the `session_id` prefix (`tg`, `local`, ...) via `extract_channel`. `NOTIFIER` env var still overrides when explicitly set. Required because multiple channels can coexist (e.g. Telegram bot + local-chat) — selecting by env alone sends notifications to the wrong channel and silently fails.
+
 ## 16. Validação
 
 Três caminhos distintos — detalhes em `docs/runbooks/validation.md`.

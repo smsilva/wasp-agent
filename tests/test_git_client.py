@@ -38,6 +38,51 @@ def test_pygithub_client_create_file_delegates(monkeypatch):
     )
 
 
+def test_pygithub_create_file_raises_already_exists_on_422_sha(monkeypatch):
+    from wasp import git_client
+    from wasp.git_client import FileAlreadyExistsError
+
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    monkeypatch.setattr(git_client, "Github", mock_github_cls)
+
+    err = git_client.GithubException(
+        status=422,
+        data={"message": 'Invalid request.\n\n"sha" wasn\'t supplied.'},
+        headers={},
+    )
+    mock_repo.create_file.side_effect = err
+
+    client = git_client.PyGithubClient(pat="t", repo="o/r")
+    try:
+        client.create_file(path="a.yaml", message="m", content="c", branch="dev")
+    except FileAlreadyExistsError as e:
+        assert str(e) == "a.yaml"
+    else:
+        raise AssertionError("expected FileAlreadyExistsError")
+
+
+def test_pygithub_create_file_reraises_other_github_errors(monkeypatch):
+    from wasp import git_client
+
+    mock_github_cls = MagicMock()
+    mock_repo = MagicMock()
+    mock_github_cls.return_value.get_repo.return_value = mock_repo
+    monkeypatch.setattr(git_client, "Github", mock_github_cls)
+
+    err = git_client.GithubException(status=500, data={"message": "boom"}, headers={})
+    mock_repo.create_file.side_effect = err
+
+    client = git_client.PyGithubClient(pat="t", repo="o/r")
+    try:
+        client.create_file(path="a.yaml", message="m", content="c", branch="dev")
+    except git_client.GithubException:
+        pass
+    else:
+        raise AssertionError("expected GithubException")
+
+
 def test_gitea_client_create_file_posts_base64(monkeypatch):
     from wasp import git_client
 

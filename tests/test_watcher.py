@@ -30,6 +30,38 @@ def test_extract_chat_id_returns_none_for_non_telegram():
     assert extract_chat_id(EmptyCtx()) is None
 
 
+def test_extract_channel_returns_tg_for_telegram_session():
+    from wasp.watcher import extract_channel
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:5621932873"
+
+    assert extract_channel(FakeCtx()) == "tg"
+
+
+def test_extract_channel_returns_local_for_local_session():
+    from wasp.watcher import extract_channel
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345"
+
+    assert extract_channel(FakeCtx()) == "local"
+
+
+def test_extract_channel_returns_none_for_other_sources():
+    from wasp.watcher import extract_channel
+
+    class WebCtx:
+        session_id = "web:abc:def"
+
+    class EmptyCtx:
+        session_id = ""
+
+    assert extract_channel(None) is None
+    assert extract_channel(EmptyCtx()) is None
+    assert extract_channel(WebCtx()) is None
+
+
 def test_ready_message_includes_endpoints():
     from wasp.watcher import ready_message
 

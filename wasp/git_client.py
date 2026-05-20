@@ -3,6 +3,11 @@ from typing import Protocol
 
 import httpx
 from github import Github
+from github.GithubException import GithubException
+
+
+class FileAlreadyExistsError(Exception):
+    """Raised when create_file targets a path that already exists on the branch."""
 
 
 class GitClient(Protocol):
@@ -14,7 +19,12 @@ class PyGithubClient:
         self._repo = Github(login_or_token=pat, base_url=base_url).get_repo(repo)
 
     def create_file(self, path: str, message: str, content: str, branch: str) -> None:
-        self._repo.create_file(path=path, message=message, content=content, branch=branch)
+        try:
+            self._repo.create_file(path=path, message=message, content=content, branch=branch)
+        except GithubException as e:
+            if e.status == 422 and "sha" in str(e.data.get("message", "")).lower():
+                raise FileAlreadyExistsError(path) from e
+            raise
 
 
 class GiteaClient:

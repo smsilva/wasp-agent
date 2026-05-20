@@ -8,18 +8,23 @@ import yaml
 from agno.tools import tool
 from opentelemetry import trace
 from pydantic import BaseModel, Field
-from wasp.git_client import PyGithubClient
+from wasp.git_client import FileAlreadyExistsError, PyGithubClient
 from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
-from wasp.watcher import extract_chat_id, watch_platform
+from wasp.watcher import extract_channel, extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
 
 
-def _select_notifier() -> Notifier | None:
+def _select_notifier(channel: str | None = None) -> Notifier | None:
     kind = os.getenv("NOTIFIER")
     token = os.getenv("TELEGRAM_TOKEN")
     if kind is None:
-        kind = "telegram" if token else "console"
+        if channel == "local":
+            kind = "console"
+        elif channel == "tg":
+            kind = "telegram"
+        else:
+            kind = "telegram" if token else "console"
     if kind == "console":
         return ConsoleNotifier()
     if kind == "telegram":
@@ -110,12 +115,20 @@ def provision_platform_instance(
         safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
         commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
 
-        client.create_file(
-            path=file_path,
-            message=commit_message,
-            content=yaml_content,
-            branch="dev",
-        )
+        try:
+            client.create_file(
+                path=file_path,
+                message=commit_message,
+                content=yaml_content,
+                branch="dev",
+            )
+        except FileAlreadyExistsError:
+            log.info("Tenant %s already provisioning (manifest exists)", name)
+            telemetry.provisioning_counter.add(1, {"outcome": "already_provisioning"})
+            return {
+                "status": "already_provisioning",
+                "message": f"Tenant '{name}' is already being provisioned.",
+            }
 
         current_span = trace.get_current_span()
         current_span.set_attribute("platform.name", name)
@@ -123,7 +136,8 @@ def provision_platform_instance(
         telemetry.provisioning_counter.add(1, {"outcome": "started"})
 
         chat_id = extract_chat_id(run_context)
-        notifier = _select_notifier()
+        channel = extract_channel(run_context)
+        notifier = _select_notifier(channel)
         if chat_id and notifier is not None:
             current_span.set_attribute("watcher.spawned", True)
             parent_span_ctx = current_span.get_span_context()

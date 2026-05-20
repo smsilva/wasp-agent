@@ -289,6 +289,39 @@ def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
     assert _select_notifier() is None
 
 
+def test_select_notifier_local_channel_picks_console_even_with_telegram_token(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="local")
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="tg")
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_env_overrides_channel(monkeypatch):
+    from wasp.provision import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.setenv("NOTIFIER", "console")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="tg")
+    assert isinstance(notifier, ConsoleNotifier)
+
+
 def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
@@ -313,6 +346,33 @@ def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
     mock_thread_cls.assert_called_once()
     mock_thread.start.assert_called_once()
     assert result["status"] == "provisioning"
+
+
+def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.git_client import FileAlreadyExistsError
+    from wasp.provision import provision_platform_instance
+
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
+    mock_client.create_file.side_effect = FileAlreadyExistsError(
+        "infrastructure/tenants/wp2.yaml"
+    )
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+
+    mock_thread_cls = MagicMock()
+
+    class FakeCtx:
+        session_id = "tg:5621932873:5621932873"
+
+    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+        result = provision_platform_instance(name="wp2", run_context=FakeCtx())
+
+    assert result["status"] == "already_provisioning"
+    assert "wp2" in result["message"]
+    mock_thread_cls.assert_not_called()
 
 
 def test_provision_missing_pat(monkeypatch):
