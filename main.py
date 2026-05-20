@@ -15,7 +15,6 @@ os.umask(0o077)  # agent.db created with 600 permissions
 import wasp.telemetry as telemetry  # noqa: E402 — must come after load_dotenv so env vars are set
 
 from agno.agent import Agent  # noqa: E402
-from agno.models.anthropic import Claude  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
@@ -43,9 +42,33 @@ INSTRUCTIONS = [
     " let the user know it will be available in a future update.",
 ]
 
+def _build_model():
+    provider = os.getenv("LLM_PROVIDER", "ollama")
+    if provider == "ollama":
+        from agno.models.ollama import Ollama
+        return Ollama(
+            id=os.getenv("OLLAMA_MODEL", "llama3.1"),
+            host=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        )
+    if provider == "anthropic":
+        from agno.models.anthropic import Claude
+        return Claude(
+            id=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929"),
+            auth_token=os.getenv("ANTHROPIC_AUTH_TOKEN"),
+        )
+    if provider == "openai":
+        from agno.models.openai import OpenAIChat
+        return OpenAIChat(
+            id=os.getenv("OPENAI_MODEL", "gpt-4o"),
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_BASE_URL") or None,
+        )
+    raise ValueError(f"LLM_PROVIDER inválido: {provider!r}. Use: ollama, anthropic, openai")
+
+
 agent = Agent(
     name="wasp-agent",
-    model=Claude(id="bedrock/anthropic.claude-4-5-haiku"),
+    model=_build_model(),
     db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
     add_history_to_context=True,
     instructions=INSTRUCTIONS,

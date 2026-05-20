@@ -16,6 +16,8 @@ AGNO_MODULES = [
     "agno.agent",
     "agno.models",
     "agno.models.anthropic",
+    "agno.models.ollama",
+    "agno.models.openai",
     "agno.db",
     "agno.db.sqlite",
     "agno.db.sqlite.sqlite",

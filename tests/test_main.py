@@ -1,9 +1,16 @@
-def test_agent_config(mock_agno):
+import pytest
+
+
+def test_agent_config(mock_agno, monkeypatch):
     """Agent is instantiated with correct model, storage, history, and instructions."""
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("OLLAMA_MODEL", "test-model")
+    monkeypatch.setenv("OLLAMA_HOST", "http://localhost:11434")
+
     import main  # noqa: F401
 
-    mock_agno["agno.models.anthropic"].Claude.assert_called_once_with(
-        id="bedrock/anthropic.claude-4-5-haiku"
+    mock_agno["agno.models.ollama"].Ollama.assert_called_once_with(
+        id="test-model", host="http://localhost:11434"
     )
     mock_agno["agno.db.sqlite.sqlite"].SqliteDb.assert_called_once_with(
         db_file="agent.db", session_table="agent_sessions"
@@ -14,8 +21,44 @@ def test_agent_config(mock_agno):
     assert "You are a DevOps assistant." in call_kwargs["instructions"]
 
 
+def test_agent_uses_anthropic_model(mock_agno, monkeypatch):
+    """Agent uses Claude when LLM_PROVIDER=anthropic."""
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-test")
+    monkeypatch.setenv("ANTHROPIC_AUTH_TOKEN", "tok")
+
+    import main  # noqa: F401
+
+    mock_agno["agno.models.anthropic"].Claude.assert_called_once_with(
+        id="claude-test", auth_token="tok"
+    )
+
+
+def test_agent_uses_openai_model(mock_agno, monkeypatch):
+    """Agent uses OpenAIChat when LLM_PROVIDER=openai."""
+    monkeypatch.setenv("LLM_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_MODEL", "gpt-4o")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+
+    import main  # noqa: F401
+
+    mock_agno["agno.models.openai"].OpenAIChat.assert_called_once_with(
+        id="gpt-4o", api_key="sk-test", base_url=None
+    )
+
+
+def test_unknown_provider_raises(mock_agno, monkeypatch):
+    """ValueError raised for unknown LLM_PROVIDER."""
+    monkeypatch.setenv("LLM_PROVIDER", "unknown")
+
+    with pytest.raises(ValueError, match="LLM_PROVIDER inválido"):
+        import main  # noqa: F401
+
+
 def test_agent_os_with_token(mock_agno, monkeypatch):
     """AgentOS receives the agent and Telegram interface when TELEGRAM_TOKEN is set."""
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("TELEGRAM_TOKEN", "test-token-123")
 
     import main  # noqa: F401
@@ -30,6 +73,7 @@ def test_agent_os_with_token(mock_agno, monkeypatch):
 
 def test_telegram_not_added_without_token(mock_agno, monkeypatch):
     """No interfaces are added when TELEGRAM_TOKEN is absent."""
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     import main  # noqa: F401
