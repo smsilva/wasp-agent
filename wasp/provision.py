@@ -141,6 +141,7 @@ def provision_platform_instance(
             ),
         }
     except Exception:
+        log.exception("provision_platform_instance failed")
         telemetry.provisioning_counter.add(1, {"outcome": "error"})
         return {
             "status": "error",
