@@ -12,7 +12,8 @@
       "Skill(conventional-commits)",
       "Bash(mcp --list)",
       "Bash(tmux list-panes *)",
-      "Bash(tmux capture-pane *)"
+      "Bash(tmux capture-pane *)",
+      "Bash(make test *)"
     ]
   }
 }

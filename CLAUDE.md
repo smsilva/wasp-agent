@@ -151,7 +151,25 @@ When a Makefile target needs more than a single command, extract the commands to
 
 `wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `wasp/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
 
-Notifier selection routes by **channel of origin**, not global env: `_select_notifier(channel)` reads the `session_id` prefix (`tg`, `local`, ...) via `extract_channel`. `NOTIFIER` env var still overrides when explicitly set. Required because multiple channels can coexist (e.g. Telegram bot + local-chat) — selecting by env alone sends notifications to the wrong channel and silently fails.
+Notifier selection routes by **channel of origin**, not global env: `_select_notifier(channel)` reads the `session_id` prefix (`tg`, `local`, ...) via `extract_channel`. `WASP_AGENT_NOTIFIER` env var still overrides when explicitly set. Required because multiple channels can coexist (e.g. Telegram bot + local-chat) — selecting by env alone sends notifications to the wrong channel and silently fails.
+
+## 17. Variáveis de ambiente com prefixo WASP_AGENT_
+
+Variáveis que configuram o comportamento do agent usam o prefixo `WASP_AGENT_` (ex.: `WASP_AGENT_NOTIFIER`). Ao adicionar nova variável de configuração do agent, seguir esse padrão.
+
+## 18. Testes e OTEL_EXPORTER_OTLP_ENDPOINT
+
+O fixture `mock_agno` em `tests/conftest.py` mocka `agno.models` como `MagicMock`. Se `OTEL_EXPORTER_OTLP_ENDPOINT` estiver setado no shell, `configure()` chama `AgnoInstrumentor`, que tenta `from agno.models.base import Model` e falha contra o mock. O fixture já faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)` para isolar os testes — não remover essa linha.
+
+## 19. E2E fixture — patch `_select_notifier`, não `TelegramNotifier`
+
+Em `tests/e2e/conftest.py`, o `agent_client` patcheia `_select_notifier` diretamente para retornar o `recording_notifier`:
+
+```python
+monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier)
+```
+
+Patchear só `TelegramNotifier` não funciona: `WASP_AGENT_NOTIFIER=console` no `.env` é carregado pelo `load_dotenv()` em `main.py` no import, e `_select_notifier` retorna `ConsoleNotifier` antes de chegar na chamada de `TelegramNotifier`. O notifier vai para o console e o `RecordingNotifier` nunca recebe — teste falha com `TimeoutError` sem mensagem de erro clara.
 
 ## 16. Validação
 

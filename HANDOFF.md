@@ -8,18 +8,18 @@ Ciclos 1–5 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–5 em `main`.** Pipeline E2E completo e validado localmente em 2026-05-20. `dev` está vários commits à frente de `main` — aguardando PR.
+**Ciclos 1–5 em `main`.** Pipeline E2E completo. `dev` tem mudanças uncommitted — aguardando commit e PR.
 
-**Path D — Local chat** implementado em 2026-05-20 (cobertura 100%, ruff clean). Conversa via `curl` sem Telegram: `make local-chat`, `scripts/local-chat`. Script de roteiro `scripts/local-chat-scenario` agora gera tenant name único por execução (`test-smoke-YYYYMMDD-HHMMSS`).
+**Sessão 2026-05-21 (uncommitted em `dev`):**
 
-**Automação GitOps cluster** (2026-05-20, committed em `dev`): `make gitops-up` / `make gitops-down` automatizam todos os passos do runbook.
+1. **`NOTIFIER` renomeada para `WASP_AGENT_NOTIFIER`.** Convenção `WASP_AGENT_` para variáveis de configuração do agent. Arquivos afetados: `wasp/provision.py`, `tests/test_provision.py`, `.env.example`, `CLAUDE.md`, `HANDOFF.md`, `docs/runbooks/local-chat.md`.
+2. **`PROMETHEUS_METRICS_ACTIVE` adicionada ao `.env.example`.**
+3. **`agno` atualizado de 2.6.5 → 2.6.8** no `uv.lock`.
+4. **`conftest.py` — fix de isolamento de testes com OTEL.** O fixture `mock_agno` agora faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)`. Sem isso, ambientes com SigNoz/Jaeger configurado no shell quebram todos os testes. Documentado em `CLAUDE.md §18`.
+5. **`make e2e-with-debug` + `scripts/e2e-with-debug`.** Novo target para debugging: `-s --log-cli-level=DEBUG -x`, grava log em `logs/e2e-<timestamp>.log`, imprime o caminho ao final.
+6. **Fix do fixture E2E (`tests/e2e/conftest.py`).** O `agent_client` agora patcheia `_select_notifier` diretamente (em vez de `TelegramNotifier`). Raiz do bug: `WASP_AGENT_NOTIFIER=console` no `.env` é carregado por `load_dotenv()` em `main.py` no import — `_select_notifier` retornava `ConsoleNotifier` antes de chegar na chamada de `TelegramNotifier`, silenciosamente ignorando o patch. Teste falhava com `TimeoutError`. Documentado em `CLAUDE.md §19`.
 
-**Sessão 2026-05-20 (uncommitted em `dev`):** dois bugs do smoke local-chat corrigidos no tool layer + roteamento de notifier por canal de origem:
-
-1. **`provision_platform_instance` agora é idempotente.** LLM (llama3.1 8B via Ollama) disparava a tool duas vezes (step "request" + step "confirm") apesar do system prompt — segunda chamada quebrava com `GithubException 422 "sha wasn't supplied"`. Fix: nova `FileAlreadyExistsError` em `wasp/git_client.py` (traduz 422 do PyGithub) + catch em `wasp/provision.py` retornando `status: "already_provisioning"` sem spawnar watcher duplicado.
-2. **Notifier roteia por canal de origem.** Com `TELEGRAM_TOKEN` setado, `_select_notifier()` sempre retornava `TelegramNotifier` mesmo para requests do `local-chat` — notificações falhavam silenciosamente (POST sendMessage → 400). Fix: novo `extract_channel(run_context)` em `wasp/watcher.py` lê prefixo do `session_id` (`tg` / `local`); `_select_notifier(channel)` em `wasp/provision.py` roteia por canal por padrão (env `NOTIFIER` ainda sobrepõe). CLAUDE.md §14 atualizado.
-
-100% coverage mantido (330 stmts), ruff clean, 79 testes passando.
+`make e2e-with-debug` executado com sucesso: **1 passed in 53.20s**.
 
 ### Specs ativos
 
@@ -50,6 +50,8 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 - **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget
 - **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente
 - **Defender no tool layer, não no prompt**: LLMs pequenos (llama3.1 8B) violam regras negativas do system prompt; idempotência na tool + roteamento explícito de notifier são mais robustos que prompt engineering
+- **Diagnóstico via tmux**: identificar que `OTEL_EXPORTER_OTLP_ENDPOINT` setado no shell quebra os testes (interação com mocks do conftest)
+- **`make e2e-with-debug`**: `-s --log-cli-level=DEBUG -x` + log em disco identificou rapidamente que o watcher notificou via `ConsoleNotifier` em vez de `RecordingNotifier` — bug silencioso que com `make e2e` apenas aparecia como `TimeoutError`
 
 ## What Didn't Work
 
@@ -57,43 +59,24 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 - **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test
 - **Suposição errada sobre `session_id`**: agno 2.0+ adiciona suffix de message hash (4 partes, não 3)
 - **`PROMETHEUS_PORT=1`** era semanticamente confuso — variável renomeada para `PROMETHEUS_METRICS_ACTIVE`
-- **Instrução de confirmação no system prompt** (`"Never call provision_platform_instance without explicit user confirmation..."`): llama3.1 8B viola — chama a tool em "request" E novamente em "confirm". Solução não é endurecer o prompt; é tornar a tool idempotente (ver "Current Progress" item 1).
-- **Seleção global de notifier por env (`TELEGRAM_TOKEN`)**: falha quando múltiplos canais coexistem (Telegram + local-chat). Roteamento deve ser por canal de origem do request.
+- **Instrução de confirmação no system prompt**: llama3.1 8B viola — chama a tool em "request" E novamente em "confirm". Solução não é endurecer o prompt; é tornar a tool idempotente.
+- **Seleção global de notifier por env (`TELEGRAM_TOKEN`)**: falha quando múltiplos canais coexistem. Roteamento deve ser por canal de origem do request.
+- **`uv sync` sem `uv cache clean`** não resolve instalação corrompida de pacote; `rm -rf .venv && uv sync` também não quando o problema é a cache do `uv` — nesses casos, upgrade de versão ou `uv cache clean <pkg>` é necessário.
+- **Patchear `TelegramNotifier` no fixture E2E**: não funciona quando `WASP_AGENT_NOTIFIER=console` está no `.env` — `_select_notifier` retorna antes de chamar `TelegramNotifier`. Patch correto é em `_select_notifier` diretamente.
 
 ## Next Steps
 
-### 1. Commit + smoke retest
-
-Mudanças desta sessão estão uncommitted em `dev`. Commitar (sugestão de mensagens):
-
-- `fix(provision): idempotent create when manifest already exists`
-- `fix(provision): select notifier by session channel, not env`
-- `chore(scripts): unique tenant name per local-chat-scenario run`
-
-Depois rodar `make run` + `bash scripts/local-chat-scenario` e confirmar no stdout do `make run`:
-- `[NOTIFIER chat_id=...] Plataforma 'X' está pronta...` (ConsoleNotifier ativo)
-- Sem `GithubException 422` mesmo se o LLM chamar a tool duas vezes
-- Sem POST para `api.telegram.org` quando origem é `local`
-
-### 2. Smoke test Telegram (manual)
+### 1. Smoke test Telegram (manual)
 
 Validar canal Telegram após as mudanças (notifier agora roteia por canal `tg`). **Não exige cluster.** Seguir `docs/runbooks/telegram-local-dev.md`.
 
-### 3. Validar Prometheus
-
-Independente: `PROMETHEUS_METRICS_ACTIVE=true make run` e `curl http://localhost:7777/telemetry/prometheus | grep agent_`.
-
-### 4. PR `dev` → `main`
-
-`dev` está vários commits à frente (path D + multi-LLM provider + log no provision + automação GitOps + fixes desta sessão). Abrir PR para acionar workflow E2E em CI. Após merge, arquivar `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` para `archived/`.
-
-### 5. Próximo spec — chat-id allowlist (prioridade alta)
+### 3. Próximo spec — chat-id allowlist (prioridade alta)
 
 `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` está em `Idea`. Próximo passo: promover a `Draft` (design completo) e depois `Approved` (criar plano em `docs/sdlc/03-execution/`). Pré-requisito para o security review (CLAUDE.md §9).
 
 ## Backlog
 
-- **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt. Reforçado pelo achado desta sessão: llama3.1 8B viola a regra de confirmação.
+- **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt.
 - **Persistent audit log** (`docs/sdlc/02-design/2026-05-20-persistent-audit-log.md`, Idea) — OTel logs export permanente. Pode consolidar com structured-logging deferred.
 - **Token/cost budget alerts** (`docs/sdlc/02-design/2026-05-20-token-cost-budget.md`, Idea).
 - **Structured logging completo** (`docs/sdlc/02-design/2026-05-16-structured-logging.md`, Deferred) — JSONL via `LOG_FILE`, `OTLPLogExporter`. Avaliar consolidação com OTel logs / audit log.
