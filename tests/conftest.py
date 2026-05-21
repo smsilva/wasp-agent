@@ -44,6 +44,10 @@ def mock_agno(monkeypatch, request):
     for mod in ("main", "wasp", "wasp.provision", "wasp.watcher", "wasp.telemetry"):
         sys.modules.pop(mod, None)
 
+    # Prevent AgnoInstrumentor from running: it imports agno.models.base at
+    # instrument time, but agno.models is mocked as MagicMock below.
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+
     mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES}
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
