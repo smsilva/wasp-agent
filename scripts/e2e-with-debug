@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 
 log_file="$(pwd)/logs/e2e-$(date +%Y%m%dT%H%M%S).log"
 mkdir --parents "$(dirname "${log_file}")"
