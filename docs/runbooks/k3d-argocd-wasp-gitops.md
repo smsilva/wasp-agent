@@ -40,30 +40,7 @@ O script `run` executa em sequência:
 
 ---
 
-## 2. Aplicar a Application wasp-gitops
-
-O manifesto está em `manifests/argocd/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
-
-```bash
-kubectl apply \
-  --filename ~/git/wasp-agent/manifests/argocd/wasp-gitops-application.yaml
-```
-
-Aponta para:
-
-| Campo | Valor |
-|-------|-------|
-| `repoURL` | `https://github.com/smsilva/wasp-gitops.git` |
-| `targetRevision` | `dev` |
-| `path` | `infrastructure/tenants` |
-| `destination.name` | `in-cluster` |
-| `destination.namespace` | `infra` |
-| `automated.prune` | `false` |
-| `automated.selfHeal` | `true` |
-
----
-
-## 3. Instalar o Kubernetes provider do Crossplane
+## 2. Instalar o Kubernetes provider do Crossplane
 
 O Crossplane precisa do provider `upbound/provider-kubernetes` para criar os objetos (`Object`) que a Composition usa.
 
@@ -91,7 +68,7 @@ kubectl apply \
 
 ---
 
-## 4. Instalar a function-patch-and-transform
+## 3. Instalar a function-patch-and-transform
 
 Crossplane v2 removeu o modo `spec.resources` (patch-and-transform legacy) das Compositions. A Composition de Platform usa `spec.mode: Pipeline` com `function-patch-and-transform`, que precisa estar instalada antes.
 
@@ -110,7 +87,7 @@ kubectl wait function/function-patch-and-transform \
 
 ---
 
-## 5. Aplicar os manifestos Crossplane locais
+## 4. Aplicar os manifestos Crossplane locais
 
 XRD em `apiextensions.crossplane.io/v2` (`scope: Cluster`) e Composition em modo Pipeline.
 
@@ -121,6 +98,31 @@ kubectl apply \
 kubectl apply \
   --filename manifests/crossplane/compositions/platform.yaml
 ```
+
+---
+
+## 5. Aplicar a Application wasp-gitops
+
+O manifesto está em `manifests/argocd/wasp-gitops-application.yaml` neste repositório (`wasp-agent`).
+
+> A Application aponta para `infrastructure/tenants` no `wasp-gitops`, que contém instâncias de `Platform`. Por isso o XRD/Composition (passo 4) precisa estar pronto antes — caso contrário o sync falha com `no matches for kind "Platform"`.
+
+```bash
+kubectl apply \
+  --filename ~/git/wasp-agent/manifests/argocd/wasp-gitops-application.yaml
+```
+
+Aponta para:
+
+| Campo | Valor |
+|-------|-------|
+| `repoURL` | `https://github.com/smsilva/wasp-gitops.git` |
+| `targetRevision` | `dev` |
+| `path` | `infrastructure/tenants` |
+| `destination.name` | `in-cluster` |
+| `destination.namespace` | `infra` |
+| `automated.prune` | `false` |
+| `automated.selfHeal` | `true` |
 
 ---
 

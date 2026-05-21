@@ -17,11 +17,7 @@ bash run
 
 cd "${repo_dir}"
 
-echo "==> [2/6] Application wasp-gitops"
-kubectl apply \
-  --filename manifests/argocd/wasp-gitops-application.yaml
-
-echo "==> [3/6] Provider upbound/provider-kubernetes"
+echo "==> [2/6] Provider upbound/provider-kubernetes"
 kubectl apply \
   --filename manifests/crossplane/providers/kubernetes.yaml
 
@@ -29,11 +25,11 @@ kubectl wait provider/provider-kubernetes \
   --for=condition=Healthy \
   --timeout=120s
 
-echo "==> [4/6] ProviderConfig + ClusterRoleBinding"
+echo "==> [3/6] ProviderConfig + ClusterRoleBinding"
 kubectl apply \
   --filename manifests/crossplane/providerconfigs/kubernetes.yaml
 
-echo "==> [5/6] function-patch-and-transform"
+echo "==> [4/6] function-patch-and-transform"
 kubectl apply \
   --filename manifests/crossplane/functions/patch-and-transform.yaml
 
@@ -41,12 +37,16 @@ kubectl wait function/function-patch-and-transform \
   --for=condition=Healthy \
   --timeout=120s
 
-echo "==> [6/6] XRD + Composition de Platform"
+echo "==> [5/6] XRD + Composition de Platform"
 kubectl apply \
   --filename manifests/crossplane/xrd/platform.yaml
 
 kubectl apply \
   --filename manifests/crossplane/compositions/platform.yaml
+
+echo "==> [6/6] Application wasp-gitops"
+kubectl apply \
+  --filename manifests/argocd/wasp-gitops-application.yaml
 
 echo
 echo "Pronto. Verifique com:"
