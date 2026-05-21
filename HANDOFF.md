@@ -4,21 +4,18 @@
 
 Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão e suporte futuro a Discord/Slack.
 
-Ciclos 1–5 completos e em `main`.
+Ciclos 1–6 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–6 em `main`.** `dev` == `main`, working tree limpo.
+**Ciclos 1–6 em `main`.** `dev` está 2 commits à frente de `origin/dev` (housekeeping, não merged ainda).
 
-**Ciclo 6 (2026-05-21, mergeado em `main`):**
+**Sessão 2026-05-21 (em `dev`, ainda não pushed):**
 
-1. `NOTIFIER` → `WASP_AGENT_NOTIFIER` (convenção `WASP_AGENT_`).
-2. `PROMETHEUS_METRICS_ACTIVE` adicionada ao `.env.example`.
-3. `agno` atualizado de 2.6.5 → 2.6.8.
-4. Fix de isolamento de testes com `OTEL_EXPORTER_OTLP_ENDPOINT` (`CLAUDE.md §18`).
-5. `make e2e-with-debug` + `scripts/e2e-with-debug`.
-6. Fix do fixture E2E: patch em `_select_notifier` em vez de `TelegramNotifier` (`CLAUDE.md §19`).
-7. Pipeline CI `pull-request.yaml`: lint + testes unitários sempre; E2E condicional (paths relevantes ou label `run-e2e`).
+1. `fd5f8a2` — Arquivado `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` (executado no Ciclo 6).
+2. **Smoke test Telegram (manual)** validado: ngrok + webhook + `make run` + sequência "Meu nome é João" / "Qual é o meu nome?" — memória de sessão OK; canal `tg` routing OK.
+3. **Validação fim-a-fim GitOps (manual)** rodada com sucesso (`make gitops-up` inicial falhou por ordem dos manifestos).
+4. `0949568` — `fix(gitops): apply Crossplane XRD/Composition before ArgoCD Application`. Inverte passos no `scripts/gitops-up` e em `docs/runbooks/k3d-argocd-wasp-gitops.md`: Application `wasp-gitops` agora é aplicada **depois** do XRD/Composition de Platform (antes, sync quebrava com `no matches for kind "Platform"`).
 
 ### Specs ativos
 
@@ -26,6 +23,7 @@ Ciclos 1–5 completos e em `main`.
 |---|---|
 | `docs/sdlc/02-design/2026-05-20-local-chat.md` | Implemented (2026-05-20) |
 | `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Approved (2026-05-21) — plano em `03-execution/2026-05-21-auth-multichannel-plan.md` |
+| `docs/sdlc/02-design/2026-05-21-ci-pull-request.md` | Implemented — plano em `03-execution/2026-05-21-ci-pull-request.md` (não arquivado ainda) |
 | `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` | Idea — opção A (OAuth direto GitHub/Google), concorre com cognito-federation |
 | `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` | Idea — opção B (Cognito como hub federado), concorre com cli-device-flow |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
@@ -37,8 +35,7 @@ Ciclos 1–5 completos e em `main`.
 ### Plans ativos
 
 - `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — **próximo a executar.** 9 tasks, TDD passo-a-passo.
-
-Plano `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` foi executado — arquivar para `archived/` após merge para `main` (CLAUDE.md §7).
+- `docs/sdlc/03-execution/2026-05-21-ci-pull-request.md` — executado e em `main`, falta arquivar para `archived/` (CLAUDE.md §7).
 
 ### Open Security Issues
 
@@ -55,6 +52,7 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 - **Defender no tool layer, não no prompt**: LLMs pequenos (llama3.1 8B) violam regras negativas do system prompt; idempotência na tool + roteamento explícito de notifier são mais robustos que prompt engineering
 - **Diagnóstico via tmux**: identificar que `OTEL_EXPORTER_OTLP_ENDPOINT` setado no shell quebra os testes (interação com mocks do conftest)
 - **`make e2e-with-debug`**: `-s --log-cli-level=DEBUG -x` + log em disco identificou rapidamente que o watcher notificou via `ConsoleNotifier` em vez de `RecordingNotifier` — bug silencioso que com `make e2e` apenas aparecia como `TimeoutError`
+- **Validação manual do ciclo GitOps real**: subir cluster + tentar `make gitops-up` expôs ordem incorreta do script (Application antes do XRD); smoke automatizado não cobre isso porque usa `fake_reconciler`
 
 ## What Didn't Work
 
@@ -66,6 +64,7 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 - **Seleção global de notifier por env (`TELEGRAM_TOKEN`)**: falha quando múltiplos canais coexistem. Roteamento deve ser por canal de origem do request.
 - **`uv sync` sem `uv cache clean`** não resolve instalação corrompida de pacote; `rm -rf .venv && uv sync` também não quando o problema é a cache do `uv` — nesses casos, upgrade de versão ou `uv cache clean <pkg>` é necessário.
 - **Patchear `TelegramNotifier` no fixture E2E**: não funciona quando `WASP_AGENT_NOTIFIER=console` está no `.env` — `_select_notifier` retorna antes de chamar `TelegramNotifier`. Patch correto é em `_select_notifier` diretamente.
+- **Ordem original do `scripts/gitops-up`**: aplicava ArgoCD `Application` antes do XRD/Composition de Platform; ArgoCD sincronizava `infrastructure/tenants` (instâncias de `Platform`) e quebrava com `no matches for kind "Platform"`. Corrigido em `0949568`.
 
 ## Next Steps
 
@@ -75,9 +74,13 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 
 **Risco aberto:** Task 3 (handler `/start <token>`) depende de investigação prévia do agno Telegram interface — pode exigir fallback se a integração não permitir registrar handler limpo.
 
-### 2. Smoke test Telegram (manual)
+### 2. Arquivar plano ci-pull-request
 
-Validar canal Telegram após as mudanças do ciclo 6 (notifier roteia por canal `tg`). **Não exige cluster.** Seguir `docs/runbooks/telegram-local-dev.md`. Pode ser feito antes ou depois do plano auth.
+`docs/sdlc/03-execution/2026-05-21-ci-pull-request.md` foi executado (commits `38b43c8`, `57e05f5`, `c2b9d4e`). Mover para `archived/` conforme CLAUDE.md §7. Tarefa rápida.
+
+### 3. Push `dev` → `origin/dev`
+
+2 commits locais (`fd5f8a2`, `0949568`) ainda não pushed.
 
 ## Backlog
 
