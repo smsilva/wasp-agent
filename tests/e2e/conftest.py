@@ -193,7 +193,7 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     _telemetry.configure()  # force reconfigure now that PROMETHEUS_PORT is set
     from wasp.git_client import GiteaClient
 
-    monkeypatch.setattr(wasp.provision, "TelegramNotifier", lambda token, **kw: recording_notifier)
+    monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier)
     monkeypatch.setattr(
         wasp.provision, "PyGithubClient",
         lambda **_kw: GiteaClient(
