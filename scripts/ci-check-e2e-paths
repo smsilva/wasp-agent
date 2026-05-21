@@ -1,0 +1,9 @@
+#!/bin/bash
+
+changed=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+
+if echo "${changed}" | grep -qE '^(wasp/|tests/e2e/|pyproject\.toml|uv\.lock)'; then
+  echo "run_e2e=true" >> "${GITHUB_OUTPUT}"
+else
+  echo "run_e2e=false" >> "${GITHUB_OUTPUT}"
+fi
