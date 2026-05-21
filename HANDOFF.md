@@ -10,12 +10,13 @@ Ciclos 1–6 completos e em `main`.
 
 **Ciclos 1–6 em `main`.** `dev` está 2 commits à frente de `origin/dev` (housekeeping, não merged ainda).
 
-**Sessão 2026-05-21 (em `dev`, ainda não pushed):**
+**Sessão 2026-05-21:**
 
 1. `fd5f8a2` — Arquivado `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` (executado no Ciclo 6).
 2. **Smoke test Telegram (manual)** validado: ngrok + webhook + `make run` + sequência "Meu nome é João" / "Qual é o meu nome?" — memória de sessão OK; canal `tg` routing OK.
 3. **Validação fim-a-fim GitOps (manual)** rodada com sucesso (`make gitops-up` inicial falhou por ordem dos manifestos).
 4. `0949568` — `fix(gitops): apply Crossplane XRD/Composition before ArgoCD Application`. Inverte passos no `scripts/gitops-up` e em `docs/runbooks/k3d-argocd-wasp-gitops.md`: Application `wasp-gitops` agora é aplicada **depois** do XRD/Composition de Platform (antes, sync quebrava com `no matches for kind "Platform"`).
+5. `34a5dc3` — Arquivado `docs/sdlc/03-execution/2026-05-21-ci-pull-request.md` (executado em `main`).
 
 ### Specs ativos
 
@@ -34,8 +35,7 @@ Ciclos 1–6 completos e em `main`.
 
 ### Plans ativos
 
-- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — **próximo a executar.** 9 tasks, TDD passo-a-passo.
-- `docs/sdlc/03-execution/2026-05-21-ci-pull-request.md` — executado e em `main`, falta arquivar para `archived/` (CLAUDE.md §7).
+- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — aguardando execução (após logging).
 
 ### Open Security Issues
 
@@ -68,26 +68,29 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 
 ## Next Steps
 
-### 1. Executar plano auth-multichannel
+### 1. Push `dev` → `origin/dev`
+
+4 commits locais (`fd5f8a2`, `0949568`, `0c70d68`, `34a5dc3`) ainda não pushed.
+
+### 2. Logging — consolidar specs e implementar
+
+**Próximo tema**, antes de auth-multichannel. Dois specs a fundir em um único design:
+
+- `docs/sdlc/02-design/2026-05-16-structured-logging.md` (Deferred) — JSONL via `LOG_FILE`.
+- `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` (Idea) — OTLP export permanente; o próprio spec pede consolidação com o anterior.
+
+Decisão central: até onde levar sem overengineering (projeto pessoal). Mínimo viável é `LOG_FILE` JSONL; teto é OTLP → backend externo (Tempo, Honeycomb, etc.). Logging vem antes de auth porque a identidade do chat-id allowlist agrega valor de auditoria — faz sentido ter o trail pronto primeiro.
+
+### 3. Executar plano auth-multichannel
 
 `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md`. TDD task-by-task, 9 tasks. Bloqueia security review (CLAUDE.md §9).
 
 **Risco aberto:** Task 3 (handler `/start <token>`) depende de investigação prévia do agno Telegram interface — pode exigir fallback se a integração não permitir registrar handler limpo.
 
-### 2. Arquivar plano ci-pull-request
-
-`docs/sdlc/03-execution/2026-05-21-ci-pull-request.md` foi executado (commits `38b43c8`, `57e05f5`, `c2b9d4e`). Mover para `archived/` conforme CLAUDE.md §7. Tarefa rápida.
-
-### 3. Push `dev` → `origin/dev`
-
-2 commits locais (`fd5f8a2`, `0949568`) ainda não pushed.
-
 ## Backlog
 
 - **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt.
-- **Persistent audit log** (`docs/sdlc/02-design/2026-05-20-persistent-audit-log.md`, Idea) — OTel logs export permanente. Pode consolidar com structured-logging deferred.
 - **Token/cost budget alerts** (`docs/sdlc/02-design/2026-05-20-token-cost-budget.md`, Idea).
-- **Structured logging completo** (`docs/sdlc/02-design/2026-05-16-structured-logging.md`, Deferred) — JSONL via `LOG_FILE`, `OTLPLogExporter`. Avaliar consolidação com OTel logs / audit log.
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
