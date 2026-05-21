@@ -221,3 +221,6 @@ __marimo__/
 
 # local-chat session state
 .wasp-cli/
+
+# e2e debug logs
+logs/

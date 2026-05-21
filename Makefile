@@ -1,4 +1,4 @@
-.PHONY: run test e2e k3d-up k3d-down gitops-up gitops-down build lint format smoke smoke-prometheus local-chat
+.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format smoke smoke-prometheus local-chat
 
 K3D_CLUSTER ?= wasp-local
 
@@ -10,6 +10,9 @@ test:
 
 e2e:
 	uv run pytest tests/e2e/ -m e2e --no-cov -v
+
+e2e-with-debug:
+	scripts/e2e-with-debug
 
 k3d-up:
 	scripts/k3d-up $(K3D_CLUSTER)

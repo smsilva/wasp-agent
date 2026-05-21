@@ -1,0 +1,9 @@
+#!/bin/bash
+
+log_file="$(pwd)/logs/e2e-$(date +%Y%m%dT%H%M%S).log"
+mkdir --parents "$(dirname "${log_file}")"
+
+uv run pytest tests/e2e/ -m e2e --no-cov -v -s --log-cli-level=DEBUG -x 2>&1 | tee "${log_file}"
+
+echo ""
+echo "Log: ${log_file}"
