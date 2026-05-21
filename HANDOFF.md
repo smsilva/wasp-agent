@@ -8,25 +8,26 @@ Ciclos 1–5 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–5 em `main`.** Pipeline E2E completo. `dev` tem mudanças uncommitted — aguardando commit e PR.
+**Ciclos 1–6 em `main`.** `dev` == `main`, working tree limpo.
 
-**Sessão 2026-05-21 (uncommitted em `dev`):**
+**Ciclo 6 (2026-05-21, mergeado em `main`):**
 
-1. **`NOTIFIER` renomeada para `WASP_AGENT_NOTIFIER`.** Convenção `WASP_AGENT_` para variáveis de configuração do agent. Arquivos afetados: `wasp/provision.py`, `tests/test_provision.py`, `.env.example`, `CLAUDE.md`, `HANDOFF.md`, `docs/runbooks/local-chat.md`.
-2. **`PROMETHEUS_METRICS_ACTIVE` adicionada ao `.env.example`.**
-3. **`agno` atualizado de 2.6.5 → 2.6.8** no `uv.lock`.
-4. **`conftest.py` — fix de isolamento de testes com OTEL.** O fixture `mock_agno` agora faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)`. Sem isso, ambientes com SigNoz/Jaeger configurado no shell quebram todos os testes. Documentado em `CLAUDE.md §18`.
-5. **`make e2e-with-debug` + `scripts/e2e-with-debug`.** Novo target para debugging: `-s --log-cli-level=DEBUG -x`, grava log em `logs/e2e-<timestamp>.log`, imprime o caminho ao final.
-6. **Fix do fixture E2E (`tests/e2e/conftest.py`).** O `agent_client` agora patcheia `_select_notifier` diretamente (em vez de `TelegramNotifier`). Raiz do bug: `WASP_AGENT_NOTIFIER=console` no `.env` é carregado por `load_dotenv()` em `main.py` no import — `_select_notifier` retornava `ConsoleNotifier` antes de chegar na chamada de `TelegramNotifier`, silenciosamente ignorando o patch. Teste falhava com `TimeoutError`. Documentado em `CLAUDE.md §19`.
-
-`make e2e-with-debug` executado com sucesso: **1 passed in 53.20s**.
+1. `NOTIFIER` → `WASP_AGENT_NOTIFIER` (convenção `WASP_AGENT_`).
+2. `PROMETHEUS_METRICS_ACTIVE` adicionada ao `.env.example`.
+3. `agno` atualizado de 2.6.5 → 2.6.8.
+4. Fix de isolamento de testes com `OTEL_EXPORTER_OTLP_ENDPOINT` (`CLAUDE.md §18`).
+5. `make e2e-with-debug` + `scripts/e2e-with-debug`.
+6. Fix do fixture E2E: patch em `_select_notifier` em vez de `TelegramNotifier` (`CLAUDE.md §19`).
+7. Pipeline CI `pull-request.yaml`: lint + testes unitários sempre; E2E condicional (paths relevantes ou label `run-e2e`).
 
 ### Specs ativos
 
 | Arquivo | Status |
 |---|---|
 | `docs/sdlc/02-design/2026-05-20-local-chat.md` | Implemented (2026-05-20) |
-| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Idea — **prioridade alta** |
+| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Approved (2026-05-21) — plano em `03-execution/2026-05-21-auth-multichannel-plan.md` |
+| `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` | Idea — opção A (OAuth direto GitHub/Google), concorre com cognito-federation |
+| `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` | Idea — opção B (Cognito como hub federado), concorre com cli-device-flow |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
 | `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` | Idea |
 | `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` | Idea |
@@ -35,7 +36,9 @@ Ciclos 1–5 completos e em `main`.
 
 ### Plans ativos
 
-Nenhum. Plano `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` foi executado — arquivar para `archived/` após merge para `main` (CLAUDE.md §7).
+- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — **próximo a executar.** 9 tasks, TDD passo-a-passo.
+
+Plano `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md` foi executado — arquivar para `archived/` após merge para `main` (CLAUDE.md §7).
 
 ### Open Security Issues
 
@@ -66,13 +69,15 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 
 ## Next Steps
 
-### 1. Smoke test Telegram (manual)
+### 1. Executar plano auth-multichannel
 
-Validar canal Telegram após as mudanças (notifier agora roteia por canal `tg`). **Não exige cluster.** Seguir `docs/runbooks/telegram-local-dev.md`.
+`docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md`. TDD task-by-task, 9 tasks. Bloqueia security review (CLAUDE.md §9).
 
-### 3. Próximo spec — chat-id allowlist (prioridade alta)
+**Risco aberto:** Task 3 (handler `/start <token>`) depende de investigação prévia do agno Telegram interface — pode exigir fallback se a integração não permitir registrar handler limpo.
 
-`docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` está em `Idea`. Próximo passo: promover a `Draft` (design completo) e depois `Approved` (criar plano em `docs/sdlc/03-execution/`). Pré-requisito para o security review (CLAUDE.md §9).
+### 2. Smoke test Telegram (manual)
+
+Validar canal Telegram após as mudanças do ciclo 6 (notifier roteia por canal `tg`). **Não exige cluster.** Seguir `docs/runbooks/telegram-local-dev.md`. Pode ser feito antes ou depois do plano auth.
 
 ## Backlog
 
@@ -83,4 +88,8 @@ Validar canal Telegram após as mudanças (notifier agora roteia por canal `tg`)
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
-- **Security review** — após implementar chat-id allowlist (CLAUDE.md §9).
+- **CLI/web auth real** — duas opções concorrentes em `Idea`, decidir entre elas antes de promover qualquer uma a Draft:
+  - Opção A: `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — OAuth direto com GitHub + Google.
+  - Opção B: `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — Cognito como hub federado (alinha com `aws-saas-platform`).
+  - Gatilho de decisão: existência da CLI `wasp` concreta + escolha entre standalone (A) vs AWS-bound (B).
+- **Security review** — após executar plano auth-multichannel (CLAUDE.md §9).
