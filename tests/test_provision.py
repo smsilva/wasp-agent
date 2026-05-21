@@ -233,7 +233,7 @@ def test_select_notifier_console_when_env_explicit(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import ConsoleNotifier
 
-    monkeypatch.setenv("NOTIFIER", "console")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -244,7 +244,7 @@ def test_select_notifier_telegram_when_env_explicit(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import TelegramNotifier
 
-    monkeypatch.setenv("NOTIFIER", "telegram")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -255,7 +255,7 @@ def test_select_notifier_default_telegram_when_token(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import TelegramNotifier
 
-    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -266,7 +266,7 @@ def test_select_notifier_default_console_without_token(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import ConsoleNotifier
 
-    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     notifier = _select_notifier()
@@ -276,7 +276,7 @@ def test_select_notifier_default_console_without_token(monkeypatch):
 def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
     from wasp.provision import _select_notifier
 
-    monkeypatch.setenv("NOTIFIER", "telegram")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     assert _select_notifier() is None
@@ -285,7 +285,7 @@ def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
 def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
     from wasp.provision import _select_notifier
 
-    monkeypatch.setenv("NOTIFIER", "discord")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "discord")
     assert _select_notifier() is None
 
 
@@ -293,7 +293,7 @@ def test_select_notifier_local_channel_picks_console_even_with_telegram_token(mo
     from wasp.provision import _select_notifier
     from wasp.notifier import ConsoleNotifier
 
-    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="local")
@@ -304,7 +304,7 @@ def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import TelegramNotifier
 
-    monkeypatch.delenv("NOTIFIER", raising=False)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="tg")
@@ -315,7 +315,7 @@ def test_select_notifier_env_overrides_channel(monkeypatch):
     from wasp.provision import _select_notifier
     from wasp.notifier import ConsoleNotifier
 
-    monkeypatch.setenv("NOTIFIER", "console")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="tg")

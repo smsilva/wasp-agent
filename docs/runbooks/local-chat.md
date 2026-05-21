@@ -18,7 +18,7 @@ unset TELEGRAM_TOKEN
 make run
 ```
 
-O log do servidor inicia com o `ConsoleNotifier` selecionado (default sem `TELEGRAM_TOKEN`). Para forçar, exporte `NOTIFIER=console`.
+O log do servidor inicia com o `ConsoleNotifier` selecionado (default sem `TELEGRAM_TOKEN`). Para forçar, exporte `WASP_AGENT_NOTIFIER=console`.
 
 ## Uso manual
 
@@ -36,7 +36,7 @@ scripts/local-chat "Sim, confirma."
 Quando o `Platform` ficar `Ready=True`, o `ConsoleNotifier` escreve no log do `make run`:
 
 ```
-[NOTIFIER chat_id=abc12345] Plataforma 'wp-demo' está pronta.
+[WASP_AGENT_NOTIFIER chat_id=abc12345] Plataforma 'wp-demo' está pronta.
 - us-east-1: https://gateway.us-east-1.wp-demo.wasp.silvios.me
 ```
 
@@ -60,6 +60,6 @@ scripts/local-chat --new-session
 
 | Var | Default | Observação |
 |---|---|---|
-| `NOTIFIER` | auto (`telegram` se `TELEGRAM_TOKEN`, senão `console`) | Força a escolha |
+| `WASP_AGENT_NOTIFIER` | auto (`telegram` se `TELEGRAM_TOKEN`, senão `console`) | Força a escolha |
 | `WASP_AGENT_URL` | `http://localhost:7777` | URL base do servidor |
 | `WASP_AGENT_ID` | `wasp-agent` | ID do agent no AgentOS |

@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 
 def _select_notifier(channel: str | None = None) -> Notifier | None:
-    kind = os.getenv("NOTIFIER")
+    kind = os.getenv("WASP_AGENT_NOTIFIER")
     token = os.getenv("TELEGRAM_TOKEN")
     if kind is None:
         if channel == "local":
