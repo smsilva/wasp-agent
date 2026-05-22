@@ -6,10 +6,13 @@ import pytest
 def pytest_collection_modifyitems(config, items):
     """Skip E2E tests unless -m e2e is explicitly requested."""
     if "e2e" not in config.option.markexpr:
-        skip = pytest.mark.skip(reason="use 'pytest tests/e2e/ -m e2e --no-cov' to run E2E tests")
+        skip = pytest.mark.skip(
+            reason="use 'pytest tests/e2e/ -m e2e --no-cov' to run E2E tests"
+        )
         for item in items:
             if item.get_closest_marker("e2e"):
                 item.add_marker(skip)
+
 
 AGNO_MODULES = [
     "agno",

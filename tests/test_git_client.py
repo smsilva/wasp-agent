@@ -102,7 +102,9 @@ def test_gitea_client_create_file_posts_base64(monkeypatch):
     client = git_client.GiteaClient(
         token="tok", repo="root/wasp-gitops", base_url="http://localhost:3456"
     )
-    client.create_file(path="infra/x.yaml", message="commit", content="hello", branch="dev")
+    client.create_file(
+        path="infra/x.yaml", message="commit", content="hello", branch="dev"
+    )
 
     assert captured["url"] == (
         "http://localhost:3456/api/v1/repos/root/wasp-gitops/contents/infra/x.yaml"

@@ -16,7 +16,10 @@ def test_manifest_build():
     r1 = manifest.spec.regions[1]
     assert r1.endpoint == "gateway.sa-east-1.wp2.wasp.silvios.me"
     assert [s.name for s in manifest.spec.services] == [
-        "auth", "discovery", "callback", "portal"
+        "auth",
+        "discovery",
+        "callback",
+        "portal",
     ]
 
 
@@ -25,17 +28,25 @@ def test_manifest_yaml_output():
     from wasp.provision import PlatformManifest
 
     manifest = PlatformManifest.build("wp2", "wasp.silvios.me", ["us-east-1"])
-    yaml_str = yaml.dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
+    yaml_str = yaml.dump(
+        manifest.model_dump(), default_flow_style=False, sort_keys=False
+    )
     data = yaml.safe_load(yaml_str)
 
     assert data["apiVersion"] == "wasp.silvios.me/v1alpha1"
     assert data["kind"] == "Platform"
     assert data["metadata"]["name"] == "wp2"
     assert data["spec"]["domain"] == "wasp.silvios.me"
-    assert data["spec"]["regions"][0]["endpoint"] == "gateway.us-east-1.wp2.wasp.silvios.me"
+    assert (
+        data["spec"]["regions"][0]["endpoint"]
+        == "gateway.us-east-1.wp2.wasp.silvios.me"
+    )
     assert len(data["spec"]["services"]) == 4
     assert [s["name"] for s in data["spec"]["services"]] == [
-        "auth", "discovery", "callback", "portal"
+        "auth",
+        "discovery",
+        "callback",
+        "portal",
     ]
 
 
@@ -86,7 +97,10 @@ def test_provision_spawns_watcher(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
-            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     mock_thread_cls.assert_called_once()
@@ -111,11 +125,16 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
         session_id = "tg:5621932873:5621932873"
 
     mock_watch = MagicMock()
-    with patch("wasp.provision.threading.Thread", mock_thread_cls), \
-         patch("wasp.provision.asyncio.run") as mock_asyncio_run, \
-         patch("wasp.provision.watch_platform", mock_watch):
+    with (
+        patch("wasp.provision.threading.Thread", mock_thread_cls),
+        patch("wasp.provision.asyncio.run") as mock_asyncio_run,
+        patch("wasp.provision.watch_platform", mock_watch),
+    ):
         provision_platform_instance(
-            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
         target = mock_thread_cls.call_args.kwargs["target"]
         target()
@@ -140,7 +159,10 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
-            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     mock_thread_cls.assert_not_called()
@@ -148,12 +170,16 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
 
 
 def test_provision_creates_span(monkeypatch):
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
     import wasp.telemetry as telemetry
+
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
     from unittest.mock import MagicMock
+
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
@@ -161,6 +187,7 @@ def test_provision_creates_span(monkeypatch):
     monkeypatch.setattr("wasp.provision.threading.Thread", MagicMock())
 
     from wasp.provision import provision_platform_instance
+
     provision_platform_instance(name="wp-test")
 
     spans = exporter.get_finished_spans()
@@ -170,10 +197,12 @@ def test_provision_creates_span(monkeypatch):
 def test_provision_records_provisioning_started(monkeypatch):
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
     import wasp.telemetry as telemetry
+
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
 
     from unittest.mock import MagicMock
+
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
@@ -181,6 +210,7 @@ def test_provision_records_provisioning_started(monkeypatch):
     monkeypatch.setattr("wasp.provision.threading.Thread", MagicMock())
 
     from wasp.provision import provision_platform_instance
+
     provision_platform_instance(name="wp-test")
 
     metrics_data = reader.get_metrics_data()
@@ -208,7 +238,9 @@ def test_provision_uses_custom_github_base_url(monkeypatch):
     provision_platform_instance(name="wp2")
 
     mock_client_cls.assert_called_once_with(
-        pat="fake-pat", repo="smsilva/wasp-gitops", base_url="http://localhost:3000/api/v3"
+        pat="fake-pat",
+        repo="smsilva/wasp-gitops",
+        base_url="http://localhost:3000/api/v3",
     )
 
 
@@ -289,7 +321,9 @@ def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
     assert _select_notifier() is None
 
 
-def test_select_notifier_local_channel_picks_console_even_with_telegram_token(monkeypatch):
+def test_select_notifier_local_channel_picks_console_even_with_telegram_token(
+    monkeypatch,
+):
     from wasp.provision import _select_notifier
     from wasp.notifier import ConsoleNotifier
 
@@ -340,7 +374,10 @@ def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
-            name="wp2", domain="wasp.silvios.me", regions=["us-east-1"], run_context=FakeCtx(),
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     mock_thread_cls.assert_called_once()

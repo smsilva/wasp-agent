@@ -10,6 +10,7 @@ Uso:
 
 Valida que agent_tool_calls_total e agent_provisioning_total aparecem no output.
 """
+
 import os
 import sys
 

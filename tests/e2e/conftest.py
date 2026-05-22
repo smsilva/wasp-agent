@@ -34,10 +34,13 @@ def sse_events(response) -> list[dict]:
         if event:
             events.append({"event": event, "data": json.loads(data) if data else None})
     return events
+
+
 GITEA_PASS = "password123"  # noqa: S105 — test credential only
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
+
 
 class GiteaClient:
     def __init__(self, base_url: str, token: str):
@@ -66,6 +69,7 @@ class GiteaClient:
 
 # ─── k3d cluster ──────────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="session")
 def k3d_cluster():
     # Use K3D_CLUSTER if set (external cluster — not created/deleted by tests).
@@ -81,9 +85,13 @@ def k3d_cluster():
         )
         subprocess.run(
             [
-                "kubectl", "wait",
-                "--context", f"k3d-{cluster_name}",
-                "--for=condition=Ready", "node", "--all",
+                "kubectl",
+                "wait",
+                "--context",
+                f"k3d-{cluster_name}",
+                "--for=condition=Ready",
+                "node",
+                "--all",
                 "--timeout=120s",
             ],
             check=True,
@@ -91,10 +99,13 @@ def k3d_cluster():
 
     subprocess.run(
         [
-            "kubectl", "apply",
-            "--context", f"k3d-{cluster_name}",
+            "kubectl",
+            "apply",
+            "--context",
+            f"k3d-{cluster_name}",
             "--validate=false",
-            "-f", "tests/e2e/fixtures/platform-crd.yaml",
+            "-f",
+            "tests/e2e/fixtures/platform-crd.yaml",
         ],
         check=True,
     )
@@ -106,16 +117,23 @@ def k3d_cluster():
 
 # ─── Gitea container ──────────────────────────────────────────────────────────
 
+
 @pytest.fixture(scope="session")
 def gitea_container():
     subprocess.run(["docker", "rm", "--force", GITEA_CONTAINER], check=False)
     subprocess.run(
         [
-            "docker", "run", "--detach",
-            "--name", GITEA_CONTAINER,
-            "-p", f"{GITEA_PORT}:3000",
-            "-e", "GITEA__security__INSTALL_LOCK=true",
-            "-e", "GITEA__server__OFFLINE_MODE=true",
+            "docker",
+            "run",
+            "--detach",
+            "--name",
+            GITEA_CONTAINER,
+            "-p",
+            f"{GITEA_PORT}:3000",
+            "-e",
+            "GITEA__security__INSTALL_LOCK=true",
+            "-e",
+            "GITEA__server__OFFLINE_MODE=true",
             "gitea/gitea:1.22",
         ],
         check=True,
@@ -137,11 +155,21 @@ def gitea_container():
 
     subprocess.run(
         [
-            "docker", "exec", "--user", "git", GITEA_CONTAINER,
-            "gitea", "admin", "user", "create",
-            "--username", GITEA_ADMIN,
-            "--password", GITEA_PASS,
-            "--email", "root@localhost",
+            "docker",
+            "exec",
+            "--user",
+            "git",
+            GITEA_CONTAINER,
+            "gitea",
+            "admin",
+            "user",
+            "create",
+            "--username",
+            GITEA_ADMIN,
+            "--password",
+            GITEA_PASS,
+            "--email",
+            "root@localhost",
             "--admin",
             "--must-change-password=false",
         ],
@@ -151,7 +179,10 @@ def gitea_container():
     r = httpx.post(
         f"{base_url}/api/v1/users/{GITEA_ADMIN}/tokens",
         auth=(GITEA_ADMIN, GITEA_PASS),
-        json={"name": "e2e-token", "scopes": ["write:repository", "read:user", "write:user"]},
+        json={
+            "name": "e2e-token",
+            "scopes": ["write:repository", "read:user", "write:user"],
+        },
         timeout=10,
     )
     r.raise_for_status()
@@ -171,31 +202,40 @@ def gitea_container():
 
 # ─── recording notifier ───────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def recording_notifier():
     from wasp.notifier import RecordingNotifier
+
     return RecordingNotifier()
 
 
 # ─── agent client ─────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def agent_client(gitea_container, recording_notifier, monkeypatch):
     monkeypatch.setenv("GH_PAT", gitea_container.token)
     monkeypatch.setenv("GITHUB_BASE_URL", f"{gitea_container.base_url}/api/v1")
     monkeypatch.setenv("GITOPS_REPO", f"{GITEA_ADMIN}/wasp-gitops")
-    monkeypatch.setenv("TELEGRAM_TOKEN", "123456789:AAHfiqksKZ8WmR2zggAY0gUMQyxFAq0k8I0")
+    monkeypatch.setenv(
+        "TELEGRAM_TOKEN", "123456789:AAHfiqksKZ8WmR2zggAY0gUMQyxFAq0k8I0"
+    )
     monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "true")
 
     import wasp.provision
     import main  # noqa: F401
     import wasp.telemetry as _telemetry
+
     _telemetry.configure()  # force reconfigure now that PROMETHEUS_PORT is set
     from wasp.git_client import GiteaClient
 
-    monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier)
     monkeypatch.setattr(
-        wasp.provision, "PyGithubClient",
+        wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier
+    )
+    monkeypatch.setattr(
+        wasp.provision,
+        "PyGithubClient",
         lambda **_kw: GiteaClient(
             token=gitea_container.token,
             repo=f"{GITEA_ADMIN}/wasp-gitops",
@@ -204,11 +244,14 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     )
 
     transport = httpx.ASGITransport(app=main.app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver", timeout=60) as c:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver", timeout=60
+    ) as c:
         yield c
 
 
 # ─── fake reconciler ──────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def fake_reconciler(k3d_cluster):
@@ -229,7 +272,10 @@ def fake_reconciler(k3d_cluster):
                 for p in platforms.get("items", []):
                     name = p["metadata"]["name"]
                     conditions = p.get("status", {}).get("conditions", [])
-                    if any(c.get("type") == "Ready" and c.get("status") == "True" for c in conditions):
+                    if any(
+                        c.get("type") == "Ready" and c.get("status") == "True"
+                        for c in conditions
+                    ):
                         continue
                     time.sleep(3)
                     api.patch_cluster_custom_object_status(
@@ -240,7 +286,11 @@ def fake_reconciler(k3d_cluster):
                         body={
                             "status": {
                                 "conditions": [
-                                    {"type": "Ready", "status": "True", "reason": "Available"}
+                                    {
+                                        "type": "Ready",
+                                        "status": "True",
+                                        "reason": "Available",
+                                    }
                                 ]
                             }
                         },

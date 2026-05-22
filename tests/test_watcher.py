@@ -68,8 +68,14 @@ def test_ready_message_includes_endpoints():
     platform = {
         "spec": {
             "regions": [
-                {"name": "us-east-1", "endpoint": "gateway.us-east-1.wp2.wasp.silvios.me"},
-                {"name": "sa-east-1", "endpoint": "gateway.sa-east-1.wp2.wasp.silvios.me"},
+                {
+                    "name": "us-east-1",
+                    "endpoint": "gateway.us-east-1.wp2.wasp.silvios.me",
+                },
+                {
+                    "name": "sa-east-1",
+                    "endpoint": "gateway.sa-east-1.wp2.wasp.silvios.me",
+                },
             ]
         }
     }
@@ -174,7 +180,14 @@ async def test_watch_platform_notifies_when_ready(monkeypatch):
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
-        "spec": {"regions": [{"name": "us-east-1", "endpoint": "gateway.us-east-1.wp2.wasp.silvios.me"}]},
+        "spec": {
+            "regions": [
+                {
+                    "name": "us-east-1",
+                    "endpoint": "gateway.us-east-1.wp2.wasp.silvios.me",
+                }
+            ]
+        },
         "status": {"conditions": [{"type": "Ready", "status": "True"}]},
     }
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
@@ -185,7 +198,9 @@ async def test_watch_platform_notifies_when_ready(monkeypatch):
     assert len(notifier.messages) == 1
     assert notifier.messages[0]["chat_id"] == "12345"
     assert "wp2" in notifier.messages[0]["text"]
-    assert "https://gateway.us-east-1.wp2.wasp.silvios.me" in notifier.messages[0]["text"]
+    assert (
+        "https://gateway.us-east-1.wp2.wasp.silvios.me" in notifier.messages[0]["text"]
+    )
 
 
 async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
@@ -202,7 +217,9 @@ async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
     monkeypatch.setattr(w, "ApiException", FakeApiException)
 
     api = MagicMock()
-    api.get_cluster_custom_object.side_effect = FakeApiException(status=404, reason="NotFound")
+    api.get_cluster_custom_object.side_effect = FakeApiException(
+        status=404, reason="NotFound"
+    )
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
     monkeypatch.setattr(w.asyncio, "sleep", AsyncMock())
 
@@ -240,7 +257,12 @@ async def test_watch_platform_timeout(monkeypatch):
 def test_find_condition_returns_none_when_not_found():
     from wasp.watcher import _find_condition
 
-    assert _find_condition({"status": {"conditions": [{"type": "Synced", "status": "True"}]}}, "Ready") is None
+    assert (
+        _find_condition(
+            {"status": {"conditions": [{"type": "Synced", "status": "True"}]}}, "Ready"
+        )
+        is None
+    )
     assert _find_condition({}, "Ready") is None
 
 
@@ -257,7 +279,9 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     monkeypatch.setattr(w, "ApiException", FakeApiException)
 
     api = MagicMock()
-    api.get_cluster_custom_object.side_effect = FakeApiException(status=500, reason="InternalServerError")
+    api.get_cluster_custom_object.side_effect = FakeApiException(
+        status=500, reason="InternalServerError"
+    )
     monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
 
     # Non-404 exceptions are caught, logged, and do not propagate from watch_platform
@@ -269,10 +293,12 @@ async def test_watcher_records_polls_counter(monkeypatch):
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
     from wasp.notifier import RecordingNotifier
     import wasp.telemetry as telemetry
+
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
 
     import wasp.watcher as w
+
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -297,10 +323,12 @@ async def test_watcher_records_duration_on_ready(monkeypatch):
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
     from wasp.notifier import RecordingNotifier
     import wasp.telemetry as telemetry
+
     reader = InMemoryMetricReader()
     telemetry.configure(metric_reader=reader)
 
     import wasp.watcher as w
+
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -322,14 +350,18 @@ async def test_watcher_records_duration_on_ready(monkeypatch):
 
 async def test_watcher_links_to_parent_span(monkeypatch):
     from unittest.mock import MagicMock
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
     from opentelemetry.trace import SpanContext, TraceFlags
     from wasp.notifier import RecordingNotifier
     import wasp.telemetry as telemetry
+
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
     import wasp.watcher as w
+
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -352,13 +384,17 @@ async def test_watcher_links_to_parent_span(monkeypatch):
 
 async def test_watcher_creates_lifecycle_span(monkeypatch):
     from unittest.mock import MagicMock
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
     from wasp.notifier import RecordingNotifier
     import wasp.telemetry as telemetry
+
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
     import wasp.watcher as w
+
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
         "spec": {"regions": []},
@@ -422,6 +458,7 @@ async def test_console_notifier_logs_message(caplog):
     await notifier.send("abc123", "Plataforma test está pronta.")
 
     assert any(
-        "[NOTIFIER chat_id=abc123]" in r.message and "Plataforma test está pronta." in r.message
+        "[NOTIFIER chat_id=abc123]" in r.message
+        and "Plataforma test está pronta." in r.message
         for r in caplog.records
     )

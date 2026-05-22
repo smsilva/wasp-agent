@@ -58,7 +58,9 @@ def _find_condition(platform: dict, type_: str) -> dict | None:
     return None
 
 
-async def watch_platform(name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None) -> None:
+async def watch_platform(
+    name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
+) -> None:
     log.info("Watcher started for %s", name)
     try:
         await _watch_platform_inner(name, chat_id, notifier, parent_span_ctx)
@@ -94,7 +96,11 @@ async def _watch_platform_inner(
                 if e.status == 404:
                     poll_count += 1
                     telemetry.watcher_polls_counter.add(1, {"result": "not_found"})
-                    log.debug("Platform %s not in cluster yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
+                    log.debug(
+                        "Platform %s not in cluster yet, sleeping %ss",
+                        name,
+                        POLL_INTERVAL_SECONDS,
+                    )
                     await asyncio.sleep(POLL_INTERVAL_SECONDS)
                     continue
                 raise
@@ -113,7 +119,9 @@ async def _watch_platform_inner(
                 return
 
             telemetry.watcher_polls_counter.add(1, {"result": "pending"})
-            log.debug("Platform %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS)
+            log.debug(
+                "Platform %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS
+            )
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
         elapsed = time.perf_counter() - t0

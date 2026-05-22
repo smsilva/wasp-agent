@@ -31,6 +31,7 @@ def _select_notifier(channel: str | None = None) -> Notifier | None:
         return TelegramNotifier(token=token) if token else None
     return None
 
+
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
 
@@ -49,8 +50,7 @@ class PlatformSpec(BaseModel):
     regions: list[RegionSpec]
     services: list[ServiceSpec] = Field(
         default_factory=lambda: [
-            ServiceSpec(name=s)
-            for s in ["auth", "discovery", "callback", "portal"]
+            ServiceSpec(name=s) for s in ["auth", "discovery", "callback", "portal"]
         ]
     )
 
@@ -106,14 +106,18 @@ def provision_platform_instance(
             raise ValueError("GH_PAT not set")
 
         manifest = PlatformManifest.build(name=name, domain=domain, regions=regions)
-        yaml_content = yaml.safe_dump(manifest.model_dump(), default_flow_style=False, sort_keys=False)
+        yaml_content = yaml.safe_dump(
+            manifest.model_dump(), default_flow_style=False, sort_keys=False
+        )
 
         github_base_url = os.getenv("GITHUB_BASE_URL", "https://api.github.com")
         gitops_repo = os.getenv("GITOPS_REPO", "smsilva/wasp-gitops")
         client = PyGithubClient(pat=pat, repo=gitops_repo, base_url=github_base_url)
         file_path = f"infrastructure/tenants/{name}.yaml"
         safe_requested_by = requested_by.replace("\n", " ").replace("\r", " ")
-        commit_message = f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
+        commit_message = (
+            f"feat(tenants): provision {name}\n\nRequested by: {safe_requested_by}"
+        )
 
         try:
             client.create_file(
@@ -141,6 +145,7 @@ def provision_platform_instance(
         if chat_id and notifier is not None:
             current_span.set_attribute("watcher.spawned", True)
             parent_span_ctx = current_span.get_span_context()
+
             def _run_watcher():
                 asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
 

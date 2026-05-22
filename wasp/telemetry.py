@@ -23,7 +23,12 @@ _prometheus_registry = None
 
 
 def configure(*, span_exporter=None, metric_reader=None) -> None:
-    global tracer, meter, _tool_calls_counter, _tool_calls_duration, _prometheus_registry
+    global \
+        tracer, \
+        meter, \
+        _tool_calls_counter, \
+        _tool_calls_duration, \
+        _prometheus_registry
 
     service_name = os.getenv("OTEL_SERVICE_NAME", "wasp-agent")
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
@@ -33,8 +38,11 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
     if span_exporter is not None:
         tp.add_span_processor(SimpleSpanProcessor(span_exporter))
     elif endpoint:
-        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+            OTLPSpanExporter,
+        )
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
         tp.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
     _trace_api.set_tracer_provider(tp)
     tracer = tp.get_tracer(service_name)
@@ -42,6 +50,7 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
     if endpoint:
         from openinference.instrumentation import TraceConfig
         from openinference.instrumentation.agno import AgnoInstrumentor
+
         hide = os.getenv("OTEL_AGNO_HIDE_IO", "true").lower() != "false"
         AgnoInstrumentor().instrument(
             tracer_provider=tp,
@@ -57,13 +66,17 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
         if os.getenv("PROMETHEUS_METRICS_ACTIVE"):
             import prometheus_client as _prom
             from opentelemetry.exporter.prometheus import PrometheusMetricReader
+
             _prometheus_registry = _prom.REGISTRY
             readers.append(PrometheusMetricReader())
         else:
             _prometheus_registry = None
         if endpoint:
-            from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+                OTLPMetricExporter,
+            )
             from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
             readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
     mp = MeterProvider(metric_readers=readers)
     _metrics_api.set_meter_provider(mp)
@@ -100,8 +113,10 @@ configure()
 
 def instrument(name: str):
     """Decorator: span + agent.tool_calls.* metrics. Works on sync and async functions."""
+
     def decorator(fn):
         if inspect.iscoroutinefunction(fn):
+
             @functools.wraps(fn)
             async def async_wrapper(*args, **kwargs):
                 t0 = time.perf_counter()
@@ -117,8 +132,10 @@ def instrument(name: str):
                         elapsed = time.perf_counter() - t0
                         _tool_calls_counter.add(1, {"tool": name, "status": status})
                         _tool_calls_duration.record(elapsed, {"tool": name})
+
             return async_wrapper
         else:
+
             @functools.wraps(fn)
             def sync_wrapper(*args, **kwargs):
                 t0 = time.perf_counter()
@@ -134,5 +151,7 @@ def instrument(name: str):
                         elapsed = time.perf_counter() - t0
                         _tool_calls_counter.add(1, {"tool": name, "status": status})
                         _tool_calls_duration.record(elapsed, {"tool": name})
+
             return sync_wrapper
+
     return decorator

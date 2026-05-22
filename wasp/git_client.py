@@ -11,7 +11,9 @@ class FileAlreadyExistsError(Exception):
 
 
 class GitClient(Protocol):
-    def create_file(self, path: str, message: str, content: str, branch: str) -> None: ...
+    def create_file(
+        self, path: str, message: str, content: str, branch: str
+    ) -> None: ...
 
 
 class PyGithubClient:
@@ -20,7 +22,9 @@ class PyGithubClient:
 
     def create_file(self, path: str, message: str, content: str, branch: str) -> None:
         try:
-            self._repo.create_file(path=path, message=message, content=content, branch=branch)
+            self._repo.create_file(
+                path=path, message=message, content=content, branch=branch
+            )
         except GithubException as e:
             if e.status == 422 and "sha" in str(e.data.get("message", "")).lower():
                 raise FileAlreadyExistsError(path) from e

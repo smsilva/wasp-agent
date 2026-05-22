@@ -4,6 +4,7 @@ E2E test: full provisioning flow.
 Requires: k3d, docker, ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN (llmproxy).
 Run with: pytest -m e2e --no-cov
 """
+
 import asyncio
 import subprocess
 import uuid
@@ -45,7 +46,9 @@ async def test_provision_and_notify(
 
     # validate git push to Gitea
     commit = gitea_container.get_latest_commit("wasp-gitops")
-    yaml_content = gitea_container.get_file(commit, f"infrastructure/tenants/{PLATFORM_NAME}.yaml")
+    yaml_content = gitea_container.get_file(
+        commit, f"infrastructure/tenants/{PLATFORM_NAME}.yaml"
+    )
     assert PLATFORM_NAME in yaml_content
 
     # apply Platform CR to k3d (simulating ArgoCD sync)

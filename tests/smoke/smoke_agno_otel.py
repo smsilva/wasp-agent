@@ -11,6 +11,7 @@ Uso:
 
 Após rodar, abrir http://localhost:16686 e buscar o serviço "wasp-agent".
 """
+
 import os
 import sys
 
