@@ -107,6 +107,10 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
         description="Individual watcher poll iterations",
     )
 
+    from opentelemetry.instrumentation.logging import LoggingInstrumentor
+
+    LoggingInstrumentor().instrument(set_logging_format=False)
+
 
 configure()
 
