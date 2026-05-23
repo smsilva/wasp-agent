@@ -267,6 +267,12 @@ def test_configure_with_explicit_reader_skips_prometheus_registry():
     assert telemetry._prometheus_registry is None
 
 
+def test_auth_denied_callable():
+    from wasp.telemetry import auth_denied
+
+    auth_denied(channel="tg", reason="unknown_identity")
+
+
 @pytest.mark.asyncio
 async def test_instrument_async_records_error_status():
     import wasp.telemetry as telemetry

@@ -8,12 +8,15 @@ import yaml
 from agno.tools import tool
 from opentelemetry import trace
 from pydantic import BaseModel, Field
+from wasp import auth
 from wasp.git_client import FileAlreadyExistsError, PyGithubClient
 from wasp.logging import chat_id_var
 from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
 from wasp.watcher import extract_channel, extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
+
+TRUSTED_CHANNELS = {"local"}
 
 
 def _select_notifier(channel: str | None = None) -> Notifier | None:
@@ -101,6 +104,27 @@ def provision_platform_instance(
     if regions is None:
         regions = list(DEFAULT_REGIONS)
 
+    channel = extract_channel(run_context)
+    chat_id = extract_chat_id(run_context)
+
+    user_id: str | None = None
+    if channel and channel not in TRUSTED_CHANNELS:
+        user_id = auth.is_authorized(channel, chat_id) if chat_id else None
+        if user_id is None:
+            log.warning(
+                "auth denied: channel=%s channel_id=%s", channel, chat_id
+            )
+            telemetry.auth_denied(channel=channel, reason="unknown_identity")
+            return {"status": "unauthorized", "message": "Acesso negado."}
+    elif channel in TRUSTED_CHANNELS:
+        user_id = "local-operator"
+
+    current_span = trace.get_current_span()
+    if user_id:
+        current_span.set_attribute("user.id", user_id)
+    if channel:
+        current_span.set_attribute("auth.channel", channel)
+
     try:
         pat = os.getenv("GH_PAT")
         if not pat:
@@ -135,15 +159,12 @@ def provision_platform_instance(
                 "message": f"Tenant '{name}' is already being provisioned.",
             }
 
-        current_span = trace.get_current_span()
         current_span.set_attribute("platform.name", name)
 
         telemetry.provisioning_counter.add(1, {"outcome": "started"})
 
-        chat_id = extract_chat_id(run_context)
         if chat_id:
             chat_id_var.set(chat_id)
-        channel = extract_channel(run_context)
         notifier = _select_notifier(channel)
         if chat_id and notifier is not None:
             current_span.set_attribute("watcher.spawned", True)

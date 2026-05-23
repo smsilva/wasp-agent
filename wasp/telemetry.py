@@ -115,6 +115,11 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
 configure()
 
 
+def auth_denied(*, channel: str, reason: str) -> None:
+    """Records an auth denial event. Wired to a Prometheus Counter in Task 6."""
+    pass
+
+
 def instrument(name: str):
     """Decorator: span + agent.tool_calls.* metrics. Works on sync and async functions."""
 

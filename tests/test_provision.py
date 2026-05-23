@@ -88,6 +88,7 @@ def test_provision_spawns_watcher(monkeypatch):
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -117,6 +118,7 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -398,6 +400,7 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread_cls = MagicMock()
 
@@ -410,6 +413,73 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
     assert result["status"] == "already_provisioning"
     assert "wp2" in result["message"]
     mock_thread_cls.assert_not_called()
+
+
+def test_provision_returns_unauthorized_when_tg_chat_id_unknown(monkeypatch):
+    from wasp.provision import provision_platform_instance
+
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: None)
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:999999"
+
+    result = provision_platform_instance(
+        name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+    )
+    assert result == {"status": "unauthorized", "message": "Acesso negado."}
+
+
+def test_provision_skips_auth_for_local_channel(monkeypatch):
+    """local channel é trusted — não tem identidade verificável, boundary é a rede."""
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_platform_instance
+
+    is_authorized_called = []
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized",
+        lambda c, i: is_authorized_called.append((c, i)) or None,
+    )
+
+    mock_client_cls = MagicMock()
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345"
+
+    with patch("wasp.provision.threading.Thread", MagicMock()):
+        result = provision_platform_instance(
+            name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+        )
+
+    assert result["status"] == "provisioning"
+    assert is_authorized_called == []
+
+
+def test_provision_proceeds_when_tg_authorized(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_platform_instance
+
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
+
+    mock_client_cls = MagicMock()
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+
+    mock_thread_cls = MagicMock()
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:5621932873"
+
+    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+        result = provision_platform_instance(
+            name="wp2", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+        )
+
+    assert result["status"] == "provisioning"
+    mock_thread_cls.assert_called_once()
 
 
 def test_provision_missing_pat(monkeypatch):
