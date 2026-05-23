@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-20  
 **Updated:** 2026-05-21  
-**Status:** Approved  
+**Status:** Implemented  
 **Prioridade:** Alta — precede os demais specs abertos em 2026-05-20.
 
 ## 1. Contexto

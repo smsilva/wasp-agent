@@ -8,7 +8,21 @@ Ciclos 1–6 completos e em `main`.
 
 ## Current Progress
 
-**Ciclos 1–6 + logging em `dev`**, não merged para `main` ainda. `dev` está 12 commits à frente de `origin/dev` (não pushed).
+**Ciclos 1–7 + logging em `dev`**, não merged para `main` ainda.
+
+**Sessão 2026-05-23 — Ciclo 7 (Autenticação multi-canal):**
+
+Implementação completa do spec `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` em `dev` (9 tasks TDD, plan `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md`):
+
+- `wasp/auth.py` — schema `auth_users` / `auth_identities` / `auth_invites` no `agent.db`; API `init_db`, `is_authorized`, `create_user`, `link_identity`, `create_invite`, `redeem_invite`, `revoke_identity`, `list_identities`, `has_any_user`, `bootstrap_admin`
+- `wasp/provision.py` — guard `is_authorized(channel, channel_id)` em `provision_platform_instance`; `local` continua trusted; span attributes `auth.channel` e `user.id`
+- `main.py` — `_install_start_token_handler` intercepta `/start <token>` no webhook do Telegram antes do agno (com validação do `X-Telegram-Bot-Api-Secret-Token`); `auth.init_db()` no startup
+- `wasp/auth_cli.py` + `scripts/admin-{invite,revoke,list,bootstrap}` + Make targets — CLI do operador
+- `wasp/telemetry.py` — métrica Prometheus `wasp_auth_denied_total{channel,reason}` (registration idempotente via `_PROM_REGISTRY._names_to_collectors`)
+- `.env.example` — `TELEGRAM_BOT_USERNAME`, `WASP_AGENT_DB_FILE`, `WASP_AGENT_INVITE_TTL_HOURS`
+- `docs/runbooks/auth-admin.md` — runbook do operador (bootstrap, invite, list, revoke, diagnóstico)
+- `docs/runbooks/validation.md` — nota de pré-requisito de auth no path B (smoke Telegram)
+- Cobertura 100%, ruff clean, 150 testes passando
 
 **Sessão 2026-05-23 — Logging:**
 
@@ -36,7 +50,7 @@ Implementação completa do subsistema de logging em `dev`:
 
 | Arquivo | Status |
 |---|---|
-| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Approved — plano em `03-execution/2026-05-21-auth-multichannel-plan.md` |
+| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Implemented — arquivar após merge em `main` |
 | `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` | Idea — opção A (OAuth direto GitHub/Google), concorre com cognito-federation |
 | `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` | Idea — opção B (Cognito como hub federado), alinha com `aws-saas-platform` |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
@@ -45,7 +59,7 @@ Implementação completa do subsistema de logging em `dev`:
 
 ### Plans ativos
 
-- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — pronto para execução.
+- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — Implementado — arquivar após merge em `main`.
 
 ### Open Security Issues
 
@@ -79,11 +93,13 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 
 ## Next Steps
 
-### 1. Executar plano auth-multichannel
+### 1. Security review
 
-`docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md`. TDD task-by-task, 9 tasks. Bloqueia security review (CLAUDE.md §9).
+Auth multi-canal implementado — desbloqueia security review (CLAUDE.md §9). Cobrir: autorização (`is_authorized` + `TRUSTED_CHANNELS`), validação do webhook Telegram, exposição de tokens em logs/spans, ataques contra `redeem_invite` (timing, reuso, expiração), permissões do `agent.db`.
 
-**Risco aberto:** Task 3 (handler `/start <token>`) depende de investigação prévia do agno Telegram interface — pode exigir fallback se a integração não permitir registrar handler limpo.
+### 2. Merge `dev` → `main`
+
+`dev` está com Ciclos 1–7 + logging acumulados. Após security review, abrir PR e arquivar os specs/plans marcados como Implemented.
 
 ## Backlog
 
@@ -96,5 +112,4 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
   - Opção A: `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — OAuth direto com GitHub + Google.
   - Opção B: `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — Cognito como hub federado (alinha com `aws-saas-platform`).
   - Gatilho de decisão: existência da CLI `wasp` concreta + escolha entre standalone (A) vs AWS-bound (B).
-- **Security review** — após executar plano auth-multichannel (CLAUDE.md §9).
 - **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`.
