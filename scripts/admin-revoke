@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -e
+
+channel="${1?usage: admin-revoke CHANNEL CHANNEL_ID}"
+channel_id="${2?usage: admin-revoke CHANNEL CHANNEL_ID}"
+
+uv run python -m wasp.auth_cli revoke \
+  --channel "${channel}" \
+  --channel-id "${channel_id}"

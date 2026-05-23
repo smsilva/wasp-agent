@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PATH="${SCRIPT_DIR}:${PATH}"
+export PATH
+
+name="${1?usage: admin-invite NAME [CHANNEL]}"
+channel="${2:-}"
+
+bot_name="${TELEGRAM_BOT_USERNAME?TELEGRAM_BOT_USERNAME must be set}"
+
+token=$(uv run python -m wasp.auth_cli invite \
+  --name "${name}" \
+  --created-by "admin" \
+  ${channel:+--channel "${channel}"})
+
+echo "Token: ${token}"
+echo "Link:  https://t.me/${bot_name}?start=${token}"
