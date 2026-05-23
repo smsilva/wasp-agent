@@ -16,7 +16,8 @@ from agno.agent import Agent  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
-from wasp import provision_platform_instance  # noqa: E402
+from wasp import auth, provision_platform_instance  # noqa: E402
+from wasp.notifier import TelegramNotifier  # noqa: E402
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -79,10 +80,82 @@ agent = Agent(
     tools=[provision_platform_instance],
 )
 
+WELCOME_MESSAGE = (
+    "Bem-vindo, {display_name}. Você está autorizado a usar o wasp-agent."
+)
+INVALID_INVITE_MESSAGE = (
+    "Link inválido ou expirado. Solicite um novo ao administrador."
+)
+
+
+async def _process_start_token(payload: dict, redeem_fn, send_fn) -> bool:
+    """Intercept ``/start <token>`` deep links.
+
+    Returns ``True`` if the payload was handled (caller must short-circuit).
+    Returns ``False`` to let agno process normally.
+    """
+    message = payload.get("message") or payload.get("edited_message") or {}
+    text = (message.get("text") or "").strip()
+    if not text.startswith("/start "):
+        return False
+    token = text.split(maxsplit=1)[1].split()[0]
+    chat_id = message.get("chat", {}).get("id")
+    if chat_id is None:
+        return False
+    result = redeem_fn(token, "tg", str(chat_id))
+    if result is None:
+        await send_fn(str(chat_id), INVALID_INVITE_MESSAGE)
+    else:
+        _user_id, display_name = result
+        await send_fn(str(chat_id), WELCOME_MESSAGE.format(display_name=display_name))
+    return True
+
+
+def _install_start_token_handler(iface: Telegram) -> None:
+    """Wrap ``iface.get_router`` so ``/start <token>`` is intercepted.
+
+    agno's built-in ``/start`` handler discards positional args. We wrap the
+    ``/webhook`` route's endpoint so wasp can redeem invite tokens before
+    agno dispatches the message to the LLM.
+    """
+    original_get_router = iface.get_router
+    notifier = TelegramNotifier(iface.token)
+
+    def get_router_with_auth():
+        router = original_get_router()
+        webhook_route = next(
+            r for r in router.routes if getattr(r, "path", "") == "/webhook"
+        )
+        original_endpoint = webhook_route.endpoint
+
+        async def webhook_with_auth(request, background_tasks):
+            from starlette.responses import JSONResponse
+
+            body = await request.json()
+            handled = await _process_start_token(
+                body, auth.redeem_invite, notifier.send
+            )
+            if handled:
+                return JSONResponse({"status": "ok"})
+
+            async def _replay():
+                return body
+
+            request.json = _replay  # type: ignore[method-assign]
+            return await original_endpoint(request, background_tasks)
+
+        webhook_route.endpoint = webhook_with_auth
+        return router
+
+    iface.get_router = get_router_with_auth  # type: ignore[method-assign]
+
+
 interfaces = []
 telegram_token = os.getenv("TELEGRAM_TOKEN")
 if telegram_token:
-    interfaces.append(Telegram(agent=agent, token=telegram_token))
+    telegram_interface = Telegram(agent=agent, token=telegram_token)
+    _install_start_token_handler(telegram_interface)
+    interfaces.append(telegram_interface)
 
 agent_os = AgentOS(
     agents=[agent],

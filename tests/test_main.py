@@ -114,3 +114,188 @@ async def test_metrics_endpoint_uses_prometheus_registry(monkeypatch):
         response = await main.metrics_endpoint(request=None)
     mock_gen.assert_called_once_with(prometheus_client.REGISTRY)
     assert response.body == fake_data
+
+
+async def test_start_token_redeems_invite_and_sends_welcome(mock_agno, monkeypatch):
+    """/start <token> calls redeem_invite and replies with welcome message."""
+    import main
+
+    sent = []
+
+    async def fake_send(chat_id, text):
+        sent.append((chat_id, text))
+
+    def fake_redeem(token, channel, channel_id):
+        assert token == "ABC123"
+        assert channel == "tg"
+        assert channel_id == "42"
+        return ("uid-1", "Alice")
+
+    payload = {"message": {"text": "/start ABC123", "chat": {"id": 42}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+
+    assert handled is True
+    assert sent == [("42", "Bem-vindo, Alice. Você está autorizado a usar o wasp-agent.")]
+
+
+async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
+    """When redeem_invite returns None, user receives generic error."""
+    import main
+
+    sent = []
+
+    async def fake_send(chat_id, text):
+        sent.append((chat_id, text))
+
+    def fake_redeem(token, channel, channel_id):
+        return None
+
+    payload = {"message": {"text": "/start BAD", "chat": {"id": 7}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+
+    assert handled is True
+    assert sent == [("7", "Link inválido ou expirado. Solicite um novo ao administrador.")]
+
+
+async def test_start_without_token_is_not_handled(mock_agno, monkeypatch):
+    """Bare /start (no positional arg) falls through to agno."""
+    import main
+
+    calls = []
+
+    async def fake_send(chat_id, text):
+        calls.append((chat_id, text))
+
+    def fake_redeem(*args, **kwargs):
+        calls.append(("redeem", args))
+        return None
+
+    payload = {"message": {"text": "/start", "chat": {"id": 1}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+
+    assert handled is False
+    assert calls == []
+
+
+async def test_non_start_message_is_not_handled(mock_agno, monkeypatch):
+    """Regular messages fall through to agno."""
+    import main
+
+    async def fake_send(chat_id, text):
+        raise AssertionError("send should not be called")
+
+    def fake_redeem(*args, **kwargs):
+        raise AssertionError("redeem should not be called")
+
+    payload = {"message": {"text": "hello bot", "chat": {"id": 1}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+    assert handled is False
+
+
+async def test_start_token_handles_edited_message(mock_agno, monkeypatch):
+    """`edited_message` is also inspected (Telegram delivers edits separately)."""
+    import main
+
+    sent = []
+
+    async def fake_send(chat_id, text):
+        sent.append((chat_id, text))
+
+    def fake_redeem(token, channel, channel_id):
+        return ("uid", "Bob")
+
+    payload = {"edited_message": {"text": "/start XYZ", "chat": {"id": 5}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+    assert handled is True
+    assert sent[0][0] == "5"
+
+
+async def test_start_token_missing_chat_id_not_handled(mock_agno, monkeypatch):
+    """Defensive: payload without chat.id is ignored."""
+    import main
+
+    async def fake_send(chat_id, text):
+        raise AssertionError("send should not be called")
+
+    def fake_redeem(*args, **kwargs):
+        raise AssertionError("redeem should not be called")
+
+    payload = {"message": {"text": "/start ABC", "chat": {}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+    assert handled is False
+
+
+def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
+    """When TELEGRAM_TOKEN is set, the wrapper is installed on the interface."""
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+
+    import main  # noqa: F401
+
+    # _install_start_token_handler reassigns iface.get_router, so the interface
+    # passed to AgentOS must NOT be the unmodified mock instance.
+    call_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
+    interface = call_kwargs["interfaces"][0]
+    # The wrapper replaces get_router with a plain function (not a MagicMock attr)
+    assert callable(interface.get_router)
+
+
+async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch):
+    """The installed get_router wraps the /webhook endpoint, intercepting /start tokens."""
+    from unittest.mock import MagicMock, AsyncMock
+
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+    import main
+
+    original_endpoint = AsyncMock(return_value="agno-result")
+    webhook_route = MagicMock(path="/webhook", endpoint=original_endpoint)
+    status_route = MagicMock(path="/status", endpoint=MagicMock())
+    fake_router = MagicMock(routes=[status_route, webhook_route])
+
+    # A real-enough fake Telegram interface: has token + get_router method.
+    class FakeTelegram:
+        def __init__(self):
+            self.token = "tk"
+
+        def get_router(self):
+            return fake_router
+
+    iface = FakeTelegram()
+    main._install_start_token_handler(iface)
+
+    monkeypatch.setattr(main.auth, "redeem_invite", lambda *a, **kw: ("uid", "Carol"))
+
+    sent = []
+
+    async def fake_send(self, chat_id, text):
+        sent.append((chat_id, text))
+
+    monkeypatch.setattr(main.TelegramNotifier, "send", fake_send)
+
+    router = iface.get_router()
+    assert router is fake_router
+    new_endpoint = webhook_route.endpoint
+    assert new_endpoint is not original_endpoint
+
+    # /start <token> path: handled, original endpoint NOT called.
+    fake_request = MagicMock()
+    fake_request.json = AsyncMock(
+        return_value={"message": {"text": "/start ABC", "chat": {"id": 99}}}
+    )
+    background = MagicMock()
+    response = await new_endpoint(fake_request, background)
+    assert response.status_code == 200
+    original_endpoint.assert_not_called()
+    assert sent == [("99", "Bem-vindo, Carol. Você está autorizado a usar o wasp-agent.")]
+
+    # Non-/start path: delegates to original.
+    fake_request2 = MagicMock()
+    fake_request2.json = AsyncMock(
+        return_value={"message": {"text": "olá", "chat": {"id": 1}}}
+    )
+    result = await new_endpoint(fake_request2, background)
+    assert result == "agno-result"
+    original_endpoint.assert_awaited_once()
+    replayed = await fake_request2.json()
+    assert replayed == {"message": {"text": "olá", "chat": {"id": 1}}}
