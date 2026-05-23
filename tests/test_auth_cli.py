@@ -53,6 +53,26 @@ def test_list_empty(capsys):
     assert capsys.readouterr().out.strip() == "(no identities)"
 
 
+def test_bootstrap_creates_first_user(capsys):
+    rc = auth_cli.main(
+        ["bootstrap", "--name", "Silvio", "--channel", "tg", "--channel-id", "12345678"]
+    )
+    assert rc == 0
+    user_id = capsys.readouterr().out.strip()
+    assert user_id
+    assert auth.is_authorized("tg", "12345678") == user_id
+
+
+def test_bootstrap_fails_when_db_not_empty(capsys):
+    auth.create_user("First")
+    rc = auth_cli.main(
+        ["bootstrap", "--name", "Silvio", "--channel", "tg", "--channel-id", "12345678"]
+    )
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "not empty" in captured.err
+
+
 def test_list_prints_table(capsys):
     token = auth.create_invite(display_name="Dave", created_by="admin")
     auth.redeem_invite(token, "tg", "444")

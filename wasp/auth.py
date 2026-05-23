@@ -255,6 +255,19 @@ def list_identities(db_file: str | None = None) -> list[dict]:
     ]
 
 
+def bootstrap_admin(
+    display_name: str,
+    channel: str,
+    channel_id: str,
+    db_file: str | None = None,
+) -> str:
+    if has_any_user(db_file=db_file):
+        raise RuntimeError("auth tables not empty — bootstrap refused")
+    user_id = create_user(display_name, db_file=db_file)
+    link_identity(user_id, channel, channel_id, db_file=db_file)
+    return user_id
+
+
 def has_any_user(db_file: str | None = None) -> bool:
     db_file = _resolve_db_file(db_file)
     init_db(db_file)

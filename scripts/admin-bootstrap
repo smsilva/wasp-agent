@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+
+name="${1?usage: admin-bootstrap NAME CHANNEL CHANNEL_ID}"
+channel="${2?usage: admin-bootstrap NAME CHANNEL CHANNEL_ID}"
+channel_id="${3?usage: admin-bootstrap NAME CHANNEL CHANNEL_ID}"
+
+uv run python -m wasp.auth_cli bootstrap \
+  --name "${name}" \
+  --channel "${channel}" \
+  --channel-id "${channel_id}"

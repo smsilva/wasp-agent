@@ -246,6 +246,18 @@ def test_init_db_without_args_uses_env_var(tmp_path, monkeypatch):
     assert "auth_invites" in names
 
 
+def test_bootstrap_creates_first_user_when_db_empty(db_file):
+    user_id = auth.bootstrap_admin("Silvio", "tg", "12345678", db_file=db_file)
+    assert user_id
+    assert auth.is_authorized("tg", "12345678", db_file=db_file) == user_id
+
+
+def test_bootstrap_fails_when_db_not_empty(db_file):
+    auth.create_user("First", db_file=db_file)
+    with pytest.raises(RuntimeError, match="not empty"):
+        auth.bootstrap_admin("Silvio", "tg", "12345678", db_file=db_file)
+
+
 def test_redeem_invite_rejects_when_identity_already_linked(db_file):
     # Pre-existing identity for (tg, "111")
     user1 = auth.create_user("Existing", db_file=db_file)

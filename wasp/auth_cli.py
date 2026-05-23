@@ -38,7 +38,21 @@ def main(argv: list[str] | None = None) -> int:
 
     subs.add_parser("list")
 
+    bootstrap = subs.add_parser("bootstrap")
+    bootstrap.add_argument("--name", required=True)
+    bootstrap.add_argument("--channel", required=True)
+    bootstrap.add_argument("--channel-id", required=True)
+
     args = parser.parse_args(argv)
+
+    if args.cmd == "bootstrap":
+        try:
+            user_id = auth.bootstrap_admin(args.name, args.channel, args.channel_id)
+        except RuntimeError as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        print(user_id)
+        return 0
 
     if args.cmd == "invite":
         token = auth.create_invite(
