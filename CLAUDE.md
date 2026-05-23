@@ -161,6 +161,12 @@ Variáveis que configuram o comportamento do agent usam o prefixo `WASP_AGENT_` 
 
 O fixture `mock_agno` em `tests/conftest.py` mocka `agno.models` como `MagicMock`. Se `OTEL_EXPORTER_OTLP_ENDPOINT` estiver setado no shell, `configure()` chama `AgnoInstrumentor`, que tenta `from agno.models.base import Model` e falha contra o mock. O fixture já faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)` para isolar os testes — não remover essa linha.
 
+O loop de `sys.modules.pop` no fixture deve incluir todo `wasp.*` module criado. Ao adicionar um novo módulo em `wasp/`, incluí-lo na lista do fixture; caso contrário, estado do módulo vaza entre testes e causa falhas intermitentes.
+
+## 20. Logging — `wasp/logging.py`
+
+`chat_id_var` é um `ContextVar` definido em `wasp/logging.py`. Python's `threading.Thread` **não herda** ContextVar do thread pai — cada thread começa com contexto vazio. `watch_platform` roda em thread separado e chama `chat_id_var.set(chat_id)` explicitamente no início; qualquer função futura que rode em thread novo e precise de `chat_id` deve fazer o mesmo.
+
 ## 19. E2E fixture — patch `_select_notifier`, não `TelegramNotifier`
 
 Em `tests/e2e/conftest.py`, o `agent_client` patcheia `_select_notifier` diretamente para retornar o `recording_notifier`:
