@@ -482,6 +482,66 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
     mock_thread_cls.assert_called_once()
 
 
+def test_provision_sets_auth_channel_span_attribute_on_deny(monkeypatch):
+    """Span attribute auth.channel is set even on auth deny."""
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: None)
+
+    from wasp.provision import provision_platform_instance
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:999999"
+
+    result = provision_platform_instance(
+        name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+    )
+    assert result["status"] == "unauthorized"
+
+    spans = exporter.get_finished_spans()
+    span = next(s for s in spans if s.name == "provision_platform_instance")
+    assert span.attributes.get("auth.channel") == "tg"
+
+
+def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: "user-abc")
+
+    mock_client_cls = MagicMock()
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+
+    from wasp.provision import provision_platform_instance
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:111"
+
+    with patch("wasp.provision.threading.Thread", MagicMock()):
+        provision_platform_instance(
+            name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+        )
+
+    spans = exporter.get_finished_spans()
+    span = next(s for s in spans if s.name == "provision_platform_instance")
+    assert span.attributes.get("user.id") == "user-abc"
+    assert span.attributes.get("auth.channel") == "tg"
+
+
 def test_provision_missing_pat(monkeypatch):
     from unittest.mock import MagicMock
     from wasp.provision import provision_platform_instance

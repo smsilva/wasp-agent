@@ -273,6 +273,20 @@ def test_auth_denied_callable():
     auth_denied(channel="tg", reason="unknown_identity")
 
 
+def test_auth_denied_counter_increments():
+    """auth_denied increments wasp_auth_denied_total{channel,reason}."""
+    from wasp.telemetry import auth_denied, _auth_denied_counter
+
+    before = _auth_denied_counter.labels(
+        channel="tg", reason="unknown_identity"
+    )._value.get()
+    auth_denied(channel="tg", reason="unknown_identity")
+    after = _auth_denied_counter.labels(
+        channel="tg", reason="unknown_identity"
+    )._value.get()
+    assert after == before + 1
+
+
 @pytest.mark.asyncio
 async def test_instrument_async_records_error_status():
     import wasp.telemetry as telemetry

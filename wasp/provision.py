@@ -107,6 +107,10 @@ def provision_platform_instance(
     channel = extract_channel(run_context)
     chat_id = extract_chat_id(run_context)
 
+    current_span = trace.get_current_span()
+    if channel:
+        current_span.set_attribute("auth.channel", channel)
+
     user_id: str | None = None
     if channel and channel not in TRUSTED_CHANNELS:
         user_id = auth.is_authorized(channel, chat_id) if chat_id else None
@@ -119,11 +123,8 @@ def provision_platform_instance(
     elif channel in TRUSTED_CHANNELS:
         user_id = "local-operator"
 
-    current_span = trace.get_current_span()
     if user_id:
         current_span.set_attribute("user.id", user_id)
-    if channel:
-        current_span.set_attribute("auth.channel", channel)
 
     try:
         pat = os.getenv("GH_PAT")

@@ -8,6 +8,7 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import StatusCode
+from prometheus_client import REGISTRY as _PROM_REGISTRY, Counter as _PromCounter
 
 tracer: _trace_api.Tracer = None  # type: ignore[assignment]
 meter: _metrics_api.Meter = None  # type: ignore[assignment]
@@ -115,9 +116,23 @@ def configure(*, span_exporter=None, metric_reader=None) -> None:
 configure()
 
 
+# Module-level Counter — defined once. Uses prometheus_client directly
+# (not OTel meter) so the metric is always emitted on the Prometheus scrape
+# regardless of OTel exporter configuration.
+_AUTH_DENIED_METRIC_NAME = "wasp_auth_denied_total"
+if _AUTH_DENIED_METRIC_NAME in _PROM_REGISTRY._names_to_collectors:
+    _auth_denied_counter = _PROM_REGISTRY._names_to_collectors[_AUTH_DENIED_METRIC_NAME]
+else:
+    _auth_denied_counter = _PromCounter(
+        _AUTH_DENIED_METRIC_NAME,
+        "Total auth denial events",
+        ["channel", "reason"],
+    )
+
+
 def auth_denied(*, channel: str, reason: str) -> None:
-    """Records an auth denial event. Wired to a Prometheus Counter in Task 6."""
-    pass
+    """Increments wasp_auth_denied_total{channel,reason}."""
+    _auth_denied_counter.labels(channel=channel, reason=reason).inc()
 
 
 def instrument(name: str):
