@@ -27,6 +27,7 @@ AGNO_MODULES = [
     "agno.os",
     "agno.os.interfaces",
     "agno.os.interfaces.telegram",
+    "agno.os.interfaces.telegram.security",
     "agno.tools",
 ]
 

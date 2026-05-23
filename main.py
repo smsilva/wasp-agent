@@ -98,6 +98,8 @@ async def _process_start_token(payload: dict, redeem_fn, send_fn) -> bool:
     text = (message.get("text") or "").strip()
     if not text.startswith("/start "):
         return False
+    # `text.strip()` above guarantees non-whitespace follows the "/start "
+    # prefix, so `split()` always yields at least one element.
     token = text.split(maxsplit=1)[1].split()[0]
     chat_id = message.get("chat", {}).get("id")
     if chat_id is None:
@@ -118,6 +120,8 @@ def _install_start_token_handler(iface: Telegram) -> None:
     ``/webhook`` route's endpoint so wasp can redeem invite tokens before
     agno dispatches the message to the LLM.
     """
+    # NOTE: relies on agno's internal `Telegram.get_router()` API. If agno
+    # changes this contract, this wrapper must be updated.
     original_get_router = iface.get_router
     notifier = TelegramNotifier(iface.token)
 
@@ -130,6 +134,15 @@ def _install_start_token_handler(iface: Telegram) -> None:
 
         async def webhook_with_auth(request, background_tasks):
             from starlette.responses import JSONResponse
+            from agno.os.interfaces.telegram.security import (
+                validate_webhook_secret_token,
+            )
+
+            secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+            if not validate_webhook_secret_token(secret_token):
+                return JSONResponse(
+                    {"detail": "Invalid secret token"}, status_code=403
+                )
 
             body = await request.json()
             handled = await _process_start_token(
@@ -138,10 +151,8 @@ def _install_start_token_handler(iface: Telegram) -> None:
             if handled:
                 return JSONResponse({"status": "ok"})
 
-            async def _replay():
-                return body
-
-            request.json = _replay  # type: ignore[method-assign]
+            # Starlette's Request.json() caches `_json` on the instance after
+            # first call; agno's downstream `await request.json()` reuses it.
             return await original_endpoint(request, background_tasks)
 
         webhook_route.endpoint = webhook_with_auth

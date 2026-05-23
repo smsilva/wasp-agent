@@ -240,12 +240,43 @@ def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
     assert callable(interface.get_router)
 
 
+async def test_start_token_trailing_space_not_handled(mock_agno, monkeypatch):
+    """`/start ` (trailing space, no token) falls through to agno without crashing."""
+    import main
+
+    async def fake_send(chat_id, text):
+        raise AssertionError("send should not be called")
+
+    def fake_redeem(*args, **kwargs):
+        raise AssertionError("redeem should not be called")
+
+    payload = {"message": {"text": "/start ", "chat": {"id": 1}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+    assert handled is False
+
+
+async def test_start_token_only_whitespace_not_handled(mock_agno, monkeypatch):
+    """`/start    ` (only whitespace after command) falls through without crashing."""
+    import main
+
+    async def fake_send(chat_id, text):
+        raise AssertionError("send should not be called")
+
+    def fake_redeem(*args, **kwargs):
+        raise AssertionError("redeem should not be called")
+
+    payload = {"message": {"text": "/start   \t  ", "chat": {"id": 1}}}
+    handled = await main._process_start_token(payload, fake_redeem, fake_send)
+    assert handled is False
+
+
 async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch):
     """The installed get_router wraps the /webhook endpoint, intercepting /start tokens."""
     from unittest.mock import MagicMock, AsyncMock
 
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+    monkeypatch.setenv("APP_ENV", "development")
     import main
 
     original_endpoint = AsyncMock(return_value="agno-result")
@@ -265,6 +296,12 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     main._install_start_token_handler(iface)
 
     monkeypatch.setattr(main.auth, "redeem_invite", lambda *a, **kw: ("uid", "Carol"))
+    # APP_ENV=development makes validate_webhook_secret_token return True for any header.
+    import sys
+
+    sys.modules[
+        "agno.os.interfaces.telegram.security"
+    ].validate_webhook_secret_token = lambda token: True
 
     sent = []
 
@@ -280,6 +317,7 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
 
     # /start <token> path: handled, original endpoint NOT called.
     fake_request = MagicMock()
+    fake_request.headers = {"X-Telegram-Bot-Api-Secret-Token": "ok"}
     fake_request.json = AsyncMock(
         return_value={"message": {"text": "/start ABC", "chat": {"id": 99}}}
     )
@@ -289,13 +327,65 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     original_endpoint.assert_not_called()
     assert sent == [("99", "Bem-vindo, Carol. Você está autorizado a usar o wasp-agent.")]
 
-    # Non-/start path: delegates to original.
+    # Non-/start path: delegates to original. Starlette caches Request._json
+    # automatically, so the wrapper does not need to replay request.json.
     fake_request2 = MagicMock()
+    fake_request2.headers = {"X-Telegram-Bot-Api-Secret-Token": "ok"}
     fake_request2.json = AsyncMock(
         return_value={"message": {"text": "olá", "chat": {"id": 1}}}
     )
     result = await new_endpoint(fake_request2, background)
     assert result == "agno-result"
     original_endpoint.assert_awaited_once()
-    replayed = await fake_request2.json()
-    assert replayed == {"message": {"text": "olá", "chat": {"id": 1}}}
+
+
+async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
+    """A /start <token> POST without valid secret-token header gets 403 (no redeem call)."""
+    from unittest.mock import MagicMock, AsyncMock
+
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+    monkeypatch.delenv("APP_ENV", raising=False)
+    import main
+
+    original_endpoint = AsyncMock(return_value="agno-result")
+    webhook_route = MagicMock(path="/webhook", endpoint=original_endpoint)
+    fake_router = MagicMock(routes=[webhook_route])
+
+    class FakeTelegram:
+        def __init__(self):
+            self.token = "tk"
+
+        def get_router(self):
+            return fake_router
+
+    iface = FakeTelegram()
+    main._install_start_token_handler(iface)
+
+    redeem_calls = []
+
+    def fake_redeem(*args, **kwargs):
+        redeem_calls.append(args)
+        return ("uid", "Mallory")
+
+    monkeypatch.setattr(main.auth, "redeem_invite", fake_redeem)
+    # Force validator to fail (simulates missing/wrong header in production).
+    import sys
+
+    sys.modules[
+        "agno.os.interfaces.telegram.security"
+    ].validate_webhook_secret_token = lambda token: False
+
+    iface.get_router()  # install wrapper
+    new_endpoint = webhook_route.endpoint
+
+    fake_request = MagicMock()
+    fake_request.headers = {}  # missing secret token
+    fake_request.json = AsyncMock(
+        return_value={"message": {"text": "/start ABC", "chat": {"id": 99}}}
+    )
+    response = await new_endpoint(fake_request, MagicMock())
+
+    assert response.status_code == 403
+    assert redeem_calls == []
+    original_endpoint.assert_not_called()
