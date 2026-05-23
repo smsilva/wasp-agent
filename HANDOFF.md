@@ -103,6 +103,13 @@ Auth multi-canal implementado — desbloqueia security review (CLAUDE.md §9). C
 
 ## Backlog
 
+- **Auth hardening (final review Ciclo 7)** — itens não-blockers identificados no final review do auth-multichannel; endereçar na security review do §1 Next Steps:
+  - Race em `redeem_invite` (read+write em statements separados) — envolver em `BEGIN IMMEDIATE`. `wasp/auth.py:173–183`.
+  - Telemetria de token inválido — incrementar `wasp_auth_denied_total{reason="invalid_token"}` quando `redeem_invite` retorna `None` em `_process_start_token`.
+  - `bootstrap_admin` deixa `auth_users` órfão se `link_identity` lança `IntegrityError` — transação única ou rollback.
+  - Invites sem `channel`/`channel_id` permitem first-claimer wins — documentar em "Limitações conhecidas" do `docs/runbooks/auth-admin.md`.
+  - `os.chmod(agent.db, 0o600)` após `init_db()` para hardenar deploys pré-umask.
+  - `init_db()` chamado em todo `is_authorized` — gate por flag módulo-nível para reduzir conexões na hot path.
 - **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt.
 - **Token/cost budget alerts** (`docs/sdlc/02-design/2026-05-20-token-cost-budget.md`, Idea).
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite.
