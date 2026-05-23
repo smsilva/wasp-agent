@@ -42,7 +42,7 @@ class JSONFormatter(logging.Formatter):
             if key not in _BUILTIN_ATTRS:
                 obj[key] = val
 
-        return json.dumps(obj)
+        return json.dumps(obj, default=str)
 
 
 def configure_logging() -> None:
