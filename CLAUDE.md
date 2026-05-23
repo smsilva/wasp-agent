@@ -139,6 +139,10 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 - Avoid bullet lists and bold except when structure genuinely helps
 - When relaying a successful tool result, use the `message` field from the dict — do not invent additional text
 
+## 12a. Telegram router wrapping — prefixo `/telegram`
+
+agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.post("/webhook", ...)` aparecem em `router.routes` com `path="/telegram/webhook"`, **não** `"/webhook"`. Ao inspecionar/wrap as rotas em `main.py`, casar por suffix (`r.path.endswith("/webhook")`) ou por `r.name == "telegram_webhook"`, nunca por equivalência exata. Unit tests com `MagicMock(path="/webhook")` passam mesmo contra implementação quebrada — incluir pelo menos um teste com path prefixado.
+
 ## 13. Async watcher
 
 See `docs/architecture/async-watcher.md`.
@@ -176,6 +180,14 @@ monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recordi
 ```
 
 Patchear só `TelegramNotifier` não funciona: `WASP_AGENT_NOTIFIER=console` no `.env` é carregado pelo `load_dotenv()` em `main.py` no import, e `_select_notifier` retorna `ConsoleNotifier` antes de chegar na chamada de `TelegramNotifier`. O notifier vai para o console e o `RecordingNotifier` nunca recebe — teste falha com `TimeoutError` sem mensagem de erro clara.
+
+O mesmo fixture também monkeypatcha `wasp.auth.is_authorized` para retornar um `user_id` fake:
+
+```python
+monkeypatch.setattr(wasp.auth, "is_authorized", lambda channel, channel_id: "e2e-user")
+```
+
+Sem isso, o `session_id="tg:..."` usado no teste cai no auth guard de `provision_platform_instance` e retorna `{"status": "unauthorized"}` silenciosamente — o teste falha lá embaixo no `get_file()` do Gitea com 404, mascarando a causa real.
 
 ## 16. Validação
 
