@@ -9,6 +9,7 @@ from agno.tools import tool
 from opentelemetry import trace
 from pydantic import BaseModel, Field
 from wasp.git_client import FileAlreadyExistsError, PyGithubClient
+from wasp.logging import chat_id_var
 from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
 from wasp.watcher import extract_channel, extract_chat_id, watch_platform
 
@@ -127,7 +128,7 @@ def provision_platform_instance(
                 branch="dev",
             )
         except FileAlreadyExistsError:
-            log.info("Tenant %s already provisioning (manifest exists)", name)
+            log.info("Tenant %s already provisioning (manifest exists)", name, extra={"platform": name})
             telemetry.provisioning_counter.add(1, {"outcome": "already_provisioning"})
             return {
                 "status": "already_provisioning",
@@ -140,6 +141,8 @@ def provision_platform_instance(
         telemetry.provisioning_counter.add(1, {"outcome": "started"})
 
         chat_id = extract_chat_id(run_context)
+        if chat_id:
+            chat_id_var.set(chat_id)
         channel = extract_channel(run_context)
         notifier = _select_notifier(channel)
         if chat_id and notifier is not None:
@@ -150,7 +153,7 @@ def provision_platform_instance(
                 asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
 
             threading.Thread(target=_run_watcher, daemon=True).start()
-            log.info("Watcher spawned for %s (chat_id=%s)", name, chat_id)
+            log.info("Watcher spawned for %s", name, extra={"platform": name})
 
         return {
             "status": "provisioning",
@@ -160,7 +163,7 @@ def provision_platform_instance(
             ),
         }
     except Exception:
-        log.exception("provision_platform_instance failed")
+        log.exception("provision_platform_instance failed", extra={"platform": name})
         telemetry.provisioning_counter.add(1, {"outcome": "error"})
         return {
             "status": "error",

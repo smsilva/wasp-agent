@@ -6,6 +6,7 @@ import wasp.telemetry as telemetry
 from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
+from wasp.logging import chat_id_var
 from wasp.notifier import Notifier
 
 log = logging.getLogger(__name__)
@@ -61,11 +62,12 @@ def _find_condition(platform: dict, type_: str) -> dict | None:
 async def watch_platform(
     name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
 ) -> None:
+    chat_id_var.set(chat_id)
     log.info("Watcher started for %s", name)
     try:
         await _watch_platform_inner(name, chat_id, notifier, parent_span_ctx)
     except Exception:
-        log.exception("Watcher failed for %s", name)
+        log.exception("Watcher failed for %s", name, extra={"platform": name})
 
 
 async def _watch_platform_inner(
@@ -114,7 +116,7 @@ async def _watch_platform_inner(
                 span.set_attribute("outcome", "ready")
                 span.set_attribute("poll_count", poll_count)
                 span.set_attribute("duration_seconds", elapsed)
-                log.info("Platform %s is Ready — notifying", name)
+                log.info("Platform %s is Ready — notifying", name, extra={"platform": name})
                 await notifier.send(chat_id, ready_message(name, platform))
                 return
 
@@ -129,7 +131,7 @@ async def _watch_platform_inner(
         span.set_attribute("outcome", "timeout")
         span.set_attribute("poll_count", poll_count)
         span.set_attribute("duration_seconds", elapsed)
-        log.warning("Watcher timeout for %s", name)
+        log.warning("Watcher timeout for %s", name, extra={"platform": name})
         await notifier.send(
             chat_id,
             f"Provisionamento de '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
