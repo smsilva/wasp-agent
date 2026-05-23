@@ -63,8 +63,9 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def init_db(db_file: str) -> None:
+def init_db(db_file: str | None = None) -> None:
     """Create schema. Idempotent."""
+    db_file = _resolve_db_file(db_file)
     con = _connect(db_file)
     try:
         for stmt in _DDL:
@@ -143,17 +144,17 @@ def create_invite(
     expires_at = (now + timedelta(hours=ttl_hours)).isoformat()
     con = _connect(db_file)
     try:
-        con.execute(
-            "INSERT INTO auth_users (user_id, display_name, created_at) VALUES (?, ?, ?)",
-            (user_id, display_name, created_at),
-        )
-        con.execute(
-            "INSERT INTO auth_invites "
-            "(token, user_id, channel, channel_id, created_by, created_at, expires_at, used_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
-            (token, user_id, channel, channel_id, created_by, created_at, expires_at),
-        )
-        con.commit()
+        with con:
+            con.execute(
+                "INSERT INTO auth_users (user_id, display_name, created_at) VALUES (?, ?, ?)",
+                (user_id, display_name, created_at),
+            )
+            con.execute(
+                "INSERT INTO auth_invites "
+                "(token, user_id, channel, channel_id, created_by, created_at, expires_at, used_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
+                (token, user_id, channel, channel_id, created_by, created_at, expires_at),
+            )
     finally:
         con.close()
     return token
@@ -185,19 +186,28 @@ def redeem_invite(
             return None
         if bound_channel_id is not None and bound_channel_id != channel_id:
             return None
+        # Reject if (channel, channel_id) is already linked to a user. Leave
+        # the invite unconsumed so the admin can revoke the existing identity
+        # and the invite can be retried.
+        already = con.execute(
+            "SELECT 1 FROM auth_identities WHERE channel=? AND channel_id=?",
+            (channel, channel_id),
+        ).fetchone()
+        if already is not None:
+            return None
         now = _now()
-        con.execute(
-            "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
-            "VALUES (?, ?, ?, ?)",
-            (channel, channel_id, user_id, now),
-        )
-        con.execute(
-            "UPDATE auth_invites SET used_at=? WHERE token=?", (now, token)
-        )
+        with con:
+            con.execute(
+                "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                "VALUES (?, ?, ?, ?)",
+                (channel, channel_id, user_id, now),
+            )
+            con.execute(
+                "UPDATE auth_invites SET used_at=? WHERE token=?", (now, token)
+            )
         display_name = con.execute(
             "SELECT display_name FROM auth_users WHERE user_id=?", (user_id,)
         ).fetchone()[0]
-        con.commit()
         return (user_id, display_name)
     finally:
         con.close()

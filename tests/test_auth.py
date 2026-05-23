@@ -234,3 +234,31 @@ def test_db_file_defaults_to_env_var(tmp_path, monkeypatch):
     assert auth.is_authorized("tg", "1") is None
     auth.link_identity(user_id, "tg", "1")
     assert auth.is_authorized("tg", "1") == user_id
+
+
+def test_init_db_without_args_uses_env_var(tmp_path, monkeypatch):
+    target = str(tmp_path / "init_env.db")
+    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
+    auth.init_db()
+    names = _table_names(target)
+    assert "auth_users" in names
+    assert "auth_identities" in names
+    assert "auth_invites" in names
+
+
+def test_redeem_invite_rejects_when_identity_already_linked(db_file):
+    # Pre-existing identity for (tg, "111")
+    user1 = auth.create_user("Existing", db_file=db_file)
+    auth.link_identity(user1, "tg", "111", db_file=db_file)
+    # New invite, attempting to bind same (tg, "111")
+    token = auth.create_invite("New", created_by=user1, db_file=db_file)
+    assert auth.redeem_invite(token, "tg", "111", db_file=db_file) is None
+    # Invite remains unconsumed (admin can revoke existing identity and retry).
+    con = sqlite3.connect(db_file)
+    try:
+        used_at = con.execute(
+            "SELECT used_at FROM auth_invites WHERE token=?", (token,)
+        ).fetchone()[0]
+    finally:
+        con.close()
+    assert used_at is None
