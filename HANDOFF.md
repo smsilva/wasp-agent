@@ -37,7 +37,6 @@ Implementação completa do subsistema de logging em `dev`:
 | Arquivo | Status |
 |---|---|
 | `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Approved — plano em `03-execution/2026-05-21-auth-multichannel-plan.md` |
-| `docs/sdlc/02-design/2026-05-21-ci-pull-request.md` | Implemented (não arquivado) |
 | `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` | Idea — opção A (OAuth direto GitHub/Google), concorre com cognito-federation |
 | `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` | Idea — opção B (Cognito como hub federado), alinha com `aws-saas-platform` |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
