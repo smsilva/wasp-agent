@@ -1,14 +1,12 @@
-import logging
 import os
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+from wasp.logging import configure_logging  # noqa: E402
+
+configure_logging()
 
 os.umask(0o077)  # agent.db created with 600 permissions
 
