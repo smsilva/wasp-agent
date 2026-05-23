@@ -129,7 +129,8 @@ def _install_start_token_handler(iface: Telegram) -> None:
     def get_router_with_auth():
         router = original_get_router()
         webhook_route = next(
-            r for r in router.routes if getattr(r, "path", "") == "/webhook"
+            r for r in router.routes
+            if getattr(r, "path", "").endswith("/webhook")
         )
         original_endpoint = webhook_route.endpoint
 

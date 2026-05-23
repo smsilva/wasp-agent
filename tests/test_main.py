@@ -346,6 +346,34 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     original_endpoint.assert_awaited_once()
 
 
+async def test_install_start_token_handler_finds_webhook_with_router_prefix(
+    mock_agno, monkeypatch
+):
+    """agno's APIRouter prefixes routes with /telegram — wrapper must still locate /webhook."""
+    from unittest.mock import MagicMock, AsyncMock
+
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+    import main
+
+    original_endpoint = AsyncMock(return_value="agno-result")
+    webhook_route = MagicMock(path="/telegram/webhook", endpoint=original_endpoint)
+    status_route = MagicMock(path="/telegram/status", endpoint=MagicMock())
+    fake_router = MagicMock(routes=[status_route, webhook_route])
+
+    class FakeTelegram:
+        def __init__(self):
+            self.token = "tk"
+
+        def get_router(self):
+            return fake_router
+
+    iface = FakeTelegram()
+    main._install_start_token_handler(iface)
+    iface.get_router()  # should not raise
+    assert webhook_route.endpoint is not original_endpoint
+
+
 async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
     """A /start <token> POST without valid secret-token header gets 403 (no redeem call)."""
     from unittest.mock import MagicMock, AsyncMock
