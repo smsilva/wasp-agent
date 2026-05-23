@@ -179,6 +179,22 @@ Patchear só `TelegramNotifier` não funciona: `WASP_AGENT_NOTIFIER=console` no 
 
 ## 16. Validação
 
+**Ao fim de todo ciclo de desenvolvimento (antes de declarar a feature pronta, abrir PR ou fazer merge), rodar obrigatoriamente:**
+
+```bash
+make test
+make e2e-with-debug
+```
+
+Os dois são complementares e não substituíveis:
+
+- `make test` roda a suite unitária com `mock_agno` — agno é mockado, então bugs na integração real (ex.: router do `Telegram` com prefixo `/telegram`, comportamento de `agno.os.AgentOS` em `import main`) **não aparecem aqui**.
+- `make e2e-with-debug` importa `main.py` real, sobe Gitea + k3d + `fake_reconciler`, e executa o fluxo completo turn-1/turn-2/watcher/notificação. É onde bugs como `webhook_route = next(... path == "/webhook")` quebrando contra o prefixo real do agno aparecem.
+
+Não pular o e2e por ser mais lento. Lição registrada (2026-05-23): o fix do `/telegram/webhook` prefix só foi descoberto ao rodar `make e2e-with-debug` depois de `make test` verde — a suite unitária usava `MagicMock(path="/webhook")` e nunca exercitou o router real.
+
+### Caminhos
+
 Três caminhos distintos — detalhes em `docs/runbooks/validation.md`.
 
 - **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
