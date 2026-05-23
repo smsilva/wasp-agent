@@ -17,6 +17,7 @@ from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
 from wasp import auth, provision_platform_instance  # noqa: E402
+auth.init_db()
 from wasp.notifier import TelegramNotifier  # noqa: E402
 
 INSTRUCTIONS = [

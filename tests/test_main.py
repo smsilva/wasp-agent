@@ -225,6 +225,13 @@ async def test_start_token_missing_chat_id_not_handled(mock_agno, monkeypatch):
     assert handled is False
 
 
+def test_main_initializes_auth_db(mock_agno, monkeypatch):
+    init_called = []
+    monkeypatch.setattr("wasp.auth.init_db", lambda db_file=None: init_called.append(db_file))
+    import main  # noqa: F401
+    assert init_called  # init_db was called at import time
+
+
 def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
     """When TELEGRAM_TOKEN is set, the wrapper is installed on the interface."""
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
