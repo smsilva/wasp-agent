@@ -3,6 +3,7 @@ import logging
 import os
 from contextvars import ContextVar
 from datetime import datetime, timezone
+from logging.handlers import TimedRotatingFileHandler
 from typing import Any
 
 chat_id_var: ContextVar[str | None] = ContextVar("chat_id", default=None)
@@ -45,6 +46,27 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(obj, default=str)
 
 
+class _RotatingTimedFileHandler(TimedRotatingFileHandler):
+    """Rotates at midnight UTC OR when file exceeds max_bytes, whichever comes first."""
+
+    def __init__(self, filename: str, max_bytes: int, backup_count: int) -> None:
+        super().__init__(
+            filename,
+            when="midnight",
+            backupCount=backup_count,
+            encoding="utf-8",
+            utc=True,
+        )
+        self.max_bytes = max_bytes
+
+    def shouldRollover(self, record: logging.LogRecord) -> bool:
+        if self.max_bytes > 0 and self.stream:
+            self.stream.seek(0, 2)
+            if self.stream.tell() >= self.max_bytes:
+                return True
+        return super().shouldRollover(record)
+
+
 def configure_logging() -> None:
     level = os.getenv("LOG_LEVEL", "INFO")
     fmt = os.getenv("LOG_FORMAT", "text")
@@ -69,7 +91,9 @@ def configure_logging() -> None:
         parent = os.path.dirname(log_file)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        file_handler = logging.FileHandler(log_file)
+        max_bytes = int(os.getenv("LOG_FILE_MAX_BYTES", str(50 * 1024 * 1024)))
+        backup_count = int(os.getenv("LOG_FILE_BACKUP_COUNT", "7"))
+        file_handler = _RotatingTimedFileHandler(log_file, max_bytes=max_bytes, backup_count=backup_count)
         file_handler.setLevel(file_level)
         file_handler.setFormatter(JSONFormatter())
         root.addHandler(file_handler)

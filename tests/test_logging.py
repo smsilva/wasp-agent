@@ -158,3 +158,63 @@ def test_configure_logging_is_idempotent(monkeypatch):
     configure_logging()
     root = logging.getLogger()
     assert len(root.handlers) == 1
+
+
+def test_configure_logging_file_handler_is_rotating(monkeypatch, tmp_path):
+    from wasp.logging import configure_logging, _RotatingTimedFileHandler
+    log_file = str(tmp_path / "test.jsonl")
+    monkeypatch.setenv("LOG_FILE", log_file)
+    configure_logging()
+    root = logging.getLogger()
+    assert isinstance(root.handlers[1], _RotatingTimedFileHandler)
+
+
+def test_configure_logging_file_handler_defaults(monkeypatch, tmp_path):
+    from wasp.logging import configure_logging
+    log_file = str(tmp_path / "test.jsonl")
+    monkeypatch.setenv("LOG_FILE", log_file)
+    monkeypatch.delenv("LOG_FILE_MAX_BYTES", raising=False)
+    monkeypatch.delenv("LOG_FILE_BACKUP_COUNT", raising=False)
+    configure_logging()
+    root = logging.getLogger()
+    handler = root.handlers[1]
+    assert handler.max_bytes == 50 * 1024 * 1024
+    assert handler.backupCount == 7
+
+
+def test_configure_logging_respects_log_file_max_bytes(monkeypatch, tmp_path):
+    from wasp.logging import configure_logging
+    log_file = str(tmp_path / "test.jsonl")
+    monkeypatch.setenv("LOG_FILE", log_file)
+    monkeypatch.setenv("LOG_FILE_MAX_BYTES", "1024")
+    configure_logging()
+    root = logging.getLogger()
+    assert root.handlers[1].max_bytes == 1024
+
+
+def test_configure_logging_respects_log_file_backup_count(monkeypatch, tmp_path):
+    from wasp.logging import configure_logging
+    log_file = str(tmp_path / "test.jsonl")
+    monkeypatch.setenv("LOG_FILE", log_file)
+    monkeypatch.setenv("LOG_FILE_BACKUP_COUNT", "14")
+    configure_logging()
+    root = logging.getLogger()
+    assert root.handlers[1].backupCount == 14
+
+
+def test_rotating_handler_rolls_over_on_size(tmp_path):
+    from wasp.logging import _RotatingTimedFileHandler
+    log_file = str(tmp_path / "test.jsonl")
+    handler = _RotatingTimedFileHandler(log_file, max_bytes=10, backup_count=3)
+    handler.stream.write("x" * 20)
+    handler.stream.flush()
+    assert handler.shouldRollover(make_record()) is True
+    handler.close()
+
+
+def test_rotating_handler_no_rollover_when_small(tmp_path):
+    from wasp.logging import _RotatingTimedFileHandler
+    log_file = str(tmp_path / "test.jsonl")
+    handler = _RotatingTimedFileHandler(log_file, max_bytes=1000, backup_count=3)
+    assert handler.shouldRollover(make_record()) is False
+    handler.close()
