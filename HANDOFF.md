@@ -2,55 +2,31 @@
 
 ## Goal
 
-Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão e suporte futuro a Discord/Slack.
+Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão, autenticação multi-canal por invite, e suporte futuro a Discord/Slack.
 
-Ciclos 1–6 completos e em `main`.
+Ciclos 1–6 estão em `main`. Ciclo 7 (autenticação multi-canal) + logging estruturado estão em `dev`.
 
 ## Current Progress
 
-**Ciclos 1–7 + logging em `dev`**, não merged para `main` ainda.
+**Sessão 2026-05-23 (parte 2) — Auth multi-canal (Ciclo 7) + fixes de validação**
 
-**Sessão 2026-05-23 — Ciclo 7 (Autenticação multi-canal):**
+- Plan `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` executado fim-a-fim (9 tasks TDD): `wasp/auth.py` (schema `auth_users` / `auth_identities` / `auth_invites`, API `init_db`/`is_authorized`/`create_user`/`link_identity`/`create_invite`/`redeem_invite`/`revoke_identity`/`list_identities`/`has_any_user`/`bootstrap_admin`), guard em `provision_platform_instance` (deny silencioso + canal `local` confiável), handler `/start <token>` no webhook do Telegram (com validação do `X-Telegram-Bot-Api-Secret-Token`), CLI admin (`scripts/admin-{invite,revoke,list,bootstrap}` + Make targets), métrica `wasp_auth_denied_total{channel,reason}`, `auth.init_db()` no startup, runbook `docs/runbooks/auth-admin.md`.
+- Final review do auth-multichannel rodou após Task 9 — APPROVED_WITH_CONCERNS. Achados não-bloqueantes ficaram registrados no Backlog abaixo.
+- Bug encontrado **só** via `make e2e-with-debug` (não via `make test`): `_install_start_token_handler` buscava route com `path == "/webhook"`, mas o `APIRouter` do agno usa `prefix="/telegram"`. Fix: `endswith("/webhook")`. Lição entrou como **§12a do `CLAUDE.md`** e como diretiva obrigatória em §16 (rodar `make test` + `make e2e-with-debug` ao fim de todo ciclo).
+- E2E `agent_client` fixture passou a monkeypatchar `wasp.auth.is_authorized` — sem isso o auth guard nega o `session_id="tg:..."` e o teste falha mascarado em 404 do Gitea (registrado em §19 do `CLAUDE.md`).
+- Smoke test do Telegram agora detalhado em `docs/runbooks/validation.md` §B com: setup ngrok, descobrir `user.id`, dois fluxos de auth (bootstrap vs invite/deep link), roteiro de mensagens, verificação opcional do auth deny path, reset de estado.
+- `make local-chat` validado em runtime: roteiro 5/5 OK (greet → memória → confirmação → tool chamada), canal `local` confirmado como `TRUSTED_CHANNELS` (auth bypassada).
 
-Implementação completa do spec `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` em `dev` (9 tasks TDD, plan `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md`):
+**Sessão 2026-05-23 (parte 1) — Logging:** subsistema completo (`wasp/logging.py`, `JSONFormatter`, `chat_id_var` ContextVar, rotação diária + 50 MB, 22 testes, cobertura 100%). Já estava em `dev` no início da sessão.
 
-- `wasp/auth.py` — schema `auth_users` / `auth_identities` / `auth_invites` no `agent.db`; API `init_db`, `is_authorized`, `create_user`, `link_identity`, `create_invite`, `redeem_invite`, `revoke_identity`, `list_identities`, `has_any_user`, `bootstrap_admin`
-- `wasp/provision.py` — guard `is_authorized(channel, channel_id)` em `provision_platform_instance`; `local` continua trusted; span attributes `auth.channel` e `user.id`
-- `main.py` — `_install_start_token_handler` intercepta `/start <token>` no webhook do Telegram antes do agno (com validação do `X-Telegram-Bot-Api-Secret-Token`); `auth.init_db()` no startup
-- `wasp/auth_cli.py` + `scripts/admin-{invite,revoke,list,bootstrap}` + Make targets — CLI do operador
-- `wasp/telemetry.py` — métrica Prometheus `wasp_auth_denied_total{channel,reason}` (registration idempotente via `_PROM_REGISTRY._names_to_collectors`)
-- `.env.example` — `TELEGRAM_BOT_USERNAME`, `WASP_AGENT_DB_FILE`, `WASP_AGENT_INVITE_TTL_HOURS`
-- `docs/runbooks/auth-admin.md` — runbook do operador (bootstrap, invite, list, revoke, diagnóstico)
-- `docs/runbooks/validation.md` — nota de pré-requisito de auth no path B (smoke Telegram)
-- Cobertura 100%, ruff clean, 150 testes passando
-
-**Sessão 2026-05-23 — Logging:**
-
-Implementação completa do subsistema de logging em `dev`:
-
-- `wasp/logging.py` — `JSONFormatter`, `chat_id_var` (ContextVar), `_RotatingTimedFileHandler`, `configure_logging()`
-- `main.py` — substitui `logging.basicConfig()` por `configure_logging()`
-- `wasp/telemetry.py` — `LoggingInstrumentor` wired (bridge OTel → Python logging)
-- `wasp/provision.py` / `wasp/watcher.py` — propagação de `chat_id` via ContextVar; campo `platform` nos logs-chave
-- Rotação automática: diária (midnight UTC) + 50 MB; 7 backups; configurável via `LOG_FILE_MAX_BYTES` / `LOG_FILE_BACKUP_COUNT`
-- `scripts/e2e-with-debug` — usa `LOG_FORMAT=json` (saída JSONL)
-- 22 testes unitários, cobertura 100%, ruff clean
-- Validado: `make run` (texto) + `make e2e-with-debug` (JSONL com `chat_id` e `platform`)
-- Specs supersedidos arquivados: `2026-05-16-structured-logging.md`, `2026-05-20-persistent-audit-log.md`
-
-**Sessão 2026-05-21:**
-
-1. Arquivado `docs/sdlc/03-execution/2026-05-20-local-chat-plan.md`.
-2. Smoke test Telegram (manual) validado: memória de sessão OK; canal `tg` routing OK.
-3. Validação fim-a-fim GitOps (manual) rodada com sucesso.
-4. `fix(gitops)`: inverte ordem no `scripts/gitops-up` — XRD/Composition antes de ArgoCD Application.
-5. Arquivado `docs/sdlc/03-execution/2026-05-21-ci-pull-request.md`.
+**Sessão 2026-05-21:** smoke Telegram manual validado; validação GitOps end-to-end rodada; `fix(gitops)` na ordem do `scripts/gitops-up`; spec local-chat arquivado.
 
 ### Specs ativos
 
 | Arquivo | Status |
 |---|---|
-| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Implemented — arquivar após merge em `main` |
+| `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md` | Implemented |
+| `docs/sdlc/02-design/2026-05-20-local-chat.md` | Implemented |
 | `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` | Idea — opção A (OAuth direto GitHub/Google), concorre com cognito-federation |
 | `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` | Idea — opção B (Cognito como hub federado), alinha com `aws-saas-platform` |
 | `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` | Idea |
@@ -59,7 +35,7 @@ Implementação completa do subsistema de logging em `dev`:
 
 ### Plans ativos
 
-- `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` — Implementado — arquivar após merge em `main`.
+Nenhum em execução. `docs/sdlc/03-execution/2026-05-21-auth-multichannel-plan.md` está completo.
 
 ### Open Security Issues
 
@@ -67,56 +43,49 @@ Nenhuma issue ativa em `docs/security/issues/` (só `archived/`).
 
 ## What Worked
 
-- **Grilling antes do spec**: fechar todas as decisões de design antes de escrever código eliminou retrabalho
-- **Notifier Protocol**: desacopla o watcher do canal desde o início; `RecordingNotifier` torna os testes limpos sem mocks; `ConsoleNotifier` reaproveita o mesmo Protocol para path D sem tocar no watcher
-- **TDD via subagent** para Ciclos 4 e 5: cobertura 100% mantida desde o início, ruff clean a cada commit
-- **TDD passo-a-passo do plano local-chat**: 7 commits pequenos (red → green → lint → commit por task) manteve cobertura 100% durante toda a execução
-- **`SpanLink`** para correlacionar trabalho assíncrono do watcher ao span síncrono da tool — padrão OTel correto para fire-and-forget
-- **`make smoke` + Jaeger** — validação E2E de spans sem precisar de infraestrutura permanente
-- **Defender no tool layer, não no prompt**: LLMs pequenos (llama3.1 8B) violam regras negativas do system prompt; idempotência na tool + roteamento explícito de notifier são mais robustos que prompt engineering
-- **Diagnóstico via tmux**: identificar que `OTEL_EXPORTER_OTLP_ENDPOINT` setado no shell quebra os testes (interação com mocks do conftest)
-- **`make e2e-with-debug`**: `-s --log-cli-level=DEBUG -x` + log em disco identificou rapidamente que o watcher notificou via `ConsoleNotifier` em vez de `RecordingNotifier` — bug silencioso que com `make e2e` apenas aparecia como `TimeoutError`
-- **Validação manual do ciclo GitOps real**: subir cluster + tentar `make gitops-up` expôs ordem incorreta do script (Application antes do XRD); smoke automatizado não cobre isso porque usa `fake_reconciler`
-- **ContextVar para propagação de `chat_id`**: propaga contexto cross-thread sem passar explicitamente por toda a call chain; `watch_platform` chama `chat_id_var.set(chat_id)` no início do thread novo
+- **TDD via subagent driven development (skill `subagent-driven-development`)**: implementer + spec reviewer + code quality reviewer por task. 9 tasks executadas em sequência sem retrabalho, com final review holístico capturando achados não-bloqueantes.
+- **Subagents com modelo Sonnet** para tasks mecânicas (Task 8, wire-up trivial) e Opus para revisão final — escolha de modelo proporcional à complexidade conserva tempo e custo.
+- **`make e2e-with-debug` como gate obrigatório**: bug do `/telegram/webhook` prefix só apareceu lá. `make test` sozinho passou contra `MagicMock(path="/webhook")` realista demais para o mock, mas incorreto contra o agno real.
+- **Webhook secret-token enforcement antes do parse**: `webhook_with_auth` valida o `X-Telegram-Bot-Api-Secret-Token` no topo, antes de chamar `_process_start_token`. Sem isso, atacantes que conhecem a URL do ngrok poderiam consumir invites.
+- **Idempotent Prometheus Counter registration**: `_PROM_REGISTRY._names_to_collectors` check evita `Duplicated timeseries` quando `sys.modules.pop` reimporta `wasp.telemetry` entre testes.
+- **Stub explícito de `is_authorized` no E2E fixture**: alinhado ao padrão existente do `_select_notifier`. Documenta o gap entre "rodar a feature" e "exercitar o auth real".
+- **Documentar o smoke test completo (auth + Telegram) em `validation.md` §B**: dois fluxos de auth (bootstrap vs invite), passos numerados, mensagens de erro esperadas, verificação opcional do deny path com métrica Prometheus.
 
 ## What Didn't Work
 
-- **Rota `/metrics`**: agno reserva esse path. Movido para `/telemetry/prometheus`
-- **Default logging WARNING** escondeu logs do watcher na primeira execução do smoke test
-- **Suposição errada sobre `session_id`**: agno 2.0+ adiciona suffix de message hash (4 partes, não 3)
-- **`PROMETHEUS_PORT=1`** era semanticamente confuso — variável renomeada para `PROMETHEUS_METRICS_ACTIVE`
-- **Instrução de confirmação no system prompt**: llama3.1 8B viola — chama a tool em "request" E novamente em "confirm". Solução não é endurecer o prompt; é tornar a tool idempotente.
-- **Seleção global de notifier por env (`TELEGRAM_TOKEN`)**: falha quando múltiplos canais coexistem. Roteamento deve ser por canal de origem do request.
-- **`uv sync` sem `uv cache clean`** não resolve instalação corrompida de pacote; `rm -rf .venv && uv sync` também não quando o problema é a cache do `uv` — nesses casos, upgrade de versão ou `uv cache clean <pkg>` é necessário.
-- **Patchear `TelegramNotifier` no fixture E2E**: não funciona quando `WASP_AGENT_NOTIFIER=console` está no `.env` — `_select_notifier` retorna antes de chamar `TelegramNotifier`. Patch correto é em `_select_notifier` diretamente.
-- **Ordem original do `scripts/gitops-up`**: aplicava ArgoCD `Application` antes do XRD/Composition de Platform; ArgoCD sincronizava `infrastructure/tenants` e quebrava com `no matches for kind "Platform"`.
+- **Unit tests com `MagicMock(path="/webhook")`**: passavam contra implementação quebrada porque mock não tinha o prefixo do `APIRouter`. Solução: adicionar pelo menos um teste com path prefixado (`"/telegram/webhook"`) para qualquer wrapper de router agno.
+- **Suposição que cobertura 100% + ruff clean = pronto**: cobertura mede linhas exercitadas, não comportamento real. O bug do prefixo tinha 100% de linhas cobertas pelos mocks. Validação E2E é o gate funcional.
+- **Final review como passo final do skill**: revelou 4 IMPORTANTs (race em `redeem_invite`, telemetria de token inválido, IntegrityError em `bootstrap_admin`, first-claimer wins em invites sem channel). Nenhum é blocker mas todos são scope-creep relativo ao plano. Decisão: backlog estruturado, sem reabrir o ciclo.
+- **Spec compliance review sem verificar comportamento integrado**: Task 3 passou no spec review com `path == "/webhook"` porque o spec não dizia nada sobre o prefixo. Compliance ≠ funcional.
 
 ## Next Steps
 
-### 1. Security review
+### 1. Security review (CLAUDE.md §9, §9a)
 
-Auth multi-canal implementado — desbloqueia security review (CLAUDE.md §9). Cobrir: autorização (`is_authorized` + `TRUSTED_CHANNELS`), validação do webhook Telegram, exposição de tokens em logs/spans, ataques contra `redeem_invite` (timing, reuso, expiração), permissões do `agent.db`.
+Auth multi-canal está em `dev` mas não passou por security review. Cobrir:
 
-### 2. Merge `dev` → `main`
+- **Race em `redeem_invite`** (`wasp/auth.py:173–183`): read+write em statements separados sob `with con:`. Envolver em `BEGIN IMMEDIATE` para serializar webhook concorrentes com o mesmo token.
+- **Telemetria de token inválido**: incrementar `wasp_auth_denied_total{reason="invalid_token"}` quando `redeem_invite` retorna `None` em `_process_start_token`.
+- **`bootstrap_admin` deixa `auth_users` órfão** se `link_identity` lança `IntegrityError`: transação única ou rollback explícito.
+- **Invites sem `channel`/`channel_id` permitem first-claimer wins**: documentar em "Limitações conhecidas" do `docs/runbooks/auth-admin.md`.
+- **`os.chmod(agent.db, 0o600)` após `init_db()`**: hardenar deploys onde o arquivo existe antes do `os.umask`.
+- **`init_db()` chamado em todo `is_authorized`**: gate por flag módulo-nível para reduzir conexões na hot path.
+- **Validação do webhook + auth path**: revisar end-to-end o fluxo `/start <token>` (entropy do token, exposição em logs, headers).
 
-`dev` está com Ciclos 1–7 + logging acumulados. Após security review, abrir PR e arquivar os specs/plans marcados como Implemented.
+### 2. Decidir entre opção A (CLI device flow OAuth) e opção B (Cognito federation)
+
+Specs `Idea` em `docs/sdlc/02-design/`. Gatilho: existência da CLI `wasp` concreta + escolha entre standalone (A) vs AWS-bound (B). Promover uma para Draft e criar plano.
+
+### 3. Definir prioridade dos demais specs em `Idea`
+
+- `2026-05-20-llm-behavior-evaluation.md` — golden set para detectar regressões no system prompt.
+- `2026-05-20-token-cost-budget.md` — alertas de orçamento de tokens.
+
+Ambos podem virar Approved + plano quando houver capacidade.
 
 ## Backlog
 
-- **Auth hardening (final review Ciclo 7)** — itens não-blockers identificados no final review do auth-multichannel; endereçar na security review do §1 Next Steps:
-  - Race em `redeem_invite` (read+write em statements separados) — envolver em `BEGIN IMMEDIATE`. `wasp/auth.py:173–183`.
-  - Telemetria de token inválido — incrementar `wasp_auth_denied_total{reason="invalid_token"}` quando `redeem_invite` retorna `None` em `_process_start_token`.
-  - `bootstrap_admin` deixa `auth_users` órfão se `link_identity` lança `IntegrityError` — transação única ou rollback.
-  - Invites sem `channel`/`channel_id` permitem first-claimer wins — documentar em "Limitações conhecidas" do `docs/runbooks/auth-admin.md`.
-  - `os.chmod(agent.db, 0o600)` após `init_db()` para hardenar deploys pré-umask.
-  - `init_db()` chamado em todo `is_authorized` — gate por flag módulo-nível para reduzir conexões na hot path.
-- **LLM behavior evaluation** (`docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md`, Idea) — golden set para detectar regressões no system prompt.
-- **Token/cost budget alerts** (`docs/sdlc/02-design/2026-05-20-token-cost-budget.md`, Idea).
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite.
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
-- **CLI/web auth real** — duas opções concorrentes em `Idea`, decidir entre elas antes de promover qualquer uma a Draft:
-  - Opção A: `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — OAuth direto com GitHub + Google.
-  - Opção B: `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — Cognito como hub federado (alinha com `aws-saas-platform`).
-  - Gatilho de decisão: existência da CLI `wasp` concreta + escolha entre standalone (A) vs AWS-bound (B).
 - **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`.
