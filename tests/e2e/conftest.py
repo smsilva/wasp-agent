@@ -224,6 +224,7 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     monkeypatch.setenv("PROMETHEUS_METRICS_ACTIVE", "true")
 
     import wasp.provision
+    import wasp.auth
     import main  # noqa: F401
     import wasp.telemetry as _telemetry
 
@@ -232,6 +233,9 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
 
     monkeypatch.setattr(
         wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier
+    )
+    monkeypatch.setattr(
+        wasp.auth, "is_authorized", lambda channel, channel_id: "e2e-user"
     )
     monkeypatch.setattr(
         wasp.provision,
