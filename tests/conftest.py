@@ -44,7 +44,7 @@ def mock_agno(monkeypatch, request):
         return
 
     # Clear cached modules so each test gets a fresh import with current mocks.
-    for mod in ("main", "wasp", "wasp.logging", "wasp.provision", "wasp.watcher", "wasp.telemetry"):
+    for mod in ("main", "wasp", "wasp.logging", "wasp.provision", "wasp.watcher", "wasp.telemetry", "wasp.auth"):
         sys.modules.pop(mod, None)
 
     # Prevent AgnoInstrumentor from running: it imports agno.models.base at
@@ -61,5 +61,5 @@ def mock_agno(monkeypatch, request):
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
     yield mocks
 
-    for mod in ("main", "wasp", "wasp.logging", "wasp.provision", "wasp.watcher", "wasp.telemetry"):
+    for mod in ("main", "wasp", "wasp.logging", "wasp.provision", "wasp.watcher", "wasp.telemetry", "wasp.auth"):
         sys.modules.pop(mod, None)
