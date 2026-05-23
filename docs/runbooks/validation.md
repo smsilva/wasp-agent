@@ -41,6 +41,8 @@ O que esse smoke test cobre:
 
 Pré-requisito: bot Telegram + ngrok + webhook — seguir [`telegram-local-dev.md`](telegram-local-dev.md).
 
+Pré-requisito adicional: o `chat_id` do seu Telegram precisa estar autorizado. Para a primeira execução: `make admin-bootstrap NAME="Você" CHANNEL=tg ID=<seu user.id>`. Ver [`auth-admin.md`](auth-admin.md).
+
 Execução:
 
 ```bash

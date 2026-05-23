@@ -1,0 +1,90 @@
+# Auth admin workflow
+
+Como autorizar usuários no `wasp-agent` via allowlist multi-canal.
+
+## Pré-requisito
+
+O operador precisa do par `(channel, channel_id)` do primeiro admin.
+
+Para Telegram, descobrir seu próprio `user.id`:
+
+1. Abrir o Telegram e mandar qualquer mensagem para [@userinfobot](https://t.me/userinfobot).
+2. O bot responde com seu `Id` numérico. Copiar esse número — é o `channel_id` para `CHANNEL=tg`.
+
+## Bootstrap inicial
+
+Uma única vez por deploy, com a tabela `auth_users` vazia:
+
+```bash
+make admin-bootstrap NAME="Silvio" CHANNEL=tg ID=12345678
+```
+
+Falha se já existir qualquer usuário. Esse comando cria o primeiro admin sem exigir convite.
+
+## Convidar novo usuário
+
+```bash
+make admin-invite NAME="Alice"
+```
+
+A saída inclui:
+
+```
+Token: <urlsafe>
+Link: https://t.me/<Bot>?start=<token>
+```
+
+O operador repassa o link via canal seguro (DM, e-mail). O link é válido por 1h (configurável via `WASP_AGENT_INVITE_TTL_HOURS`) e só pode ser consumido uma vez.
+
+`TELEGRAM_BOT_USERNAME` precisa estar setado no `.env` para o link ser montado corretamente.
+
+## Usuário consome o link
+
+1. Usuário clica no link.
+2. Telegram abre o chat com o bot.
+3. Bot recebe `/start <token>` automaticamente.
+4. Bot responde: `Bem-vindo, Alice. Você está autorizado a usar o wasp-agent.`
+
+Se o token expirou, já foi consumido, ou é inválido, o bot responde: `Link inválido ou expirado. Solicite um novo ao administrador.`
+
+## Listar identidades ativas
+
+```bash
+make admin-list
+```
+
+## Revogar
+
+```bash
+make admin-revoke CHANNEL=tg ID=12345678
+```
+
+Remove a identidade da allowlist mas mantém o registro em `auth_users` para audit. Sessões agno em curso para aquele `chat_id` **não** são interrompidas — limitação conhecida.
+
+## Diagnóstico — `chat_id` não autorizado
+
+Logs estruturados registram cada negação em nível `WARNING` com a mensagem `auth denied: channel=tg channel_id=...`.
+
+Para inspecionar:
+
+```bash
+# Se LOG_FILE estiver configurado
+grep "auth denied" logs/wasp.jsonl
+
+# Caso contrário, no stdout do `make run`
+```
+
+Métrica Prometheus `wasp_auth_denied_total{channel,reason}` disponível se `PROMETHEUS_METRICS_ACTIVE=true`.
+
+## Canal `local` (local-chat / E2E)
+
+O canal `local` **não** passa por allowlist — é tratado como "operador confiável no host". O boundary de segurança é a rede: o endpoint AgentOS (`/agents/.../runs`) deve ouvir só `127.0.0.1` em produção.
+
+Se for necessário expor `local-chat` por rede, ver spec futuro `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md`.
+
+## Limitações conhecidas
+
+- **TTL 1h** (configurável). Se o link expirar antes do uso, admin emite um novo invite.
+- **Revogação não interrompe tools em execução** — só impede novas mensagens daquele `chat_id`.
+- **Sem multi-tenancy real** — qualquer usuário autorizado pode provisionar qualquer tenant.
+- **Bootstrap exige DB vazio** — para rotacionar o admin inicial, revogar manualmente via SQL em `agent.db` ou apagar o arquivo e refazer o bootstrap.
