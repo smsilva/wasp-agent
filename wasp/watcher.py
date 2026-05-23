@@ -63,7 +63,7 @@ async def watch_platform(
     name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
 ) -> None:
     chat_id_var.set(chat_id)
-    log.info("Watcher started for %s", name)
+    log.info("Watcher started for %s", name, extra={"platform": name})
     try:
         await _watch_platform_inner(name, chat_id, notifier, parent_span_ctx)
     except Exception:
