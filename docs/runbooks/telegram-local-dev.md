@@ -9,8 +9,10 @@ Como testar o bot Telegram localmente usando ngrok como túnel público.
 ## Pré-requisitos
 
 - ngrok instalado (`snap install ngrok` ou https://ngrok.com/download)
-- `.env` preenchido com `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN` e `TELEGRAM_TOKEN`
+- `.env` preenchido com `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `TELEGRAM_TOKEN` e `TELEGRAM_BOT_USERNAME` (sem o `@`)
 - Bot criado no `@BotFather` (envie `/newbot` para obter o `TELEGRAM_TOKEN`)
+
+> Este runbook cobre o setup de túnel + webhook. O smoke test propriamente dito (incluindo auth via `make admin-bootstrap` ou `/start <token>`) está em [`validation.md` §B](validation.md#b-smoke-test-telegram--manual-sem-cluster).
 
 ---
 
