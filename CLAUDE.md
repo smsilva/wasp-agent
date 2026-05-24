@@ -143,6 +143,8 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 
 agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.post("/webhook", ...)` aparecem em `router.routes` com `path="/telegram/webhook"`, **não** `"/webhook"`. Ao inspecionar/wrap as rotas em `main.py`, casar por suffix (`r.path.endswith("/webhook")`) ou por `r.name == "telegram_webhook"`, nunca por equivalência exata. Unit tests com `MagicMock(path="/webhook")` passam mesmo contra implementação quebrada — incluir pelo menos um teste com path prefixado.
 
+**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `Request` de `starlette.requests` e `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth` (não no topo do módulo) para que estejam no escopo na definição da função. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
+
 ## 13. Async watcher
 
 See `docs/architecture/async-watcher.md`.

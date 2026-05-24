@@ -424,3 +424,43 @@ async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
     assert response.status_code == 403
     assert redeem_calls == []
     original_endpoint.assert_not_called()
+
+
+async def test_webhook_with_auth_has_fastapi_type_annotations(mock_agno, monkeypatch):
+    """webhook_with_auth must have Request and BackgroundTasks type annotations.
+
+    Without them FastAPI resolves the parameters as query params and returns
+    422 Unprocessable Entity on every incoming webhook POST.
+    """
+    import inspect
+    from unittest.mock import MagicMock, AsyncMock
+    from starlette.requests import Request
+    from starlette.background import BackgroundTasks
+
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
+    import main
+
+    original_endpoint = AsyncMock(return_value="agno-result")
+    webhook_route = MagicMock(path="/telegram/webhook", endpoint=original_endpoint)
+    fake_router = MagicMock(routes=[webhook_route])
+
+    class FakeTelegram:
+        def __init__(self):
+            self.token = "tk"
+
+        def get_router(self):
+            return fake_router
+
+    iface = FakeTelegram()
+    main._install_start_token_handler(iface)
+    iface.get_router()
+
+    sig = inspect.signature(webhook_route.endpoint)
+    params = sig.parameters
+    assert params["request"].annotation is Request, (
+        "Missing Request annotation — FastAPI will return 422 on every webhook POST"
+    )
+    assert params["background_tasks"].annotation is BackgroundTasks, (
+        "Missing BackgroundTasks annotation — FastAPI will return 422 on every webhook POST"
+    )
