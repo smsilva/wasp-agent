@@ -1,6 +1,6 @@
 # Local chat — interagir com o agent via curl
 
-Caminho de validação manual sem Telegram. Evolução do smoke Telegram (`validation.md` path B). Útil para iterar sobre `INSTRUCTIONS`, memória de sessão e ciclo de provisionamento.
+Caminho de validação manual sem Telegram (path D em [`validation.md`](validation.md)). Útil para iterar sobre `INSTRUCTIONS`, memória de sessão e ciclo de provisionamento.
 
 ## Pré-requisitos
 

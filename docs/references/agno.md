@@ -12,6 +12,4 @@
 - agno's AgentOS reserves `/metrics` and `/metrics/refresh` for its dashboard REST API. Appending a Starlette `Route("/metrics", ...)` is silently shadowed (first match wins). Mount Prometheus on a dedicated path (this project uses `/telemetry/prometheus`).
 - REST API for agent runs: `POST /agents/{agent_id}/runs` with body `{"message": "...", "session_id": "..."}`. Reuse the same `session_id` on subsequent POSTs to continue a multi-turn conversation (the SqliteDb stores state by session). In tests, use `httpx.AsyncClient(app=app, base_url="http://test")` to call the app in-process without starting a real server.
 
-For details and future-cycle checklists, see `docs/notes/2026-05-13-agno-api-cycle1.md`.
-
 To run the bot locally with ngrok, see `docs/runbooks/telegram-local-dev.md`.

@@ -23,7 +23,7 @@ git clone https://github.com/smsilva/kubernetes ~/git/kubernetes
 
 ## 1. Criar o cluster, instalar o ArgoCD e o Crossplane
 
-Script: `/home/silvios/git/kubernetes/lab/argo/argocd/run`
+Script: `~/git/kubernetes/lab/argo/argocd/run`
 
 ```bash
 cd ~/git/kubernetes/lab/argo/argocd

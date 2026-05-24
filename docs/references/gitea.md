@@ -33,14 +33,14 @@ Scope reference for this project:
 
 ## PyGithub incompatibility
 
-PyGithub **não funciona** contra Gitea para criação de arquivos. Dois bugs:
+PyGithub **does not work** against Gitea for file creation. Two bugs:
 
-1. **Assertion de porta** (`PyGithub/Requester.py:902`): PyGithub valida que toda URL retornada pela API tem a mesma porta do `base_url`. Gitea inclui a porta interna `3000` nas response URLs mesmo quando exposto em outra porta externa (ex.: `3456`), causando `AssertionError: 3000` antes de qualquer request sair.
-2. **Método HTTP**: Gitea 1.22 (e 1.21) usa `POST /repos/.../contents/{path}` para **criar** arquivos e `PUT` para **atualizar**. PyGithub `create_file()` usa `PUT`, e Gitea responde `422 "SHA Required"` para arquivos novos. GitHub aceita `PUT` em ambos os casos.
+1. **Port assertion** (`PyGithub/Requester.py:902`): PyGithub validates that every URL returned by the API uses the same port as `base_url`. Gitea includes the internal port `3000` in response URLs even when exposed on a different external port (e.g. `3456`), causing `AssertionError: 3000` before any request leaves.
+2. **HTTP method**: Gitea 1.22 (and 1.21) uses `POST /repos/.../contents/{path}` to **create** files and `PUT` to **update**. PyGithub `create_file()` uses `PUT`, and Gitea responds `422 "SHA Required"` for new files. GitHub accepts `PUT` in both cases.
 
-Por isso o código de produção usa `wasp.git_client.PyGithubClient` (GitHub), e o E2E injeta `wasp.git_client.GiteaClient` (httpx POST direto). Ver `wasp/git_client.py`.
+Production code uses `wasp.git_client.PyGithubClient` (GitHub); E2E tests inject `wasp.git_client.GiteaClient` (direct httpx POST). See `wasp/git_client.py`.
 
-O repo deve ser inicializado com `auto_init: true` e o `default_branch` correto (ex.: `"dev"`) para o primeiro push funcionar imediatamente.
+The repo must be initialized with `auto_init: true` and the correct `default_branch` (e.g. `"dev"`) for the first push to succeed immediately.
 
 ## Getting file content after a push
 

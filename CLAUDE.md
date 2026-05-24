@@ -106,10 +106,10 @@ Lightweight reminders (one line, no context) belong in the **Backlog** section o
 
 See `docs/references/agno.md`.
 
-## 9. Security — próximos passos
+## 9. Security
 
-- **Autenticação/autorização de usuários**: implementar mecanismo para limitar quais usuários podem usar o bot (allowlist de `chat_id`, por exemplo).
-- **Security review**: realizar após implementar autenticação — cobrir autorizações, inputs não sanitizados, exposição de tokens.
+- **Autenticação/autorização de usuários**: implementado via allowlist multi-canal (`auth_users`). Ver `docs/runbooks/auth-admin.md`.
+- **Security review**: pendente — cobrir autorizações, inputs não sanitizados, exposição de tokens.
 
 ## 9a. Security tracking
 
