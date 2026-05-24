@@ -153,7 +153,15 @@ def create_invite(
                 "INSERT INTO auth_invites "
                 "(token, user_id, channel, channel_id, created_by, created_at, expires_at, used_at) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, NULL)",
-                (token, user_id, channel, channel_id, created_by, created_at, expires_at),
+                (
+                    token,
+                    user_id,
+                    channel,
+                    channel_id,
+                    created_by,
+                    created_at,
+                    expires_at,
+                ),
             )
     finally:
         con.close()
@@ -202,9 +210,7 @@ def redeem_invite(
                 "VALUES (?, ?, ?, ?)",
                 (channel, channel_id, user_id, now),
             )
-            con.execute(
-                "UPDATE auth_invites SET used_at=? WHERE token=?", (now, token)
-            )
+            con.execute("UPDATE auth_invites SET used_at=? WHERE token=?", (now, token))
         display_name = con.execute(
             "SELECT display_name FROM auth_users WHERE user_id=?", (user_id,)
         ).fetchone()[0]
@@ -213,9 +219,7 @@ def redeem_invite(
         con.close()
 
 
-def revoke(
-    channel: str, channel_id: str, db_file: str | None = None
-) -> bool:
+def revoke(channel: str, channel_id: str, db_file: str | None = None) -> bool:
     db_file = _resolve_db_file(db_file)
     init_db(db_file)
     con = _connect(db_file)

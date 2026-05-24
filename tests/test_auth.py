@@ -66,9 +66,7 @@ def test_link_identity_allows_is_authorized(db_file):
 
 def test_create_invite_returns_urlsafe_token(db_file):
     user_id = auth.create_user("Alice", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=user_id, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=user_id, db_file=db_file)
     assert isinstance(token, str)
     assert len(token) >= 40
 
@@ -76,9 +74,7 @@ def test_create_invite_returns_urlsafe_token(db_file):
 def test_create_invite_persists_with_expires_at_from_default_ttl(db_file, monkeypatch):
     monkeypatch.delenv("WASP_AGENT_INVITE_TTL_HOURS", raising=False)
     user_id = auth.create_user("Alice", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=user_id, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=user_id, db_file=db_file)
     con = sqlite3.connect(db_file)
     try:
         row = con.execute(
@@ -98,9 +94,7 @@ def test_create_invite_persists_with_expires_at_from_default_ttl(db_file, monkey
 def test_create_invite_uses_env_ttl(db_file, monkeypatch):
     monkeypatch.setenv("WASP_AGENT_INVITE_TTL_HOURS", "5")
     user_id = auth.create_user("Alice", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=user_id, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=user_id, db_file=db_file)
     con = sqlite3.connect(db_file)
     try:
         row = con.execute(
@@ -116,9 +110,7 @@ def test_create_invite_uses_env_ttl(db_file, monkeypatch):
 
 def test_redeem_invite_creates_identity_and_returns_user(db_file):
     admin = auth.create_user("Admin", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=admin, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=admin, db_file=db_file)
     result = auth.redeem_invite(token, "tg", "67890", db_file=db_file)
     assert result is not None
     user_id, display_name = result
@@ -141,16 +133,12 @@ def test_redeem_invite_returns_none_for_unknown_token(db_file):
 
 def test_redeem_invite_returns_none_when_expired(db_file):
     admin = auth.create_user("Admin", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=admin, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=admin, db_file=db_file)
     # Backdate expiration to past.
     past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     con = sqlite3.connect(db_file)
     try:
-        con.execute(
-            "UPDATE auth_invites SET expires_at=? WHERE token=?", (past, token)
-        )
+        con.execute("UPDATE auth_invites SET expires_at=? WHERE token=?", (past, token))
         con.commit()
     finally:
         con.close()
@@ -159,9 +147,7 @@ def test_redeem_invite_returns_none_when_expired(db_file):
 
 def test_redeem_invite_returns_none_when_already_consumed(db_file):
     admin = auth.create_user("Admin", db_file=db_file)
-    token = auth.create_invite(
-        display_name="Bob", created_by=admin, db_file=db_file
-    )
+    token = auth.create_invite(display_name="Bob", created_by=admin, db_file=db_file)
     first = auth.redeem_invite(token, "tg", "67890", db_file=db_file)
     assert first is not None
     second = auth.redeem_invite(token, "tg", "11111", db_file=db_file)

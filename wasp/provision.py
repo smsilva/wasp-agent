@@ -115,9 +115,7 @@ def provision_platform_instance(
     if channel and channel not in TRUSTED_CHANNELS:
         user_id = auth.is_authorized(channel, chat_id) if chat_id else None
         if user_id is None:
-            log.warning(
-                "auth denied: channel=%s channel_id=%s", channel, chat_id
-            )
+            log.warning("auth denied: channel=%s channel_id=%s", channel, chat_id)
             telemetry.auth_denied(channel=channel, reason="unknown_identity")
             return {"status": "unauthorized", "message": "Acesso negado."}
     elif channel in TRUSTED_CHANNELS:
@@ -153,7 +151,11 @@ def provision_platform_instance(
                 branch="dev",
             )
         except FileAlreadyExistsError:
-            log.info("Tenant %s already provisioning (manifest exists)", name, extra={"platform": name})
+            log.info(
+                "Tenant %s already provisioning (manifest exists)",
+                name,
+                extra={"platform": name},
+            )
             telemetry.provisioning_counter.add(1, {"outcome": "already_provisioning"})
             return {
                 "status": "already_provisioning",

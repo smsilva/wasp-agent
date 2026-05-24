@@ -135,7 +135,9 @@ async def test_start_token_redeems_invite_and_sends_welcome(mock_agno, monkeypat
     handled = await main._process_start_token(payload, fake_redeem, fake_send)
 
     assert handled is True
-    assert sent == [("42", "Bem-vindo, Alice. Você está autorizado a usar o wasp-agent.")]
+    assert sent == [
+        ("42", "Bem-vindo, Alice. Você está autorizado a usar o wasp-agent.")
+    ]
 
 
 async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
@@ -154,7 +156,9 @@ async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
     handled = await main._process_start_token(payload, fake_redeem, fake_send)
 
     assert handled is True
-    assert sent == [("7", "Link inválido ou expirado. Solicite um novo ao administrador.")]
+    assert sent == [
+        ("7", "Link inválido ou expirado. Solicite um novo ao administrador.")
+    ]
 
 
 async def test_start_without_token_is_not_handled(mock_agno, monkeypatch):
@@ -227,8 +231,11 @@ async def test_start_token_missing_chat_id_not_handled(mock_agno, monkeypatch):
 
 def test_main_initializes_auth_db(mock_agno, monkeypatch):
     init_called = []
-    monkeypatch.setattr("wasp.auth.init_db", lambda db_file=None: init_called.append(db_file))
+    monkeypatch.setattr(
+        "wasp.auth.init_db", lambda db_file=None: init_called.append(db_file)
+    )
     import main  # noqa: F401
+
     assert init_called  # init_db was called at import time
 
 
@@ -332,7 +339,9 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     response = await new_endpoint(fake_request, background)
     assert response.status_code == 200
     original_endpoint.assert_not_called()
-    assert sent == [("99", "Bem-vindo, Carol. Você está autorizado a usar o wasp-agent.")]
+    assert sent == [
+        ("99", "Bem-vindo, Carol. Você está autorizado a usar o wasp-agent.")
+    ]
 
     # Non-/start path: delegates to original. Starlette caches Request._json
     # automatically, so the wrapper does not need to replay request.json.

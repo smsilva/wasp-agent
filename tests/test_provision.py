@@ -88,7 +88,9 @@ def test_provision_spawns_watcher(monkeypatch):
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
+    )
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -118,7 +120,9 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
+    )
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -400,7 +404,9 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
+    )
 
     mock_thread_cls = MagicMock()
 
@@ -424,7 +430,10 @@ def test_provision_returns_unauthorized_when_tg_chat_id_unknown(monkeypatch):
         session_id = "tg:wasp-agent:999999"
 
     result = provision_platform_instance(
-        name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+        name="x",
+        domain="d",
+        regions=["us-east-1"],
+        run_context=FakeCtx(),
     )
     assert result == {"status": "unauthorized", "message": "Acesso negado."}
 
@@ -450,7 +459,10 @@ def test_provision_skips_auth_for_local_channel(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", MagicMock()):
         result = provision_platform_instance(
-            name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+            name="x",
+            domain="d",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     assert result["status"] == "provisioning"
@@ -461,7 +473,9 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: "user-abc")
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
+    )
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
@@ -475,7 +489,10 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
-            name="wp2", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+            name="wp2",
+            domain="d",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     assert result["status"] == "provisioning"
@@ -500,7 +517,10 @@ def test_provision_sets_auth_channel_span_attribute_on_deny(monkeypatch):
         session_id = "tg:wasp-agent:999999"
 
     result = provision_platform_instance(
-        name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+        name="x",
+        domain="d",
+        regions=["us-east-1"],
+        run_context=FakeCtx(),
     )
     assert result["status"] == "unauthorized"
 
@@ -533,7 +553,10 @@ def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
 
     with patch("wasp.provision.threading.Thread", MagicMock()):
         provision_platform_instance(
-            name="x", domain="d", regions=["us-east-1"], run_context=FakeCtx(),
+            name="x",
+            domain="d",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
         )
 
     spans = exporter.get_finished_spans()

@@ -8,13 +8,36 @@ from typing import Any
 
 chat_id_var: ContextVar[str | None] = ContextVar("chat_id", default=None)
 
-_BUILTIN_ATTRS = frozenset({
-    "args", "created", "exc_info", "exc_text", "filename", "funcName",
-    "levelname", "levelno", "lineno", "message", "module", "msecs",
-    "msg", "name", "pathname", "process", "processName", "relativeCreated",
-    "stack_info", "taskName", "thread", "threadName",
-    "otelTraceID", "otelSpanID", "otelServiceName", "otelTraceSampled",
-})
+_BUILTIN_ATTRS = frozenset(
+    {
+        "args",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "message",
+        "module",
+        "msecs",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "taskName",
+        "thread",
+        "threadName",
+        "otelTraceID",
+        "otelSpanID",
+        "otelServiceName",
+        "otelTraceSampled",
+    }
+)
 
 
 class JSONFormatter(logging.Formatter):
@@ -93,7 +116,9 @@ def configure_logging() -> None:
             os.makedirs(parent, exist_ok=True)
         max_bytes = int(os.getenv("LOG_FILE_MAX_BYTES", str(50 * 1024 * 1024)))
         backup_count = int(os.getenv("LOG_FILE_BACKUP_COUNT", "7"))
-        file_handler = _RotatingTimedFileHandler(log_file, max_bytes=max_bytes, backup_count=backup_count)
+        file_handler = _RotatingTimedFileHandler(
+            log_file, max_bytes=max_bytes, backup_count=backup_count
+        )
         file_handler.setLevel(file_level)
         file_handler.setFormatter(JSONFormatter())
         root.addHandler(file_handler)

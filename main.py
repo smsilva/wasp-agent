@@ -17,6 +17,7 @@ from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
 from wasp import auth, provision_platform_instance  # noqa: E402
+
 auth.init_db()
 from wasp.notifier import TelegramNotifier  # noqa: E402
 
@@ -81,12 +82,8 @@ agent = Agent(
     tools=[provision_platform_instance],
 )
 
-WELCOME_MESSAGE = (
-    "Bem-vindo, {display_name}. Você está autorizado a usar o wasp-agent."
-)
-INVALID_INVITE_MESSAGE = (
-    "Link inválido ou expirado. Solicite um novo ao administrador."
-)
+WELCOME_MESSAGE = "Bem-vindo, {display_name}. Você está autorizado a usar o wasp-agent."
+INVALID_INVITE_MESSAGE = "Link inválido ou expirado. Solicite um novo ao administrador."
 
 
 async def _process_start_token(payload: dict, redeem_fn, send_fn) -> bool:
@@ -129,14 +126,16 @@ def _install_start_token_handler(iface: Telegram) -> None:
     def get_router_with_auth():
         from starlette.requests import Request
         from starlette.background import BackgroundTasks
+
         router = original_get_router()
         webhook_route = next(
-            r for r in router.routes
-            if getattr(r, "path", "").endswith("/webhook")
+            r for r in router.routes if getattr(r, "path", "").endswith("/webhook")
         )
         original_endpoint = webhook_route.endpoint
 
-        async def webhook_with_auth(request: Request, background_tasks: BackgroundTasks):
+        async def webhook_with_auth(
+            request: Request, background_tasks: BackgroundTasks
+        ):
             from starlette.responses import JSONResponse
             from agno.os.interfaces.telegram.security import (
                 validate_webhook_secret_token,
@@ -144,9 +143,7 @@ def _install_start_token_handler(iface: Telegram) -> None:
 
             secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
             if not validate_webhook_secret_token(secret_token):
-                return JSONResponse(
-                    {"detail": "Invalid secret token"}, status_code=403
-                )
+                return JSONResponse({"detail": "Invalid secret token"}, status_code=403)
 
             body = await request.json()
             handled = await _process_start_token(

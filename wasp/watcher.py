@@ -116,7 +116,9 @@ async def _watch_platform_inner(
                 span.set_attribute("outcome", "ready")
                 span.set_attribute("poll_count", poll_count)
                 span.set_attribute("duration_seconds", elapsed)
-                log.info("Platform %s is Ready — notifying", name, extra={"platform": name})
+                log.info(
+                    "Platform %s is Ready — notifying", name, extra={"platform": name}
+                )
                 await notifier.send(chat_id, ready_message(name, platform))
                 return
 
