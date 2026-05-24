@@ -9,7 +9,7 @@ Quando você mudou `wasp/provision.py`, `wasp/watcher.py` ou a Composition do Cr
 - `k3d`, `helm`, `kubectl` instalados
 - `~/git/kubernetes` clonado: `git clone https://github.com/smsilva/kubernetes ~/git/kubernetes`
 - `GH_PAT` no `.env` com `Contents: write` em `smsilva/wasp-gitops` — ver [`github-pat-setup.md`](github-pat-setup.md)
-- ngrok rodando + webhook registrado (ver [`telegram-local-dev.md`](telegram-local-dev.md))
+- ngrok rodando + webhook registrado (passos 1–3 de [`telegram-local-dev.md`](telegram-local-dev.md)) — **não inicie o agente ainda**
 
 ## E.1. Subir cluster GitOps
 
@@ -36,6 +36,8 @@ make admin-list    # confirma inserção
 Para descobrir seu `chat_id`: enviar qualquer mensagem ao bot e ler nos logs do `make run` a linha `Processing message from user <chat_id>`, ou usar [@userinfobot](https://t.me/userinfobot).
 
 ## E.3. Iniciar o agente
+
+Se o agente já estava rodando antes de `make gitops-up`, reinicie-o agora — o kubeconfig do cluster `k3s-default` é criado pelo `make gitops-up` e o processo que subiu antes não o enxerga.
 
 ```bash
 make run
@@ -75,6 +77,28 @@ kubectl get application wasp-gitops -n argocd
 
 # Crossplane reconcile
 kubectl get platform <nome>
+```
+
+**Opcional — via ArgoCD CLI:**
+
+```bash
+# Obter a senha do admin
+argocd_admin_password=$(
+  kubectl --namespace argocd get secret argocd-initial-admin-secret --output jsonpath="{.data.password}" \
+  | base64 --decode
+)
+
+# Login (uma vez por sessão)
+argocd login localhost:32080 \
+  --username admin \
+  --password "${argocd_admin_password?}" \
+  --insecure
+
+# Listar apps
+argocd app list
+
+# Forçar sync manual
+argocd app sync wasp-gitops
 ```
 
 Aguardar `READY=True` no Platform. Tempo típico do ciclo após confirmação no Telegram: **~2 minutos**.
