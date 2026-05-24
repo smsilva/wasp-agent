@@ -26,6 +26,16 @@ uv sync
 
 See `docs/runbooks/` for GitHub PAT setup and other procedures.
 
+## Validation
+
+| Caminho | Quando usar | Runbook |
+|---|---|---|
+| E2E automatizado | Após qualquer mudança de código | [`docs/runbooks/validation-e2e.md`](docs/runbooks/validation-e2e.md) |
+| Smoke test Telegram | Canal Telegram, auth, comportamento do LLM | [`docs/runbooks/validation-telegram.md`](docs/runbooks/validation-telegram.md) |
+| Prometheus | Métricas e instrumentação | [`docs/runbooks/validation-prometheus.md`](docs/runbooks/validation-prometheus.md) |
+| Local chat | Iteração rápida sem Telegram | [`docs/runbooks/validation-local-chat.md`](docs/runbooks/validation-local-chat.md) |
+| Ciclo GitOps completo | Mudanças em `provision.py`, `watcher.py` ou Composition | [`docs/runbooks/validation-gitops.md`](docs/runbooks/validation-gitops.md) |
+
 ## Usage
 
 ```bash
