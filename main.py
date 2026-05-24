@@ -127,6 +127,8 @@ def _install_start_token_handler(iface: Telegram) -> None:
     notifier = TelegramNotifier(iface.token)
 
     def get_router_with_auth():
+        from starlette.requests import Request
+        from starlette.background import BackgroundTasks
         router = original_get_router()
         webhook_route = next(
             r for r in router.routes
@@ -134,7 +136,7 @@ def _install_start_token_handler(iface: Telegram) -> None:
         )
         original_endpoint = webhook_route.endpoint
 
-        async def webhook_with_auth(request, background_tasks):
+        async def webhook_with_auth(request: Request, background_tasks: BackgroundTasks):
             from starlette.responses import JSONResponse
             from agno.os.interfaces.telegram.security import (
                 validate_webhook_secret_token,
