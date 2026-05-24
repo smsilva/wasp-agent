@@ -1,11 +1,11 @@
 # Local chat — interagir com o agent via curl
 
-Caminho de validação manual sem Telegram (path D em [`validation.md`](validation.md)). Útil para iterar sobre `INSTRUCTIONS`, memória de sessão e ciclo de provisionamento.
+Caminho de validação manual sem Telegram ([`validation-local-chat.md`](validation-local-chat.md)). Útil para iterar sobre `INSTRUCTIONS`, memória de sessão e ciclo de provisionamento.
 
 ## Pré-requisitos
 
 - `curl`, `jq`, `uuidgen` no PATH.
-- Para o happy path completo (provision + notificação async): cluster com ArgoCD + Crossplane + Composition, `GH_PAT` válido. Ver apêndice de `validation.md`.
+- Para o happy path completo (provision + notificação async): cluster com ArgoCD + Crossplane + Composition, `GH_PAT` válido. Ver [`validation-gitops.md`](validation-gitops.md).
 
 Para validação só do LLM (sem provisionar), basta o agent rodando — recuse a confirmação no passo de criação.
 

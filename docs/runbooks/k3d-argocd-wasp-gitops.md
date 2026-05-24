@@ -4,7 +4,7 @@ Como criar um cluster k3d com ArgoCD instalado e a Application `wasp-gitops` apo
 
 > **Atalho**: `make gitops-up` executa todos os passos abaixo (`scripts/gitops-up`). Use este runbook para entender o que cada passo faz ou para rodar manualmente.
 
-> **Escopo**: cluster GitOps completo para validação fim-a-fim do ciclo real de provisionamento (ver "Apêndice" em [`validation.md`](validation.md)). **Não é necessário para o smoke test do Telegram** — esse roda só com `make run` + ngrok. Também **não confundir com `make k3d-up`**, que sobe o cluster barebones do pipeline E2E.
+> **Escopo**: cluster GitOps completo para validação fim-a-fim do ciclo real de provisionamento (ver [`validation-gitops.md`](validation-gitops.md)). **Não é necessário para o smoke test do Telegram** — esse roda só com `make run` + ngrok. Também **não confundir com `make k3d-up`**, que sobe o cluster barebones do pipeline E2E.
 
 ---
 

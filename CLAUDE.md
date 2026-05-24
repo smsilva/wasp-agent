@@ -209,7 +209,7 @@ Não pular o e2e por ser mais lento. Lição registrada (2026-05-23): o fix do `
 
 ### Caminhos
 
-Três caminhos distintos — detalhes em `docs/runbooks/validation.md`.
+Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
 
 - **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
 - **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**

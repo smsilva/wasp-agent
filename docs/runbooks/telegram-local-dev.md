@@ -2,7 +2,7 @@
 
 Como testar o bot Telegram localmente usando ngrok como túnel público.
 
-> **Escopo**: setup de Telegram + ngrok para o smoke test do bot (caminho B em [`validation.md`](validation.md)). O smoke test **não exige cluster** — basta `make run`. Cluster GitOps só entra na validação fim-a-fim do ciclo de provisionamento (apêndice em `validation.md`).
+> **Escopo**: setup de Telegram + ngrok para o smoke test do bot ([`validation-telegram.md`](validation-telegram.md)). O smoke test **não exige cluster** — basta `make run`. Cluster GitOps só entra na validação fim-a-fim do ciclo de provisionamento ([`validation-gitops.md`](validation-gitops.md)).
 
 ---
 
@@ -12,7 +12,7 @@ Como testar o bot Telegram localmente usando ngrok como túnel público.
 - `.env` preenchido com `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, `TELEGRAM_TOKEN` e `TELEGRAM_BOT_USERNAME` (sem o `@`)
 - Bot criado no `@BotFather` (envie `/newbot` para obter o `TELEGRAM_TOKEN`)
 
-> Este runbook cobre o setup de túnel + webhook. O smoke test propriamente dito (incluindo auth via `make admin-bootstrap` ou `/start <token>`) está em [`validation.md` §B](validation.md#b-smoke-test-telegram--manual-sem-cluster).
+> Este runbook cobre o setup de túnel + webhook. O smoke test propriamente dito (incluindo auth via `make admin-bootstrap` ou `/start <token>`) está em [`validation-telegram.md`](validation-telegram.md).
 
 ---
 
@@ -114,7 +114,7 @@ Envie qualquer mensagem ao bot no Telegram. Para verificar memória de sessão:
 
 A segunda resposta deve mencionar "João" — confirma que `add_history_to_context=True` e o SQLite estão funcionando.
 
-> Este passo valida apenas o canal Telegram (webhook + LLM + memória). Mensagens conversacionais não exigem auth. Para testar o fluxo completo — incluindo `provision_platform_instance` — continue em [`validation.md §B`](validation.md#b-smoke-test-telegram--manual-sem-cluster), que cobre auth bootstrap, roteiro de provisionamento e, opcionalmente, o ciclo GitOps completo até `Ready`.
+> Este passo valida apenas o canal Telegram (webhook + LLM + memória). Mensagens conversacionais não exigem auth. Para testar o fluxo completo — incluindo `provision_platform_instance` — continue em [`validation-telegram.md`](validation-telegram.md), que cobre auth bootstrap e roteiro de provisionamento.
 
 ---
 
