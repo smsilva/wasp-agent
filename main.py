@@ -104,6 +104,7 @@ async def _process_start_token(payload: dict, redeem_fn, send_fn) -> bool:
         return False
     result = redeem_fn(token, "tg", str(chat_id))
     if result is None:
+        telemetry.auth_denied(channel="tg", reason="invalid_token")
         await send_fn(str(chat_id), INVALID_INVITE_MESSAGE)
     else:
         _user_id, display_name = result
@@ -124,7 +125,6 @@ def _install_start_token_handler(iface: Telegram) -> None:
     notifier = TelegramNotifier(iface.token)
 
     def get_router_with_auth():
-        from starlette.requests import Request
         from starlette.background import BackgroundTasks
 
         router = original_get_router()

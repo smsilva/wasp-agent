@@ -141,16 +141,20 @@ async def test_start_token_redeems_invite_and_sends_welcome(mock_agno, monkeypat
 
 
 async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
-    """When redeem_invite returns None, user receives generic error."""
+    """When redeem_invite returns None, user receives generic error and metric is emitted."""
     import main
+    import wasp.telemetry as telemetry
 
     sent = []
+    denied = []
 
     async def fake_send(chat_id, text):
         sent.append((chat_id, text))
 
     def fake_redeem(token, channel, channel_id):
         return None
+
+    monkeypatch.setattr(telemetry, "auth_denied", lambda **kw: denied.append(kw))
 
     payload = {"message": {"text": "/start BAD", "chat": {"id": 7}}}
     handled = await main._process_start_token(payload, fake_redeem, fake_send)
@@ -159,6 +163,7 @@ async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
     assert sent == [
         ("7", "Link inválido ou expirado. Solicite um novo ao administrador.")
     ]
+    assert denied == [{"channel": "tg", "reason": "invalid_token"}]
 
 
 async def test_start_without_token_is_not_handled(mock_agno, monkeypatch):

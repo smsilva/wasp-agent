@@ -11,6 +11,8 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 
+_initialized_dbs: set[str] = set()
+
 _DDL = (
     """
     CREATE TABLE IF NOT EXISTS auth_users (
@@ -66,6 +68,8 @@ def _now() -> str:
 def init_db(db_file: str | None = None) -> None:
     """Create schema. Idempotent."""
     db_file = _resolve_db_file(db_file)
+    if db_file in _initialized_dbs:
+        return
     con = _connect(db_file)
     try:
         for stmt in _DDL:
@@ -73,6 +77,7 @@ def init_db(db_file: str | None = None) -> None:
         con.commit()
     finally:
         con.close()
+    _initialized_dbs.add(db_file)
 
 
 def is_authorized(
@@ -178,6 +183,9 @@ def redeem_invite(
     init_db(db_file)
     con = _connect(db_file)
     try:
+        # BEGIN IMMEDIATE acquires the write lock before the SELECT, preventing
+        # two concurrent callers from both seeing used_at=NULL and both succeeding.
+        con.execute("BEGIN IMMEDIATE")
         row = con.execute(
             "SELECT user_id, channel, channel_id, expires_at, used_at "
             "FROM auth_invites WHERE token=?",
@@ -265,11 +273,30 @@ def bootstrap_admin(
     channel_id: str,
     db_file: str | None = None,
 ) -> str:
-    if has_any_user(db_file=db_file):
-        raise RuntimeError("auth tables not empty — bootstrap refused")
-    user_id = create_user(display_name, db_file=db_file)
-    link_identity(user_id, channel, channel_id, db_file=db_file)
-    return user_id
+    db_file = _resolve_db_file(db_file)
+    init_db(db_file)
+    con = _connect(db_file)
+    try:
+        # Single IMMEDIATE transaction: check + insert are atomic, preventing
+        # concurrent bootstrap calls from creating orphan auth_users rows.
+        con.execute("BEGIN IMMEDIATE")
+        if con.execute("SELECT 1 FROM auth_users LIMIT 1").fetchone() is not None:
+            raise RuntimeError("auth tables not empty — bootstrap refused")
+        user_id = uuid.uuid4().hex
+        now = _now()
+        with con:
+            con.execute(
+                "INSERT INTO auth_users (user_id, display_name, created_at) VALUES (?, ?, ?)",
+                (user_id, display_name, now),
+            )
+            con.execute(
+                "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                "VALUES (?, ?, ?, ?)",
+                (channel, channel_id, user_id, now),
+            )
+        return user_id
+    finally:
+        con.close()
 
 
 def has_any_user(db_file: str | None = None) -> bool:

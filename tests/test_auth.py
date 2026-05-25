@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -242,6 +243,41 @@ def test_bootstrap_fails_when_db_not_empty(db_file):
     auth.create_user("First", db_file=db_file)
     with pytest.raises(RuntimeError, match="not empty"):
         auth.bootstrap_admin("Silvio", "tg", "12345678", db_file=db_file)
+
+
+def test_redeem_invite_concurrent_unbound_token_only_succeeds_once(db_file):
+    """Two concurrent redemptions of the same unbound invite must not both succeed.
+
+    Without BEGIN IMMEDIATE, both threads can read used_at=NULL and then both
+    link a different channel_id (no PK conflict) — double-claiming one invite.
+    """
+    admin = auth.create_user("Admin", db_file=db_file)
+    token = auth.create_invite(display_name="Bob", created_by=admin, db_file=db_file)
+
+    results = []
+    barrier = threading.Barrier(2)
+    errors = []
+
+    def redeem(channel_id):
+        try:
+            barrier.wait()
+            result = auth.redeem_invite(token, "tg", channel_id, db_file=db_file)
+            results.append(result)
+        except Exception as exc:
+            errors.append(exc)
+
+    t1 = threading.Thread(target=redeem, args=("111",))
+    t2 = threading.Thread(target=redeem, args=("222",))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    assert not errors, f"Unexpected errors: {errors}"
+    successes = [r for r in results if r is not None]
+    assert len(successes) == 1, (
+        f"Expected exactly 1 successful redemption, got {len(successes)}: {results}"
+    )
 
 
 def test_redeem_invite_rejects_when_identity_already_linked(db_file):
