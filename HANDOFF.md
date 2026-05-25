@@ -28,7 +28,11 @@ Branch `dev` contém sobre `main`:
 
 ### Plans ativos
 
-Nenhum em execução.
+- **Refatoração `provision_platform_instance` + `list_platform_instances`**
+  - Spec: `docs/sdlc/02-design/2026-05-25-platform-provision-refactor.md` (Draft)
+  - Plano: `docs/sdlc/03-execution/2026-05-25-platform-provision-refactor-plan.md` (11 tasks TDD)
+  - Worktree: `.claude/worktrees/refactor-provision-cc/` (branch `worktree-refactor-provision-cc`)
+  - Retomar com `/handoff-continue` — entry point é a Task 1 do plano (AuthorizationGuard).
 
 ### Open Security Issues
 
@@ -51,4 +55,5 @@ Specs `Idea` em `docs/sdlc/02-design/`. Promover uma para Draft e criar plano de
 - **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher.
 - **Operações além de criar** — update, delete, list de tenants.
 - **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`.
-- **Reduzir `MAX_COMPLEXITY` para 10** — refatorar `provision_platform_instance` (`wasp/provision.py`, CC=15) e atualizar limite em `tests/test_complexity.py`.
+- **Falha clara em configuração ausente** — variáveis obrigatórias (`GH_PAT`, `TELEGRAM_TOKEN`, etc.) hoje falham tardiamente dentro do fluxo (ex.: `raise ValueError("GH_PAT not set")` em `provision_platform_instance`). Validar no startup com mensagens explícitas listando todas as variáveis faltantes de uma vez.
+- **Authorization granular (RBAC)** — hoje todo `user_id` autorizado pode provisionar/listar/etc. qualquer tenant. Mencionado como fora de escopo em `docs/sdlc/02-design/2026-05-20-chat-id-allowlist.md`. Definir papéis (admin, operator, viewer) e mapeamento `user_id → role`.
