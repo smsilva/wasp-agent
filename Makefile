@@ -1,4 +1,4 @@
-.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list
+.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format cc smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list
 
 K3D_CLUSTER ?= wasp-local
 
@@ -31,6 +31,9 @@ build:
 
 lint:
 	uv run ruff check .
+
+cc:
+	uv run radon cc wasp/ main.py --show-complexity --average --min B
 
 format:
 	uv run ruff format .
