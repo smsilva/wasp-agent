@@ -143,7 +143,9 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 
 agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.post("/webhook", ...)` aparecem em `router.routes` com `path="/telegram/webhook"`, **não** `"/webhook"`. Ao inspecionar/wrap as rotas em `main.py`, casar por suffix (`r.path.endswith("/webhook")`) ou por `r.name == "telegram_webhook"`, nunca por equivalência exata. Unit tests com `MagicMock(path="/webhook")` passam mesmo contra implementação quebrada — incluir pelo menos um teste com path prefixado.
 
-**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `Request` de `starlette.requests` e `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth` (não no topo do módulo) para que estejam no escopo na definição da função. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
+**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth`; `Request` já está no escopo global do módulo (importado para `metrics_endpoint`) — **não** reimportar localmente. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
+
+**Python 3.14 + PEP 649 — annotations em closures resolvem pelo módulo, não pelo escopo local:** `get_type_hints(webhook_with_auth)` usa `webhook_with_auth.__globals__` (o módulo `main`), não o escopo de `get_router_with_auth`. Importar `Request` localmente dentro da closure é ineficaz para FastAPI e ruff o sinaliza como F401. Só importar localmente o que for *realmente* usado em código (não apenas em annotations).
 
 ## 13. Async watcher
 
@@ -214,5 +216,9 @@ Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
 - **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
 - **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
 - **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
+
+## 21. SQLite — padrão check-then-write atômico (`wasp/auth.py`)
+
+Operações de check-then-write em `wasp/auth.py` (`redeem_invite`, `bootstrap_admin`) usam `con.execute("BEGIN IMMEDIATE")` antes do primeiro SELECT para adquirir o write lock imediatamente. Após `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` retorna 0, então o módulo Python não emite outro `BEGIN` automático antes do DML. O `with con:` subsequente fecha a transação com COMMIT (sucesso) ou ROLLBACK (exceção). Early `return None` antes do `with con:` faz o `con.close()` no `finally` rolar back a transação vazia — sem efeito colateral.
 
 Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) e derrubar com `make gitops-down`. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`. Isso é validação pesada, não smoke test.
