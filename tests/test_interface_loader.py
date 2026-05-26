@@ -34,4 +34,5 @@ def test_build_installs_start_token_handler(mock_agno, monkeypatch):
     with patch("wasp.clients.interfaces._install_start_token_handler") as mock_install:
         InterfaceLoader(agent).build()
 
-    mock_install.assert_called_once()
+    telegram_iface = mock_agno["agno.os.interfaces.telegram"].Telegram.return_value
+    mock_install.assert_called_once_with(telegram_iface)
