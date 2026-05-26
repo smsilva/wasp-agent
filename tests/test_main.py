@@ -52,7 +52,7 @@ def test_unknown_provider_raises(mock_agno, monkeypatch):
     """ValueError raised for unknown LLM_PROVIDER."""
     monkeypatch.setenv("LLM_PROVIDER", "unknown")
 
-    with pytest.raises(ValueError, match="LLM_PROVIDER inválido"):
+    with pytest.raises(ValueError, match="Invalid LLM_PROVIDER"):
         import main  # noqa: F401
 
 
@@ -136,7 +136,7 @@ async def test_start_token_redeems_invite_and_sends_welcome(mock_agno, monkeypat
 
     assert handled is True
     assert sent == [
-        ("42", "Bem-vindo, Alice. Você está autorizado a usar o wasp-agent.")
+        ("42", "Welcome, Alice. You are authorized to use wasp-agent.")
     ]
 
 
@@ -161,7 +161,7 @@ async def test_start_token_invalid_sends_error_message(mock_agno, monkeypatch):
 
     assert handled is True
     assert sent == [
-        ("7", "Link inválido ou expirado. Solicite um novo ao administrador.")
+        ("7", "Invalid or expired link. Request a new one from the administrator.")
     ]
     assert denied == [{"channel": "tg", "reason": "invalid_token"}]
 
@@ -345,7 +345,7 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     assert response.status_code == 200
     original_endpoint.assert_not_called()
     assert sent == [
-        ("99", "Bem-vindo, Carol. Você está autorizado a usar o wasp-agent.")
+        ("99", "Welcome, Carol. You are authorized to use wasp-agent.")
     ]
 
     # Non-/start path: delegates to original. Starlette caches Request._json

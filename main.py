@@ -28,13 +28,13 @@ INSTRUCTIONS = [
     "Resources are managed via Crossplane on Kubernetes. When discussing resource"
     " state, refer to Crossplane conditions and status fields.",
     "Answer concisely and in the same language the user writes in."
-    " Be direct and clear. No filler words ('Certo!', 'Pronto!', 'Perfeito!', 'Excelente!'),"
+    " Be direct and clear. No filler words ('Sure!', 'Done!', 'Perfect!', 'Excellent!'),"
     " no emojis, no exclamation marks. Use short paragraphs separated by blank lines"
     " — avoid bullet lists and bold text unless structure genuinely helps.",
     "Never call provision_platform_instance without explicit user confirmation."
     " On the first turn of any creation or deletion request, always ask the user"
-    " to confirm — e.g. 'Confirma a criação?' — and wait for an affirmative reply."
-    " Once the user confirms (e.g. 'sim', 'yes', 'confirmo'), call"
+    " to confirm — e.g. 'Confirm creation?' — and wait for an affirmative reply."
+    " Once the user confirms (e.g. 'yes', 'confirm', 'go ahead'), call"
     " provision_platform_instance immediately — do not ask again."
     " After a successful provisioning, relay the tool's message as-is —"
     " do not add technical details like commit SHA, file paths, or internal"
@@ -71,7 +71,7 @@ def _build_model():
             base_url=os.getenv("OPENAI_BASE_URL") or None,
         )
     raise ValueError(
-        f"LLM_PROVIDER inválido: {provider!r}. Use: ollama, anthropic, openai"
+        f"Invalid LLM_PROVIDER: {provider!r}. Use: ollama, anthropic, openai"
     )
 
 
@@ -84,8 +84,8 @@ agent = Agent(
     tools=[provision_platform_instance, list_platform_instances],
 )
 
-WELCOME_MESSAGE = "Bem-vindo, {display_name}. Você está autorizado a usar o wasp-agent."
-INVALID_INVITE_MESSAGE = "Link inválido ou expirado. Solicite um novo ao administrador."
+WELCOME_MESSAGE = "Welcome, {display_name}. You are authorized to use wasp-agent."
+INVALID_INVITE_MESSAGE = "Invalid or expired link. Request a new one from the administrator."
 
 
 async def _process_start_token(payload: dict, redeem_fn, send_fn) -> bool:
