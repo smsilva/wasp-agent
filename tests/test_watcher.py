@@ -127,7 +127,7 @@ def test_load_kube_config_auto_fallback_local(monkeypatch):
 
 async def test_telegram_notifier_send_posts_message(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
-    import wasp.notifier as n
+    import wasp.clients.telegram.notifier as n
 
     fake_client = AsyncMock()
     fake_client.__aenter__.return_value = fake_client
@@ -146,7 +146,7 @@ async def test_telegram_notifier_send_posts_message(monkeypatch):
 
 
 async def test_recording_notifier_captures_messages():
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     n = RecordingNotifier()
     await n.send("123", "hello")
@@ -160,7 +160,7 @@ async def test_recording_notifier_captures_messages():
 
 async def test_recording_notifier_wait_for_message_resolves_after_send():
     import asyncio
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     n = RecordingNotifier()
 
@@ -176,7 +176,7 @@ async def test_recording_notifier_wait_for_message_resolves_after_send():
 async def test_watch_platform_notifies_when_ready(monkeypatch):
     from unittest.mock import MagicMock
     import wasp.watcher as w
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {
@@ -207,7 +207,7 @@ async def test_watch_platform_retries_on_404_until_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
     import wasp.watcher as w
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -237,7 +237,7 @@ async def test_watch_platform_timeout(monkeypatch):
     from itertools import chain, repeat
     from unittest.mock import AsyncMock, MagicMock
     import wasp.watcher as w
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     api = MagicMock()
     api.get_cluster_custom_object.return_value = {"status": {"conditions": []}}
@@ -269,7 +269,7 @@ def test_find_condition_returns_none_when_not_found():
 async def test_watch_platform_reraises_non_404_exception(monkeypatch):
     from unittest.mock import MagicMock
     import wasp.watcher as w
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     class FakeApiException(Exception):
         def __init__(self, status, reason):
@@ -291,7 +291,7 @@ async def test_watch_platform_reraises_non_404_exception(monkeypatch):
 async def test_watcher_records_polls_counter(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
     import wasp.telemetry as telemetry
 
     reader = InMemoryMetricReader()
@@ -321,7 +321,7 @@ async def test_watcher_records_polls_counter(monkeypatch):
 async def test_watcher_records_duration_on_ready(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.metrics.export import InMemoryMetricReader
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
     import wasp.telemetry as telemetry
 
     reader = InMemoryMetricReader()
@@ -354,7 +354,7 @@ async def test_watcher_links_to_parent_span(monkeypatch):
         InMemorySpanExporter,
     )
     from opentelemetry.trace import SpanContext, TraceFlags
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
     import wasp.telemetry as telemetry
 
     exporter = InMemorySpanExporter()
@@ -387,7 +387,7 @@ async def test_watcher_creates_lifecycle_span(monkeypatch):
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
         InMemorySpanExporter,
     )
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
     import wasp.telemetry as telemetry
 
     exporter = InMemorySpanExporter()
@@ -411,7 +411,7 @@ async def test_watcher_creates_lifecycle_span(monkeypatch):
 async def test_watch_platform_retries_until_ready(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
     import wasp.watcher as w
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     api = MagicMock()
     not_ready = {"status": {"conditions": []}}
@@ -451,9 +451,9 @@ def test_extract_chat_id_from_local_session_with_suffix():
 
 async def test_console_notifier_logs_message(caplog):
     import logging
-    from wasp.notifier import ConsoleNotifier
+    from wasp.clients.local import ConsoleNotifier
 
-    caplog.set_level(logging.INFO, logger="wasp.notifier")
+    caplog.set_level(logging.INFO, logger="wasp.clients.local.notifier")
     notifier = ConsoleNotifier()
     await notifier.send("abc123", "Plataforma test está pronta.")
 
@@ -466,7 +466,7 @@ async def test_console_notifier_logs_message(caplog):
 
 def test_select_notifier_console_when_env_explicit(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import ConsoleNotifier
+    from wasp.clients.local import ConsoleNotifier
 
     monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
@@ -477,7 +477,7 @@ def test_select_notifier_console_when_env_explicit(monkeypatch):
 
 def test_select_notifier_telegram_when_env_explicit(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import TelegramNotifier
+    from wasp.clients.telegram import TelegramNotifier
 
     monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
@@ -488,7 +488,7 @@ def test_select_notifier_telegram_when_env_explicit(monkeypatch):
 
 def test_select_notifier_default_telegram_when_token(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import TelegramNotifier
+    from wasp.clients.telegram import TelegramNotifier
 
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
@@ -499,7 +499,7 @@ def test_select_notifier_default_telegram_when_token(monkeypatch):
 
 def test_select_notifier_default_console_without_token(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import ConsoleNotifier
+    from wasp.clients.local import ConsoleNotifier
 
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
@@ -528,7 +528,7 @@ def test_select_notifier_local_channel_picks_console_even_with_telegram_token(
     monkeypatch,
 ):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import ConsoleNotifier
+    from wasp.clients.local import ConsoleNotifier
 
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
@@ -539,7 +539,7 @@ def test_select_notifier_local_channel_picks_console_even_with_telegram_token(
 
 def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import TelegramNotifier
+    from wasp.clients.telegram import TelegramNotifier
 
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
@@ -550,7 +550,7 @@ def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
 
 def test_select_notifier_env_overrides_channel(monkeypatch):
     from wasp.watcher import _select_notifier
-    from wasp.notifier import ConsoleNotifier
+    from wasp.clients.local import ConsoleNotifier
 
     monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
