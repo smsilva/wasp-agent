@@ -143,7 +143,7 @@ In the system prompt, include explicit anti-pattern instructions to control LLM 
 
 agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.post("/webhook", ...)` aparecem em `router.routes` com `path="/telegram/webhook"`, **não** `"/webhook"`. Ao inspecionar/wrap as rotas em `main.py`, casar por suffix (`r.path.endswith("/webhook")`) ou por `r.name == "telegram_webhook"`, nunca por equivalência exata. Unit tests com `MagicMock(path="/webhook")` passam mesmo contra implementação quebrada — incluir pelo menos um teste com path prefixado.
 
-**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth`; `Request` já está no escopo global do módulo (importado para `metrics_endpoint`) — **não** reimportar localmente. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
+**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth`. `Request` é importado no topo de `wasp/clients/telegram/webhook.py` — `webhook_with_auth.__globals__` aponta para os globals desse módulo; não reimportar localmente. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
 
 **Python 3.14 + PEP 649 — annotations em closures resolvem pelo módulo, não pelo escopo local:** `get_type_hints(webhook_with_auth)` usa `webhook_with_auth.__globals__` (o módulo `main`), não o escopo de `get_router_with_auth`. Importar `Request` localmente dentro da closure é ineficaz para FastAPI e ruff o sinaliza como F401. Só importar localmente o que for *realmente* usado em código (não apenas em annotations).
 
@@ -170,6 +170,8 @@ Variáveis que configuram o comportamento do agent usam o prefixo `WASP_AGENT_` 
 O fixture `mock_agno` em `tests/conftest.py` mocka `agno.models` como `MagicMock`. Se `OTEL_EXPORTER_OTLP_ENDPOINT` estiver setado no shell, `configure()` chama `AgnoInstrumentor`, que tenta `from agno.models.base import Model` e falha contra o mock. O fixture já faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)` para isolar os testes — não remover essa linha.
 
 O loop de `sys.modules.pop` no fixture deve incluir todo `wasp.*` module criado. Ao adicionar um novo módulo em `wasp/`, incluí-lo na lista do fixture; caso contrário, estado do módulo vaza entre testes e causa falhas intermitentes.
+
+Ao testar `telemetry.metrics_endpoint`, patchar `wasp.telemetry.generate_latest` — não `prometheus_client.generate_latest`. O nome é bound no import do módulo; patchar no módulo fonte não afeta o nome já resolvido.
 
 ## 20. Logging — `wasp/logging.py`
 
@@ -223,6 +225,14 @@ Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
 Operações de check-then-write em `wasp/auth.py` (`redeem_invite`, `bootstrap_admin`) usam `con.execute("BEGIN IMMEDIATE")` antes do primeiro SELECT para adquirir o write lock imediatamente. Após `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` retorna 0, então o módulo Python não emite outro `BEGIN` automático antes do DML. O `with con:` subsequente fecha a transação com COMMIT (sucesso) ou ROLLBACK (exceção). Early `return None` antes do `with con:` faz o `con.close()` no `finally` rolar back a transação vazia — sem efeito colateral.
 
 Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) e derrubar com `make gitops-down`. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`. Isso é validação pesada, não smoke test.
+
+## 23. Startup e ordenação de imports em `main.py`
+
+`wasp/startup.py` contém `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, e `os.umask(0o077)`. Chamada de `main.py` após `load_dotenv()`.
+
+**Por que `load_dotenv()` fica em `main.py` e não em `startup()`:** qualquer `import wasp.*` dispara `wasp/__init__.py` → `wasp.provision` → `wasp.telemetry.configure()` em tempo de importação. `load_dotenv()` deve preceder esse import; do contrário, variáveis do `.env` (ex.: `OTEL_EXPORTER_OTLP_ENDPOINT`, `PROMETHEUS_METRICS_ACTIVE`) não estarão disponíveis quando `configure()` rodar.
+
+**`GitOpsCommitter.probe()`** valida `GH_PAT` no startup sempre que a variável estiver setada (zero-config). Captura `GithubException` e re-levanta como `RuntimeError`, mantendo callers livres de imports específicos do github.
 
 ## 22. Estrutura de pacotes — `wasp/clients/`
 
