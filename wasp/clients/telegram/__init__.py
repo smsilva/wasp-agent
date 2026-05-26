@@ -1,2 +1,3 @@
 from wasp.clients.telegram.notifier import TelegramNotifier as TelegramNotifier
 from wasp.clients.telegram.webhook import _install_start_token_handler as _install_start_token_handler
+from wasp.clients.telegram.webhook import _process_start_token as _process_start_token

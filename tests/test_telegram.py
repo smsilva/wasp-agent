@@ -1,5 +1,5 @@
 async def test_process_start_token_redeems_invite(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     sent = []
 
@@ -21,7 +21,7 @@ async def test_process_start_token_redeems_invite(mock_agno):
 
 async def test_process_start_token_invalid_sends_error(mock_agno, monkeypatch):
     import wasp.telemetry as telemetry
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     sent = []
     denied = []
@@ -45,7 +45,7 @@ async def test_process_start_token_invalid_sends_error(mock_agno, monkeypatch):
 
 
 async def test_process_start_token_bare_start_not_handled(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     calls = []
 
@@ -64,7 +64,7 @@ async def test_process_start_token_bare_start_not_handled(mock_agno):
 
 
 async def test_process_start_token_non_start_not_handled(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     async def fake_send(chat_id, text):
         raise AssertionError("send should not be called")
@@ -78,7 +78,7 @@ async def test_process_start_token_non_start_not_handled(mock_agno):
 
 
 async def test_process_start_token_edited_message(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     sent = []
 
@@ -95,7 +95,7 @@ async def test_process_start_token_edited_message(mock_agno):
 
 
 async def test_process_start_token_missing_chat_id_not_handled(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     async def fake_send(chat_id, text):
         raise AssertionError("send should not be called")
@@ -109,7 +109,7 @@ async def test_process_start_token_missing_chat_id_not_handled(mock_agno):
 
 
 async def test_process_start_token_trailing_space_not_handled(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     async def fake_send(chat_id, text):
         raise AssertionError("send should not be called")
@@ -123,7 +123,7 @@ async def test_process_start_token_trailing_space_not_handled(mock_agno):
 
 
 async def test_process_start_token_only_whitespace_not_handled(mock_agno):
-    from wasp.telegram import _process_start_token
+    from wasp.clients.telegram import _process_start_token
 
     async def fake_send(chat_id, text):
         raise AssertionError("send should not be called")
@@ -138,8 +138,8 @@ async def test_process_start_token_only_whitespace_not_handled(mock_agno):
 
 async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch):
     from unittest.mock import MagicMock, AsyncMock
-    import wasp.telegram as telegram_mod
-    from wasp.telegram import _install_start_token_handler
+    import wasp.clients.telegram.webhook as telegram_mod
+    from wasp.clients.telegram import _install_start_token_handler
 
     monkeypatch.setenv("APP_ENV", "development")
 
@@ -202,7 +202,7 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
 
 async def test_install_start_token_handler_finds_webhook_with_router_prefix(mock_agno):
     from unittest.mock import MagicMock, AsyncMock
-    from wasp.telegram import _install_start_token_handler
+    from wasp.clients.telegram import _install_start_token_handler
 
     original_endpoint = AsyncMock(return_value="agno-result")
     webhook_route = MagicMock(path="/telegram/webhook", endpoint=original_endpoint)
@@ -224,8 +224,8 @@ async def test_install_start_token_handler_finds_webhook_with_router_prefix(mock
 
 async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
     from unittest.mock import MagicMock, AsyncMock
-    import wasp.telegram as telegram_mod
-    from wasp.telegram import _install_start_token_handler
+    import wasp.clients.telegram.webhook as telegram_mod
+    from wasp.clients.telegram import _install_start_token_handler
 
     monkeypatch.delenv("APP_ENV", raising=False)
 
@@ -276,7 +276,7 @@ async def test_webhook_with_auth_has_fastapi_type_annotations(mock_agno):
     from unittest.mock import MagicMock, AsyncMock
     from starlette.requests import Request
     from starlette.background import BackgroundTasks
-    from wasp.telegram import _install_start_token_handler
+    from wasp.clients.telegram import _install_start_token_handler
 
     original_endpoint = AsyncMock(return_value="agno-result")
     webhook_route = MagicMock(path="/telegram/webhook", endpoint=original_endpoint)
