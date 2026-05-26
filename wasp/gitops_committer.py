@@ -1,12 +1,25 @@
 import os
 from pathlib import PurePosixPath
 
+from github.GithubException import GithubException
+
 from wasp.git_client import FileAlreadyExistsError, GitClient, PyGithubClient
 
 
 class GitOpsCommitter:
     def __init__(self, client: GitClient):
         self._client = client
+
+    @classmethod
+    def probe(cls) -> None:
+        if not os.getenv("GH_PAT"):
+            return
+        try:
+            cls.from_env()
+        except GithubException as e:
+            raise RuntimeError(
+                f"GitHub token is invalid (HTTP {e.status}): {e.data.get('message', e)}"
+            ) from e
 
     @classmethod
     def from_env(cls) -> "GitOpsCommitter":

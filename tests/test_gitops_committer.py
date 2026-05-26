@@ -46,6 +46,43 @@ def test_commit_returns_already_provisioning_on_conflict():
     }
 
 
+def test_probe_does_nothing_when_pat_absent(monkeypatch):
+    from wasp.gitops_committer import GitOpsCommitter
+
+    monkeypatch.delenv("GH_PAT", raising=False)
+    GitOpsCommitter.probe()  # must not raise
+
+
+def test_probe_raises_runtime_error_on_github_exception(monkeypatch):
+    from github.GithubException import GithubException
+    from wasp.gitops_committer import GitOpsCommitter
+
+    monkeypatch.setenv("GH_PAT", "expired")
+    monkeypatch.setattr(
+        GitOpsCommitter,
+        "from_env",
+        classmethod(
+            MagicMock(
+                side_effect=GithubException(401, {"message": "Bad credentials"}, {})
+            )
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="GitHub token is invalid \\(HTTP 401\\)"):
+        GitOpsCommitter.probe()
+
+
+def test_probe_succeeds_when_token_valid(monkeypatch):
+    from wasp.gitops_committer import GitOpsCommitter
+
+    monkeypatch.setenv("GH_PAT", "valid-token")
+    monkeypatch.setattr(
+        GitOpsCommitter, "from_env", classmethod(MagicMock(return_value=None))
+    )
+
+    GitOpsCommitter.probe()  # must not raise
+
+
 def test_from_env_raises_when_pat_missing(monkeypatch):
     from wasp.gitops_committer import GitOpsCommitter
 

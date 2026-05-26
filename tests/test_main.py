@@ -78,3 +78,40 @@ def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
     call_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
     interface = call_kwargs["interfaces"][0]
     assert callable(interface.get_router)
+
+
+def test_startup_exits_when_probe_raises(mock_agno, monkeypatch):
+    """App exits with code 1 when GitOpsCommitter.probe raises RuntimeError."""
+    from unittest.mock import MagicMock
+    import pytest
+    import wasp.gitops_committer as gc
+
+    monkeypatch.setattr(
+        gc.GitOpsCommitter,
+        "probe",
+        classmethod(
+            MagicMock(
+                side_effect=RuntimeError(
+                    "GitHub token is invalid (HTTP 401): Bad credentials"
+                )
+            )
+        ),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        import main  # noqa: F401
+
+    assert exc_info.value.code == 1
+
+
+def test_startup_continues_when_probe_succeeds(mock_agno, monkeypatch):
+    """App starts normally when probe returns without raising."""
+    from unittest.mock import MagicMock
+    import wasp.gitops_committer as gc
+
+    spy = MagicMock(return_value=None)
+    monkeypatch.setattr(gc.GitOpsCommitter, "probe", classmethod(spy))
+
+    import main  # noqa: F401
+
+    spy.assert_called_once()

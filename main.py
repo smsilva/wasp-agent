@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 
 from dotenv import load_dotenv
 
@@ -7,6 +9,14 @@ load_dotenv()
 from wasp.logging import configure_logging  # noqa: E402
 
 configure_logging()
+
+from wasp.gitops_committer import GitOpsCommitter  # noqa: E402
+
+try:
+    GitOpsCommitter.probe()
+except RuntimeError as e:
+    logging.getLogger(__name__).error("startup: %s", e)
+    sys.exit(1)
 
 os.umask(0o077)  # agent.db created with 600 permissions
 
