@@ -158,8 +158,11 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     iface = FakeTelegram()
     _install_start_token_handler(iface)
 
-    monkeypatch.setattr(telegram_mod.auth, "redeem_invite", lambda *a, **kw: ("uid", "Carol"))
+    monkeypatch.setattr(
+        telegram_mod.auth, "redeem_invite", lambda *a, **kw: ("uid", "Carol")
+    )
     import sys
+
     sys.modules[
         "agno.os.interfaces.telegram.security"
     ].validate_webhook_secret_token = lambda token: True
@@ -248,6 +251,7 @@ async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
 
     monkeypatch.setattr(telegram_mod.auth, "redeem_invite", fake_redeem)
     import sys
+
     sys.modules[
         "agno.os.interfaces.telegram.security"
     ].validate_webhook_secret_token = lambda token: False
