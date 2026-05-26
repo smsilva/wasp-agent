@@ -56,6 +56,7 @@ def mock_agno(monkeypatch, request):
         "wasp.auth_cli",
         "wasp.auth_guard",
         "wasp.gitops_committer",
+        "wasp.platform_cluster",
     ):
         sys.modules.pop(mod, None)
 
@@ -84,5 +85,6 @@ def mock_agno(monkeypatch, request):
         "wasp.auth_cli",
         "wasp.auth_guard",
         "wasp.gitops_committer",
+        "wasp.platform_cluster",
     ):
         sys.modules.pop(mod, None)
