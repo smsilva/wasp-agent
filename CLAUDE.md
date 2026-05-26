@@ -223,3 +223,24 @@ Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
 Operações de check-then-write em `wasp/auth.py` (`redeem_invite`, `bootstrap_admin`) usam `con.execute("BEGIN IMMEDIATE")` antes do primeiro SELECT para adquirir o write lock imediatamente. Após `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` retorna 0, então o módulo Python não emite outro `BEGIN` automático antes do DML. O `with con:` subsequente fecha a transação com COMMIT (sucesso) ou ROLLBACK (exceção). Early `return None` antes do `with con:` faz o `con.close()` no `finally` rolar back a transação vazia — sem efeito colateral.
 
 Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) e derrubar com `make gitops-down`. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`. Isso é validação pesada, não smoke test.
+
+## 22. Estrutura de pacotes — `wasp/clients/`
+
+Código específico de um canal de notificação ou integração externa vive em `wasp/clients/<canal>/`:
+
+```
+wasp/clients/
+  __init__.py          ← Notifier Protocol
+  telegram/
+    __init__.py        ← re-exports públicos
+    notifier.py        ← implementação do Notifier
+    webhook.py         ← integração específica (ex: webhook auth)
+  local/
+    __init__.py
+    notifier.py
+```
+
+- `wasp/clients/__init__.py` define apenas o `Notifier` Protocol.
+- Cada subpacote expõe sua API pública via `__init__.py`.
+- `RecordingNotifier` (test double) fica em `tests/notifiers.py`, não em `wasp/clients/`.
+- Ao adicionar novo canal (Discord, Slack), criar `wasp/clients/<canal>/` seguindo o mesmo padrão.
