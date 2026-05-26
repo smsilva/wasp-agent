@@ -92,4 +92,6 @@ from wasp.clients.local.notifier import ConsoleNotifier
 make format
 make test           # 100% coverage obrigatório
 make e2e-with-debug # cobre bugs que make test não pega (router real do agno, prefixo /telegram)
+make local-chat     # smoke test do canal local (ConsoleNotifier)
+make gitops-up      # validação pesada — só se mudanças afetarem provision.py/watcher.py
 ```
