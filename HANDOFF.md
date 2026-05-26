@@ -31,7 +31,6 @@ Branch `dev` contém sobre `main`:
 - **Refatoração `provision_platform_instance` + `list_platform_instances`**
   - Spec: `docs/sdlc/02-design/2026-05-25-platform-provision-refactor.md` (Draft)
   - Plano: `docs/sdlc/03-execution/2026-05-25-platform-provision-refactor-plan.md` (11 tasks TDD)
-  - Worktree: `.claude/worktrees/refactor-provision-cc/` (branch `worktree-refactor-provision-cc`)
   - Retomar com `/handoff-continue` — entry point é a Task 1 do plano (AuthorizationGuard).
 
 ### Open Security Issues
