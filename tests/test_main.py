@@ -440,6 +440,17 @@ async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
     original_endpoint.assert_not_called()
 
 
+def test_agent_tools_include_list_platform_instances(mock_agno, monkeypatch):
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("WASP_AGENT_ENABLE_TELEGRAM", "false")
+    import main  # noqa: F401
+
+    call_kwargs = mock_agno["agno.agent"].Agent.call_args.kwargs
+    tool_names = {getattr(t, "__name__", None) for t in call_kwargs["tools"]}
+    assert "list_platform_instances" in tool_names
+    assert "provision_platform_instance" in tool_names
+
+
 async def test_webhook_with_auth_has_fastapi_type_annotations(mock_agno, monkeypatch):
     """webhook_with_auth must have Request and BackgroundTasks type annotations.
 

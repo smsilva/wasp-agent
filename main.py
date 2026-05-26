@@ -16,7 +16,7 @@ from agno.agent import Agent  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from agno.db.sqlite.sqlite import SqliteDb  # noqa: E402
-from wasp import auth, provision_platform_instance  # noqa: E402
+from wasp import auth, list_platform_instances, provision_platform_instance  # noqa: E402
 
 auth.init_db()
 from wasp.notifier import TelegramNotifier  # noqa: E402
@@ -38,9 +38,10 @@ INSTRUCTIONS = [
     " After a successful provisioning, relay the tool's message as-is —"
     " do not add technical details like commit SHA, file paths, or internal"
     " infrastructure names (ArgoCD, Crossplane, GitHub, Kubernetes).",
-    "Currently, you can only create new tenants. Any other operation (update,"
-    " delete, list, status) is not yet supported — acknowledge the request and"
-    " let the user know it will be available in a future update.",
+    "list_platform_instances is read-only — safe to call without confirmation.",
+    "Currently, you can create new tenants and list existing ones."
+    " Other operations (update, delete, status of individual tenant) are not"
+    " yet supported — acknowledge the request and let the user know.",
 ]
 
 
@@ -79,7 +80,7 @@ agent = Agent(
     db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
     add_history_to_context=True,
     instructions=INSTRUCTIONS,
-    tools=[provision_platform_instance],
+    tools=[provision_platform_instance, list_platform_instances],
 )
 
 WELCOME_MESSAGE = "Bem-vindo, {display_name}. Você está autorizado a usar o wasp-agent."
