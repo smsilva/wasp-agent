@@ -17,29 +17,32 @@ Classe `InterfaceLoader` em `wasp/clients/interfaces.py` que lê variáveis de a
 ```python
 # main.py
 from wasp.clients.interfaces import InterfaceLoader
-interfaces = InterfaceLoader().build(agent)
+interfaces = InterfaceLoader(agent).build()
 ```
 
 ## InterfaceLoader
 
 ```python
 class InterfaceLoader:
-    def build(self, agent) -> list:
-        builders = [self._build_telegram]
-        return [iface for b in builders if (iface := b(agent)) is not None]
+    def __init__(self, agent) -> None:
+        self._agent = agent
 
-    def _build_telegram(self, agent) -> Telegram | None:
+    def build(self) -> list:
+        builders = [self._build_telegram]
+        return [iface for b in builders if (iface := b()) is not None]
+
+    def _build_telegram(self) -> Telegram | None:
         token = os.getenv("TELEGRAM_TOKEN")
         if not token:
             return None
-        iface = Telegram(agent=agent, token=token)
+        iface = Telegram(agent=self._agent, token=token)
         _install_start_token_handler(iface)
         return iface
 ```
 
 ## Extensibility
 
-Para adicionar Slack: criar `_build_slack(agent) -> SlackInterface | None` e registrá-lo em `builders`. `main.py` não muda.
+Para adicionar Slack: criar `_build_slack(self) -> SlackInterface | None` e registrá-lo em `builders`. `main.py` não muda.
 
 ## Testing
 
@@ -51,4 +54,4 @@ Para adicionar Slack: criar `_build_slack(agent) -> SlackInterface | None` e reg
 | File | Change |
 |---|---|
 | `wasp/clients/interfaces.py` | novo — contém `InterfaceLoader` |
-| `main.py` | remove bloco de 6 linhas, adiciona 2 linhas (import + `InterfaceLoader().build(agent)`) |
+| `main.py` | remove bloco de 6 linhas, adiciona 2 linhas (import + `InterfaceLoader(agent).build()`) |
