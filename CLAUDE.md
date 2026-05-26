@@ -198,6 +198,7 @@ Sem isso, o `session_id="tg:..."` usado no teste cai no auth guard de `provision
 **Ao fim de todo ciclo de desenvolvimento (antes de declarar a feature pronta, abrir PR ou fazer merge), rodar obrigatoriamente:**
 
 ```bash
+make format
 make test
 make e2e-with-debug
 ```
