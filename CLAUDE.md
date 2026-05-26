@@ -241,6 +241,6 @@ wasp/clients/
 ```
 
 - `wasp/clients/__init__.py` define apenas o `Notifier` Protocol.
-- Cada subpacote expõe sua API pública via `__init__.py`.
+- Cada subpacote expõe sua API pública via `__init__.py`. Re-exports em `__init__.py` precisam de alias explícito (`X as X`) para ruff não reportar F401: `from wasp.clients.foo import Bar as Bar`.
 - `RecordingNotifier` (test double) fica em `tests/notifiers.py`, não em `wasp/clients/`.
 - Ao adicionar novo canal (Discord, Slack), criar `wasp/clients/<canal>/` seguindo o mesmo padrão.
