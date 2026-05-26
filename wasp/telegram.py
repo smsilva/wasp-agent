@@ -73,6 +73,8 @@ def _install_start_token_handler(iface) -> None:
             if handled:
                 return JSONResponse({"status": "ok"})
 
+            # Starlette's Request.json() caches `_json` on the instance after
+            # first call; agno's downstream `await request.json()` reuses it.
             return await original_endpoint(request, background_tasks)
 
         webhook_route.endpoint = webhook_with_auth
