@@ -9,7 +9,7 @@ class InterfaceLoader:
     def __init__(self, agent) -> None:
         self._agent = agent
 
-    def build(self) -> list:
+    def build(self) -> list[Telegram]:
         builders = [self._build_telegram]
         return [iface for b in builders if (iface := b()) is not None]
 
