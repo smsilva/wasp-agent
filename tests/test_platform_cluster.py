@@ -86,9 +86,7 @@ def test_from_env_uses_kube_config(monkeypatch):
     from wasp.platform_cluster import PlatformClusterReader
 
     mock_api = MagicMock()
-    monkeypatch.setattr(
-        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
-    )
+    monkeypatch.setattr("wasp.platform_cluster.load_kube_config_auto", lambda: mock_api)
 
     reader = PlatformClusterReader.from_env()
 

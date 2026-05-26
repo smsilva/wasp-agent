@@ -33,8 +33,9 @@ INSTRUCTIONS = [
     " — avoid bullet lists and bold text unless structure genuinely helps.",
     "Never call provision_platform_instance without explicit user confirmation."
     " On the first turn of any creation or deletion request, always ask the user"
-    " to confirm — e.g. 'Confirma a criação?' — and wait for an affirmative reply"
-    " before calling any tool."
+    " to confirm — e.g. 'Confirma a criação?' — and wait for an affirmative reply."
+    " Once the user confirms (e.g. 'sim', 'yes', 'confirmo'), call"
+    " provision_platform_instance immediately — do not ask again."
     " After a successful provisioning, relay the tool's message as-is —"
     " do not add technical details like commit SHA, file paths, or internal"
     " infrastructure names (ArgoCD, Crossplane, GitHub, Kubernetes).",

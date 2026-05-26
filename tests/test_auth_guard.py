@@ -16,9 +16,7 @@ def test_guard_returns_local_operator_for_trusted_channel():
     from wasp.auth_guard import AuthorizationGuard
 
     span = MagicMock()
-    user_id, err = AuthorizationGuard().check(
-        channel="local", chat_id="abc", span=span
-    )
+    user_id, err = AuthorizationGuard().check(channel="local", chat_id="abc", span=span)
 
     assert user_id == "local-operator"
     assert err is None
@@ -31,9 +29,7 @@ def test_guard_authorizes_known_tg_user(monkeypatch):
 
     monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: "user-abc")
     span = MagicMock()
-    user_id, err = AuthorizationGuard().check(
-        channel="tg", chat_id="111", span=span
-    )
+    user_id, err = AuthorizationGuard().check(channel="tg", chat_id="111", span=span)
 
     assert user_id == "user-abc"
     assert err is None
@@ -52,9 +48,7 @@ def test_guard_denies_unknown_tg_user(monkeypatch):
     )
 
     span = MagicMock()
-    user_id, err = AuthorizationGuard().check(
-        channel="tg", chat_id="999", span=span
-    )
+    user_id, err = AuthorizationGuard().check(channel="tg", chat_id="999", span=span)
 
     assert user_id is None
     assert err == {"status": "unauthorized", "message": "Acesso negado."}

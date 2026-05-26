@@ -512,9 +512,7 @@ def test_list_returns_tenants_with_status(monkeypatch):
             {"metadata": {"name": "fresh"}, "status": {}},
         ]
     }
-    monkeypatch.setattr(
-        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
-    )
+    monkeypatch.setattr("wasp.platform_cluster.load_kube_config_auto", lambda: mock_api)
 
     class FakeCtx:
         session_id = "local:wasp-agent:abc"
@@ -537,9 +535,7 @@ def test_list_returns_empty_list(monkeypatch):
 
     mock_api = MagicMock()
     mock_api.list_cluster_custom_object.return_value = {"items": []}
-    monkeypatch.setattr(
-        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
-    )
+    monkeypatch.setattr("wasp.platform_cluster.load_kube_config_auto", lambda: mock_api)
 
     class FakeCtx:
         session_id = "local:wasp-agent:abc"
@@ -555,9 +551,7 @@ def test_list_returns_error_on_exception(monkeypatch):
 
     mock_api = MagicMock()
     mock_api.list_cluster_custom_object.side_effect = RuntimeError("boom")
-    monkeypatch.setattr(
-        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
-    )
+    monkeypatch.setattr("wasp.platform_cluster.load_kube_config_auto", lambda: mock_api)
 
     class FakeCtx:
         session_id = "local:wasp-agent:abc"
@@ -580,9 +574,7 @@ def test_list_creates_span(monkeypatch):
 
     mock_api = MagicMock()
     mock_api.list_cluster_custom_object.return_value = {"items": []}
-    monkeypatch.setattr(
-        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
-    )
+    monkeypatch.setattr("wasp.platform_cluster.load_kube_config_auto", lambda: mock_api)
 
     from wasp.provision import list_platform_instances
 

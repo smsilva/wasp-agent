@@ -117,7 +117,9 @@ class PlatformProvisioner:
                     name,
                     extra={"platform": name},
                 )
-                telemetry.provisioning_counter.add(1, {"outcome": "already_provisioning"})
+                telemetry.provisioning_counter.add(
+                    1, {"outcome": "already_provisioning"}
+                )
                 return err
 
             span.set_attribute("platform.name", name)
@@ -141,7 +143,9 @@ class PlatformProvisioner:
                 ),
             }
         except Exception:
-            log.exception("provision_platform_instance failed", extra={"platform": name})
+            log.exception(
+                "provision_platform_instance failed", extra={"platform": name}
+            )
             telemetry.provisioning_counter.add(1, {"outcome": "error"})
             return {
                 "status": "error",
@@ -179,7 +183,10 @@ class PlatformInventory:
             return {"status": "ok", "tenants": tenants}
         except Exception:
             log.exception("list_platform_instances failed")
-            return {"status": "error", "message": "List failed. Please try again later."}
+            return {
+                "status": "error",
+                "message": "List failed. Please try again later.",
+            }
 
 
 @tool

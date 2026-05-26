@@ -227,6 +227,7 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
     import wasp.watcher
     import wasp.auth
     import main  # noqa: F401
+    import wasp.gitops_committer
     import wasp.telemetry as _telemetry
 
     _telemetry.configure()  # force reconfigure now that PROMETHEUS_PORT is set
@@ -239,7 +240,7 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
         wasp.auth, "is_authorized", lambda channel, channel_id: "e2e-user"
     )
     monkeypatch.setattr(
-        wasp.provision,
+        wasp.gitops_committer,
         "PyGithubClient",
         lambda **_kw: GiteaClient(
             token=gitea_container.token,
