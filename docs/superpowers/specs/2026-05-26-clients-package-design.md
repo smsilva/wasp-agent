@@ -81,8 +81,15 @@ from wasp.clients.telegram.webhook import _install_start_token_handler
 from wasp.clients.local.notifier import ConsoleNotifier
 ```
 
-## Critérios de sucesso
+## Tarefas adicionais pós-refatoração
 
-- `ruff check .` passa limpo
-- `make test` (100% coverage) passa
-- `make e2e-with-debug` passa
+- Atualizar `CLAUDE.md` com a estrutura de pacotes preferida (`wasp/clients/<canal>/`) para guiar adições futuras
+- Criar documento de exploração em `docs/sdlc/01-exploration/` descrevendo a extensão do padrão `clients/` para o restante do código
+
+## Validação
+
+```bash
+make format
+make test           # 100% coverage obrigatório
+make e2e-with-debug # cobre bugs que make test não pega (router real do agno, prefixo /telegram)
+```
