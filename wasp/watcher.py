@@ -9,7 +9,9 @@ from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
 from wasp.logging import chat_id_var
-from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
+from wasp.clients import Notifier
+from wasp.clients.local import ConsoleNotifier
+from wasp.clients.telegram import TelegramNotifier
 
 log = logging.getLogger(__name__)
 
