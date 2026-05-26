@@ -13,21 +13,15 @@ os.umask(0o077)  # agent.db created with 600 permissions
 import wasp.telemetry as telemetry  # noqa: E402 — must come after load_dotenv so env vars are set
 
 from agno.os import AgentOS  # noqa: E402
-from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from wasp import auth  # noqa: E402
 from wasp.agent import build_agent  # noqa: E402
-from wasp.clients.telegram import _install_start_token_handler  # noqa: E402
+from wasp.clients.interfaces import InterfaceLoader  # noqa: E402
 
 auth.init_db()
 
 agent = build_agent()
 
-interfaces = []
-telegram_token = os.getenv("TELEGRAM_TOKEN")
-if telegram_token:
-    telegram_interface = Telegram(agent=agent, token=telegram_token)
-    _install_start_token_handler(telegram_interface)
-    interfaces.append(telegram_interface)
+interfaces = InterfaceLoader(agent).build()
 
 agent_os = AgentOS(
     agents=[agent],
