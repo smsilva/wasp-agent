@@ -479,3 +479,114 @@ def test_provision_missing_pat(monkeypatch):
 
     assert result["status"] == "error"
     assert result["message"] == "Provisioning failed. Please try again later."
+
+
+def test_list_returns_unauthorized_when_unknown_tg_chat_id(monkeypatch):
+    from wasp.provision import list_platform_instances
+
+    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: None)
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:999"
+
+    result = list_platform_instances(run_context=FakeCtx())
+
+    assert result == {"status": "unauthorized", "message": "Acesso negado."}
+
+
+def test_list_returns_tenants_with_status(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import list_platform_instances
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.return_value = {
+        "items": [
+            {
+                "metadata": {"name": "acme"},
+                "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+            },
+            {
+                "metadata": {"name": "globex"},
+                "status": {"conditions": [{"type": "Ready", "status": "False"}]},
+            },
+            {"metadata": {"name": "fresh"}, "status": {}},
+        ]
+    }
+    monkeypatch.setattr(
+        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = list_platform_instances(run_context=FakeCtx())
+
+    assert result == {
+        "status": "ok",
+        "tenants": [
+            {"name": "acme", "status": "Ready"},
+            {"name": "globex", "status": "Pending"},
+            {"name": "fresh", "status": "Unknown"},
+        ],
+    }
+
+
+def test_list_returns_empty_list(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import list_platform_instances
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.return_value = {"items": []}
+    monkeypatch.setattr(
+        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = list_platform_instances(run_context=FakeCtx())
+
+    assert result == {"status": "ok", "tenants": []}
+
+
+def test_list_returns_error_on_exception(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import list_platform_instances
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.side_effect = RuntimeError("boom")
+    monkeypatch.setattr(
+        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = list_platform_instances(run_context=FakeCtx())
+
+    assert result["status"] == "error"
+    assert result["message"] == "List failed. Please try again later."
+
+
+def test_list_creates_span(monkeypatch):
+    from unittest.mock import MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.return_value = {"items": []}
+    monkeypatch.setattr(
+        "wasp.platform_cluster.load_kube_config_auto", lambda: mock_api
+    )
+
+    from wasp.provision import list_platform_instances
+
+    list_platform_instances()
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "list_platform_instances" for s in spans)
