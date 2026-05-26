@@ -1,7 +1,7 @@
 # Design: Apêndice expandido — fluxo GitOps completo via Telegram
 
 **Date:** 2026-05-23  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** Expandir o Apêndice de `validation.md` com passos detalhados para executar o ciclo completo: Telegram → commit em `wasp-gitops` → ArgoCD sync → Crossplane reconcile → notificação Ready no Telegram.
 
 ---

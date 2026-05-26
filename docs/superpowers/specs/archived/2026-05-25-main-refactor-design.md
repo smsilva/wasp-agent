@@ -1,5 +1,5 @@
 **Date:** 2026-05-25  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** `main.py`, `wasp/`, `tests/`
 
 # Design: Refatoração de `main.py`

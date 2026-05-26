@@ -1,7 +1,7 @@
 # Logging Design
 
 **Date:** 2026-05-23  
-**Status:** Approved  
+**Status:** Implemented  
 **Replaces:** `docs/sdlc/02-design/2026-05-16-structured-logging.md`, `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md`
 
 ## Goals

@@ -34,12 +34,6 @@ Nenhuma issue ativa em `docs/security/issues/`.
 
 ## Active Specs / Plans
 
-### Status: Approved (implementados, atualizar para Implemented)
-- `docs/superpowers/specs/2026-05-26-clients-package-design.md` — refatoração `wasp/clients/` (concluída hoje)
-- `docs/superpowers/specs/2026-05-25-main-refactor-design.md` — refatoração `main.py` (concluída em sessão anterior)
-- `docs/superpowers/specs/2026-05-23-logging-design.md` — logging estruturado (concluída)
-- `docs/superpowers/specs/2026-05-23-telegram-full-gitops-runbook-design.md` — runbook GitOps completo (verificar)
-
 ### Status: Idea
 - `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — opção A de auth (OAuth direto GitHub/Google)
 - `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — opção B de auth (Cognito como hub federado)
@@ -52,9 +46,7 @@ Nenhuma issue ativa em `docs/security/issues/`.
 ## Next Steps
 
 1. **Rodar validação pendente:** `make e2e-with-debug` → `make gitops-up` → `make local-chat` (verificar callback no terminal)
-2. **Sincronizar `dev` com `main`:** `git checkout dev && git merge main` (1 commit de CLAUDE.md a cherry-pick ou merge)
-3. **Atualizar status dos specs** — marcar como `Implemented` os 4 specs "Approved" já entregues e mover para `archived/`
-4. **Decidir próxima feature:** escolher entre opção A (CLI device flow OAuth) e opção B (Cognito federation), ou avançar em `llm-behavior-evaluation`
+2. **Decidir próxima feature:** escolher entre opção A (CLI device flow OAuth) e opção B (Cognito federation), ou avançar em `llm-behavior-evaluation`
 
 ## Backlog
 

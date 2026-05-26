@@ -1,7 +1,7 @@
 # Design: Pacote `wasp/clients/`
 
 **Date:** 2026-05-26  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** Reorganização de `wasp/notifier.py` e `wasp/telegram.py` em subpacotes por canal
 
 ## Contexto
