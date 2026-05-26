@@ -16,7 +16,7 @@ from agno.os import AgentOS  # noqa: E402
 from agno.os.interfaces.telegram import Telegram  # noqa: E402
 from wasp import auth  # noqa: E402
 from wasp.agent import build_agent  # noqa: E402
-from wasp.telegram import _install_start_token_handler  # noqa: E402
+from wasp.clients.telegram import _install_start_token_handler  # noqa: E402
 
 auth.init_db()
 
