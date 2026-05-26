@@ -11,30 +11,11 @@ from pydantic import BaseModel, Field
 from wasp import auth
 from wasp.git_client import FileAlreadyExistsError, PyGithubClient
 from wasp.logging import chat_id_var
-from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
-from wasp.watcher import extract_channel, extract_chat_id, watch_platform
+from wasp.watcher import _select_notifier, extract_channel, extract_chat_id, watch_platform
 
 log = logging.getLogger(__name__)
 
 TRUSTED_CHANNELS = {"local"}
-
-
-def _select_notifier(channel: str | None = None) -> Notifier | None:
-    kind = os.getenv("WASP_AGENT_NOTIFIER")
-    token = os.getenv("TELEGRAM_TOKEN")
-    if kind is None:
-        if channel == "local":
-            kind = "console"
-        elif channel == "tg":
-            kind = "telegram"
-        else:
-            kind = "telegram" if token else "console"
-    if kind == "console":
-        return ConsoleNotifier()
-    if kind == "telegram":
-        return TelegramNotifier(token=token) if token else None
-    return None
-
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)

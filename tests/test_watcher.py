@@ -462,3 +462,171 @@ async def test_console_notifier_logs_message(caplog):
         and "Plataforma test está pronta." in r.message
         for r in caplog.records
     )
+
+
+def test_select_notifier_console_when_env_explicit(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_telegram_when_env_explicit(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_default_telegram_when_token(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_default_console_without_token(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+
+    notifier = _select_notifier()
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
+    from wasp.watcher import _select_notifier
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+
+    assert _select_notifier() is None
+
+
+def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
+    from wasp.watcher import _select_notifier
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "discord")
+    assert _select_notifier() is None
+
+
+def test_select_notifier_local_channel_picks_console_even_with_telegram_token(
+    monkeypatch,
+):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="local")
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import TelegramNotifier
+
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="tg")
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_select_notifier_env_overrides_channel(monkeypatch):
+    from wasp.watcher import _select_notifier
+    from wasp.notifier import ConsoleNotifier
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+
+    notifier = _select_notifier(channel="tg")
+    assert isinstance(notifier, ConsoleNotifier)
+
+
+def test_spawner_no_chat_id_returns_false(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    thread_cls = MagicMock()
+    with patch("wasp.watcher.threading.Thread", thread_cls):
+        result = PlatformWatcherSpawner().spawn(
+            name="x", chat_id=None, channel="tg", parent_span_ctx=None
+        )
+
+    assert result is False
+    thread_cls.assert_not_called()
+
+
+def test_spawner_no_notifier_returns_false(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+
+    thread_cls = MagicMock()
+    with patch("wasp.watcher.threading.Thread", thread_cls):
+        result = PlatformWatcherSpawner().spawn(
+            name="x", chat_id="111", channel="tg", parent_span_ctx=None
+        )
+
+    assert result is False
+    thread_cls.assert_not_called()
+
+
+def test_spawner_spawns_thread(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    thread = MagicMock()
+    thread_cls = MagicMock(return_value=thread)
+    with patch("wasp.watcher.threading.Thread", thread_cls):
+        result = PlatformWatcherSpawner().spawn(
+            name="x", chat_id="111", channel="local", parent_span_ctx=None
+        )
+
+    assert result is True
+    thread_cls.assert_called_once()
+    thread.start.assert_called_once()
+
+
+def test_spawner_target_runs_asyncio(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+
+    thread = MagicMock()
+    thread_cls = MagicMock(return_value=thread)
+    mock_watch = MagicMock()
+    mock_async_run = MagicMock()
+
+    with (
+        patch("wasp.watcher.threading.Thread", thread_cls),
+        patch("wasp.watcher.asyncio.run", mock_async_run),
+        patch("wasp.watcher.watch_platform", mock_watch),
+    ):
+        PlatformWatcherSpawner().spawn(
+            name="x", chat_id="111", channel="local", parent_span_ctx=None
+        )
+        target = thread_cls.call_args.kwargs["target"]
+        target()
+
+    mock_async_run.assert_called_once_with(mock_watch.return_value)

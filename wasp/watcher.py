@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+import threading
 import time
 
 import wasp.telemetry as telemetry
@@ -7,9 +9,27 @@ from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
 from wasp.logging import chat_id_var
-from wasp.notifier import Notifier
+from wasp.notifier import ConsoleNotifier, Notifier, TelegramNotifier
 
 log = logging.getLogger(__name__)
+
+
+def _select_notifier(channel: str | None = None) -> Notifier | None:
+    kind = os.getenv("WASP_AGENT_NOTIFIER")
+    token = os.getenv("TELEGRAM_TOKEN")
+    if kind is None:
+        if channel == "local":
+            kind = "console"
+        elif channel == "tg":
+            kind = "telegram"
+        else:
+            kind = "telegram" if token else "console"
+    if kind == "console":
+        return ConsoleNotifier()
+    if kind == "telegram":
+        return TelegramNotifier(token=token) if token else None
+    return None
+
 
 PLATFORM_GROUP = "wasp.silvios.me"
 PLATFORM_VERSION = "v1alpha1"
@@ -149,3 +169,25 @@ def ready_message(name: str, platform: dict) -> str:
         if endpoint:
             lines.append(f"- {r['name']}: https://{endpoint}")
     return "\n".join(lines)
+
+
+class PlatformWatcherSpawner:
+    def spawn(
+        self,
+        name: str,
+        chat_id: str | None,
+        channel: str | None,
+        parent_span_ctx,
+    ) -> bool:
+        if not chat_id:
+            return False
+        chat_id_var.set(chat_id)
+        notifier = _select_notifier(channel)
+        if notifier is None:
+            return False
+
+        def _run_watcher():
+            asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
+
+        threading.Thread(target=_run_watcher, daemon=True).start()
+        return True
