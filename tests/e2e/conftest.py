@@ -205,7 +205,7 @@ def gitea_container():
 
 @pytest.fixture
 def recording_notifier():
-    from wasp.notifier import RecordingNotifier
+    from tests.notifiers import RecordingNotifier
 
     return RecordingNotifier()
 
