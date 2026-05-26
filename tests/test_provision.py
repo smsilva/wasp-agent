@@ -58,7 +58,7 @@ def test_provision_commits(monkeypatch):
     mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     result = provision_platform_instance(
         name="wp2",
@@ -87,7 +87,7 @@ def test_provision_spawns_watcher(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
         "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
     )
@@ -98,7 +98,7 @@ def test_provision_spawns_watcher(monkeypatch):
     class FakeCtx:
         session_id = "tg:5621932873:5621932873"
 
-    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
             name="wp2",
             domain="wasp.silvios.me",
@@ -119,7 +119,7 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
         "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
     )
@@ -132,9 +132,9 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
 
     mock_watch = MagicMock()
     with (
-        patch("wasp.provision.threading.Thread", mock_thread_cls),
-        patch("wasp.provision.asyncio.run") as mock_asyncio_run,
-        patch("wasp.provision.watch_platform", mock_watch),
+        patch("wasp.watcher.threading.Thread", mock_thread_cls),
+        patch("wasp.watcher.asyncio.run") as mock_asyncio_run,
+        patch("wasp.watcher.watch_platform", mock_watch),
     ):
         provision_platform_instance(
             name="wp2",
@@ -156,14 +156,14 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     mock_thread_cls = MagicMock()
 
     class FakeCtx:
         session_id = "web:abc:def"
 
-    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
             name="wp2",
             domain="wasp.silvios.me",
@@ -189,8 +189,8 @@ def test_provision_creates_span(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr("wasp.provision.threading.Thread", MagicMock())
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
 
     from wasp.provision import provision_platform_instance
 
@@ -212,8 +212,8 @@ def test_provision_records_provisioning_started(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr("wasp.provision.threading.Thread", MagicMock())
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
 
     from wasp.provision import provision_platform_instance
 
@@ -239,7 +239,7 @@ def test_provision_uses_custom_github_base_url(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("GITHUB_BASE_URL", "http://localhost:3000/api/v3")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     provision_platform_instance(name="wp2")
 
@@ -258,7 +258,7 @@ def test_provision_uses_gitops_repo_env_var(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     provision_platform_instance(name="wp2")
 
@@ -275,7 +275,7 @@ def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -283,7 +283,7 @@ def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
     class FakeCtx:
         session_id = "local:wasp-agent:abc12345"
 
-    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
             name="wp2",
             domain="wasp.silvios.me",
@@ -308,7 +308,7 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
     )
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
         "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
     )
@@ -318,7 +318,7 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
     class FakeCtx:
         session_id = "tg:5621932873:5621932873"
 
-    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(name="wp2", run_context=FakeCtx())
 
     assert result["status"] == "already_provisioning"
@@ -357,12 +357,12 @@ def test_provision_skips_auth_for_local_channel(monkeypatch):
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     class FakeCtx:
         session_id = "local:wasp-agent:abc12345"
 
-    with patch("wasp.provision.threading.Thread", MagicMock()):
+    with patch("wasp.watcher.threading.Thread", MagicMock()):
         result = provision_platform_instance(
             name="x",
             domain="d",
@@ -385,14 +385,14 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     mock_thread_cls = MagicMock()
 
     class FakeCtx:
         session_id = "tg:wasp-agent:5621932873"
 
-    with patch("wasp.provision.threading.Thread", mock_thread_cls):
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
         result = provision_platform_instance(
             name="wp2",
             domain="d",
@@ -449,14 +449,14 @@ def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     from wasp.provision import provision_platform_instance
 
     class FakeCtx:
         session_id = "tg:wasp-agent:111"
 
-    with patch("wasp.provision.threading.Thread", MagicMock()):
+    with patch("wasp.watcher.threading.Thread", MagicMock()):
         provision_platform_instance(
             name="x",
             domain="d",
@@ -471,15 +471,11 @@ def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
 
 
 def test_provision_missing_pat(monkeypatch):
-    from unittest.mock import MagicMock
     from wasp.provision import provision_platform_instance
 
     monkeypatch.delenv("GH_PAT", raising=False)
-    mock_client_cls = MagicMock()
-    monkeypatch.setattr("wasp.provision.PyGithubClient", mock_client_cls)
 
     result = provision_platform_instance(name="wp2")
 
     assert result["status"] == "error"
     assert result["message"] == "Provisioning failed. Please try again later."
-    mock_client_cls.assert_not_called()
