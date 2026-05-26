@@ -2,7 +2,7 @@ import pytest
 from radon.complexity import cc_visit
 from pathlib import Path
 
-MAX_COMPLEXITY = 15
+MAX_COMPLEXITY = 10
 
 SOURCE_FILES = sorted(Path("wasp").glob("**/*.py")) + [Path("main.py")]
 
