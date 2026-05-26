@@ -25,37 +25,17 @@ def test_telegram_not_added_without_token(mock_agno, monkeypatch):
     assert call_kwargs["interfaces"] == []
 
 
-def test_metrics_route_exists():
+def test_prometheus_route_registered(mock_agno, monkeypatch):
+    """main.py delegates Prometheus route registration to telemetry."""
+    from unittest.mock import MagicMock
+    import wasp.telemetry as telemetry
+
+    spy = MagicMock()
+    monkeypatch.setattr(telemetry, "register_prometheus_route", spy)
+
     import main
 
-    appended = [call.args[0] for call in main.app.routes.append.call_args_list]
-    paths = [r.path for r in appended if hasattr(r, "path")]
-    assert "/telemetry/prometheus" in paths
-
-
-async def test_metrics_endpoint_returns_prometheus_format():
-    import main
-
-    response = await main.metrics_endpoint(request=None)
-    assert response.status_code == 200
-    assert "text/plain" in response.media_type
-
-
-async def test_metrics_endpoint_uses_prometheus_registry(monkeypatch):
-    from unittest.mock import patch
-    import prometheus_client
-
-    fake_data = (
-        b"# HELP agent_tool_calls_total Tool invocations\nagent_tool_calls_total 1.0\n"
-    )
-    with patch("prometheus_client.generate_latest", return_value=fake_data) as mock_gen:
-        import main
-        import wasp.telemetry as telemetry
-
-        telemetry._prometheus_registry = prometheus_client.REGISTRY
-        response = await main.metrics_endpoint(request=None)
-    mock_gen.assert_called_once_with(prometheus_client.REGISTRY)
-    assert response.body == fake_data
+    spy.assert_called_once_with(main.app)
 
 
 def test_main_initializes_auth_db(mock_agno, monkeypatch):

@@ -8,7 +8,15 @@ from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.trace import StatusCode
-from prometheus_client import REGISTRY as _PROM_REGISTRY, Counter as _PromCounter
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    REGISTRY as _PROM_REGISTRY,
+    Counter as _PromCounter,
+    generate_latest,
+)
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.routing import Route
 
 tracer: _trace_api.Tracer = None  # type: ignore[assignment]
 meter: _metrics_api.Meter = None  # type: ignore[assignment]
@@ -179,3 +187,16 @@ def instrument(name: str):
             return sync_wrapper
 
     return decorator
+
+
+async def metrics_endpoint(request: Request) -> Response:
+    data = (
+        generate_latest(_prometheus_registry)
+        if _prometheus_registry is not None
+        else generate_latest()
+    )
+    return Response(data, media_type=CONTENT_TYPE_LATEST)
+
+
+def register_prometheus_route(app) -> None:
+    app.routes.append(Route("/telemetry/prometheus", metrics_endpoint))

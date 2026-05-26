@@ -267,6 +267,42 @@ def test_configure_with_explicit_reader_skips_prometheus_registry():
     assert telemetry._prometheus_registry is None
 
 
+@pytest.mark.asyncio
+async def test_metrics_endpoint_returns_prometheus_format():
+    import wasp.telemetry as telemetry
+
+    response = await telemetry.metrics_endpoint(request=None)
+    assert response.status_code == 200
+    assert "text/plain" in response.media_type
+
+
+@pytest.mark.asyncio
+async def test_metrics_endpoint_uses_prometheus_registry():
+    from unittest.mock import patch
+    import prometheus_client
+    import wasp.telemetry as telemetry
+
+    fake_data = (
+        b"# HELP agent_tool_calls_total Tool invocations\nagent_tool_calls_total 1.0\n"
+    )
+    telemetry._prometheus_registry = prometheus_client.REGISTRY
+    with patch("wasp.telemetry.generate_latest", return_value=fake_data) as mock_gen:
+        response = await telemetry.metrics_endpoint(request=None)
+    mock_gen.assert_called_once_with(prometheus_client.REGISTRY)
+    assert response.body == fake_data
+
+
+def test_register_prometheus_route_appends_correct_path():
+    from unittest.mock import MagicMock
+    import wasp.telemetry as telemetry
+
+    app = MagicMock()
+    telemetry.register_prometheus_route(app)
+    app.routes.append.assert_called_once()
+    route = app.routes.append.call_args.args[0]
+    assert route.path == "/telemetry/prometheus"
+
+
 def test_auth_denied_callable():
     from wasp.telemetry import auth_denied
 

@@ -40,19 +40,7 @@ agent_os = AgentOS(
 
 app = agent_os.get_app()
 
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST  # noqa: E402
-from starlette.requests import Request  # noqa: E402
-from starlette.responses import Response  # noqa: E402
-from starlette.routing import Route  # noqa: E402
-
-
-async def metrics_endpoint(request: Request) -> Response:
-    registry = telemetry._prometheus_registry
-    data = generate_latest(registry) if registry is not None else generate_latest()
-    return Response(data, media_type=CONTENT_TYPE_LATEST)
-
-
-app.routes.append(Route("/telemetry/prometheus", metrics_endpoint))
+telemetry.register_prometheus_route(app)
 
 if __name__ == "__main__":  # pragma: no cover
     agent_os.serve(app="main:app", reload=True)
