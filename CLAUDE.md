@@ -57,6 +57,10 @@ Spec `Status` values: `Idea`, `Draft`, `Approved`, `Implemented`, `Deferred`.
 
 One-line reminders without context go in `HANDOFF.md` **Backlog**, not `sdlc/02-design/`.
 
+Naming convention for paired design+plan: spec uses `YYYY-MM-DD-<slug>-design.md` in `sdlc/02-design/`; the matching plan uses `YYYY-MM-DD-<slug>-plan.md` in `sdlc/03-execution/`. Same date and slug — different suffix.
+
+Do **not** create `docs/superpowers/` or any parallel SDLC tree. Skills like `superpowers:writing-plans` and `superpowers:executing-plans` default to that path; override the location and write specs/plans directly into `docs/sdlc/02-design/` and `docs/sdlc/03-execution/`.
+
 Markdown header blocks: when stacking `**Field:**` lines without blank lines between them, end each with **two trailing spaces** so they render as separate lines.
 
 ### Packages — `wasp/clients/`
