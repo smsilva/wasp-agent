@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 
 async def test_discord_notifier_send_calls_channel_send():
