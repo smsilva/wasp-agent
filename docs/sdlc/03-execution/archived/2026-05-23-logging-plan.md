@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python stdlib `logging`, `contextvars`, `json`; `opentelemetry-instrumentation-logging` (already in deps).
 
-**Spec:** `docs/superpowers/specs/2026-05-23-logging-design.md`
+**Spec:** `docs/sdlc/02-design/archived/2026-05-23-logging-design.md`
 
 ---
 
@@ -582,14 +582,14 @@ Update `docs/sdlc/02-design/2026-05-16-structured-logging.md` — change `**Stat
 
 ```markdown
 **Status:** Implemented  
-**Superseded by:** `docs/superpowers/specs/2026-05-23-logging-design.md`
+**Superseded by:** `docs/sdlc/02-design/archived/2026-05-23-logging-design.md`
 ```
 
 Update `docs/sdlc/02-design/2026-05-20-persistent-audit-log.md` — change `**Status:** Idea` to `**Status:** Deferred` and add:
 
 ```markdown
 **Status:** Deferred  
-**Note:** Structured logging (LOG_FILE JSONL + OTel bridge) implemented in `docs/superpowers/specs/2026-05-23-logging-design.md`. OTLP export to persistent backend deferred.
+**Note:** Structured logging (LOG_FILE JSONL + OTel bridge) implemented in `docs/sdlc/02-design/archived/2026-05-23-logging-design.md`. OTLP export to persistent backend deferred.
 ```
 
 Move both files to their archive directory:

@@ -57,7 +57,7 @@ Spec `Status` values: `Idea`, `Draft`, `Approved`, `Implemented`, `Deferred`.
 
 One-line reminders without context go in `HANDOFF.md` **Backlog**, not `sdlc/02-design/`.
 
-Naming convention for paired design+plan: spec uses `YYYY-MM-DD-<slug>-design.md` in `sdlc/02-design/`; the matching plan uses `YYYY-MM-DD-<slug>-plan.md` in `sdlc/03-execution/`. Same date and slug — different suffix.
+Naming convention: usar `YYYY-MM-DD-<slug>.md` nas pastas SDLC. A pasta (`02-design/` vs `03-execution/`) já indica o tipo — não duplicar com sufixo `-design`/`-plan`. Mesmo slug para o par design+execução, em pastas diferentes. Arquivos já em `archived/` mantêm o sufixo histórico.
 
 Do **not** create `docs/superpowers/` or any parallel SDLC tree. Skills like `superpowers:writing-plans` and `superpowers:executing-plans` default to that path; override the location and write specs/plans directly into `docs/sdlc/02-design/` and `docs/sdlc/03-execution/`.
 

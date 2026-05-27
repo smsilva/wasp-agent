@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-16  
 **Status:** Implemented  
-**Superseded by:** `docs/superpowers/specs/2026-05-23-logging-design.md`  
+**Superseded by:** `docs/sdlc/02-design/archived/2026-05-23-logging-design.md`  
 
 Será consolidado com OTel logs no Ciclo 4 (ver [`2026-05-17-opentelemetry-design.md`](./2026-05-17-opentelemetry-design.md)).
 

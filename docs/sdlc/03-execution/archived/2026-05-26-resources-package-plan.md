@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.14, Pydantic, kubernetes-client, pytest, ruff, uv.
 
-**Spec:** `docs/superpowers/specs/2026-05-26-resources-package-design.md`
+**Spec:** `docs/sdlc/02-design/archived/2026-05-26-resources-package-design.md`
 
 ---
 

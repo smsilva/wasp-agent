@@ -5,7 +5,7 @@
 
 ## Problema
 
-A refatoração inicial (`docs/superpowers/specs/2026-05-26-clients-package-design.md`) move o código do Telegram e o `ConsoleNotifier` para `wasp/clients/`. O restante de `wasp/` ainda mistura responsabilidades sem um padrão claro de agrupamento por domínio.
+A refatoração inicial (`docs/sdlc/02-design/archived/2026-05-26-clients-package-design.md`) move o código do Telegram e o `ConsoleNotifier` para `wasp/clients/`. O restante de `wasp/` ainda mistura responsabilidades sem um padrão claro de agrupamento por domínio.
 
 ## Pergunta a responder
 

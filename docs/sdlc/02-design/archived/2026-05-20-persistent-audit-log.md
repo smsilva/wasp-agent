@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-20  
 **Status:** Deferred  
-**Note:** Structured logging (LOG_FILE JSONL + OTel bridge) implemented in `docs/superpowers/specs/2026-05-23-logging-design.md`. OTLP export to persistent backend deferred.  
+**Note:** Structured logging (LOG_FILE JSONL + OTel bridge) implemented in `docs/sdlc/02-design/archived/2026-05-23-logging-design.md`. OTLP export to persistent backend deferred.  
 
 ## Contexto
 

@@ -36,19 +36,19 @@ Nenhuma issue ativa em `docs/security/issues/`.
 ## Active Specs / Plans
 
 ### Implementados (aguardando marcação após merge)
-- `docs/superpowers/specs/2026-05-27-discord-bot-design.md` — Discord Bot Design
-- `docs/superpowers/plans/2026-05-27-discord-bot.md` — Discord Bot Implementation Plan
-- `docs/superpowers/specs/2026-05-26-resources-package-design.md` — Resources Package Design
-- `docs/superpowers/specs/2026-05-26-interface-loader-design.md` — InterfaceLoader Design
+- `docs/sdlc/02-design/archived/2026-05-27-discord-bot-design.md` — Discord Bot Design
+- `docs/sdlc/03-execution/archived/2026-05-27-discord-bot-plan.md` — Discord Bot Implementation Plan
+- `docs/sdlc/02-design/archived/2026-05-26-resources-package-design.md` — Resources Package Design
+- `docs/sdlc/02-design/archived/2026-05-26-interface-loader-design.md` — InterfaceLoader Design
 
-### Status: Idea (backlog de features)
-- `docs/sdlc/02-design/2026-05-27-discord-slash-commands.md` — Discord Slash Commands
-- `docs/sdlc/02-design/2026-05-26-opentelemetry-tracing.md` — Distributed Tracing
-- `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` — golden set para regressões no system prompt
-- `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` — alertas de orçamento
-- `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — auth OAuth device flow
-- `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — auth Cognito federation
-- 14 specs de 2026-05-26: helm-chart, dora-metrics, rate-limiting, prompt-versioning, load-testing, sbom, supply-chain-security, secret-rotation, code-quality-security-scanning, penetration-test, eu-ai-act, privacy-data-retention, disaster-recovery, incident-response
+### Status: Idea (exploração — backlog de features)
+- `docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md` — Discord Slash Commands
+- `docs/sdlc/01-exploration/2026-05-26-opentelemetry-tracing.md` — Distributed Tracing
+- `docs/sdlc/01-exploration/2026-05-20-llm-behavior-evaluation.md` — golden set para regressões no system prompt
+- `docs/sdlc/01-exploration/2026-05-20-token-cost-budget.md` — alertas de orçamento
+- `docs/sdlc/01-exploration/2026-05-21-cli-device-flow-oauth.md` — auth OAuth device flow
+- `docs/sdlc/01-exploration/2026-05-21-auth-cognito-federation.md` — auth Cognito federation
+- 14 explorações de 2026-05-26 em `docs/sdlc/01-exploration/`: helm-chart, dora-metrics, rate-limiting, prompt-versioning, load-testing, sbom, supply-chain-security, secret-rotation, code-quality-security-scanning, penetration-test, eu-ai-act, privacy-data-retention, disaster-recovery, incident-response
 
 ### Status: Deferred
 - `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` — persistir `platform_watches` em SQLite
@@ -58,13 +58,13 @@ Nenhuma issue ativa em `docs/security/issues/`.
 1. **Merge `dev` → `main`** — branch passou em `make test` (261 tests), smoke test Discord confirmado
 2. **Atualizar status dos specs entregues** — mover specs/plans Discord + resources + interface-loader para `archived/` ou marcar `Implemented`
 3. **Decidir próxima feature** — sugestões em ordem de valor imediato:
-   - `2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
-   - `2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
-   - `2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
+   - `01-exploration/2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
+   - `01-exploration/2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
+   - `01-exploration/2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
 
 ## Backlog
 
-- **Discord slash commands** (`docs/sdlc/02-design/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
+- **Discord slash commands** (`docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
 - **Handler de convite via DM no Discord** — hoje novos usuários Discord exigem `make admin-link` pelo operador; implementar redeem de token por DM elimina essa fricção (ver `wasp/clients/telegram/webhook.py` como referência)
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
 - **Próximo CRD: `Cluster`** — seguir padrão: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + `@tool` em `wasp/provision.py`

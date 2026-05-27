@@ -2,7 +2,7 @@
 
 **Status:** Idea  
 **Date:** 2026-05-27  
-**Depende de:** `docs/superpowers/specs/2026-05-27-discord-bot-design.md` (mensagens livres implementadas)
+**Depende de:** `docs/sdlc/02-design/archived/2026-05-27-discord-bot-design.md` (mensagens livres implementadas)
 
 ## Contexto
 
