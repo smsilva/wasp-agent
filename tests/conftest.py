@@ -72,6 +72,7 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.base",
         "wasp.resources.platform",
         "wasp.resources.platform.manifest",
+        "wasp.resources.platform.inventory",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
@@ -117,6 +118,7 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.base",
         "wasp.resources.platform",
         "wasp.resources.platform.manifest",
+        "wasp.resources.platform.inventory",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)

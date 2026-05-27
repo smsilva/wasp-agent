@@ -6,8 +6,7 @@ from agno.tools import tool
 from opentelemetry import trace
 from wasp.auth_guard import AuthorizationGuard
 from wasp.gitops_committer import GitOpsCommitter
-from wasp.platform_cluster import PlatformClusterReader
-from wasp.resources.platform import PlatformManifest
+from wasp.resources.platform import PlatformInventory, PlatformManifest
 from wasp.watcher import PlatformWatcherSpawner, extract_channel, extract_chat_id
 
 log = logging.getLogger(__name__)
@@ -104,42 +103,6 @@ class PlatformProvisioner:
             return {
                 "status": "error",
                 "message": "Provisioning failed. Please try again later.",
-            }
-
-
-class PlatformInventory:
-    def __init__(
-        self,
-        guard: AuthorizationGuard,
-        reader: PlatformClusterReader,
-    ):
-        self._guard = guard
-        self._reader = reader
-
-    @classmethod
-    def from_env(cls) -> "PlatformInventory":
-        return cls(
-            guard=AuthorizationGuard(),
-            reader=PlatformClusterReader.from_env(),
-        )
-
-    def list(self, run_context) -> dict:
-        span = trace.get_current_span()
-        channel = extract_channel(run_context)
-        chat_id = extract_chat_id(run_context)
-
-        user_id, err = self._guard.check(channel, chat_id, span)
-        if err is not None:
-            return err
-
-        try:
-            tenants = self._reader.list_with_status()
-            return {"status": "ok", "tenants": tenants}
-        except Exception:
-            log.exception("list_platform_instances failed")
-            return {
-                "status": "error",
-                "message": "List failed. Please try again later.",
             }
 
 

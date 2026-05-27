@@ -10,3 +10,6 @@ from wasp.resources.platform.manifest import (
 from wasp.resources.platform.manifest import (
     PlatformManifest as PlatformManifest,
 )
+from wasp.resources.platform.inventory import (
+    PlatformInventory as PlatformInventory,
+)
