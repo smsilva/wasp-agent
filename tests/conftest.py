@@ -37,6 +37,12 @@ KUBE_MODULES = [
     "kubernetes.config",
 ]
 
+DISCORD_MODULES = [
+    "discord",
+    "discord.ext",
+    "discord.ext.commands",
+]
+
 
 @pytest.fixture(autouse=True)
 def mock_agno(monkeypatch, request):
@@ -60,6 +66,9 @@ def mock_agno(monkeypatch, request):
         "wasp.clients.k8s.reader",
         "wasp.clients.local",
         "wasp.clients.local.notifier",
+        "wasp.clients.discord",
+        "wasp.clients.discord.bot",
+        "wasp.clients.discord.notifier",
         "wasp.provision",
         "wasp.watcher",
         "wasp.telemetry",
@@ -81,11 +90,16 @@ def mock_agno(monkeypatch, request):
     # instrument time, but agno.models is mocked as MagicMock below.
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
 
-    mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES}
+    mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES + DISCORD_MODULES}
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
     # Make @tool a transparent no-op so provision_platform_instance remains directly callable in tests.
     mocks["agno.tools"].tool = lambda fn: fn
+    # discord.Client must be a plain stub class (not a MagicMock subclass) so that
+    # DiscordBot can subclass it without inheriting MagicMock's __getattr__ magic,
+    # which tries to create child mocks of the same type and breaks __init__.
+    # discord.Intents stays as a MagicMock instance so Intents.default() works via __getattr__.
+    mocks["discord"].Client = type("Client", (), {"user": None, "__init__": lambda self, **kw: None})
     # Prevent load_dotenv() from reading the real .env during tests so that
     # monkeypatch.setenv/delenv has full control over env vars.
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
@@ -106,6 +120,9 @@ def mock_agno(monkeypatch, request):
         "wasp.clients.k8s.reader",
         "wasp.clients.local",
         "wasp.clients.local.notifier",
+        "wasp.clients.discord",
+        "wasp.clients.discord.bot",
+        "wasp.clients.discord.notifier",
         "wasp.provision",
         "wasp.watcher",
         "wasp.telemetry",

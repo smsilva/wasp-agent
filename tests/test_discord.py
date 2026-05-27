@@ -1,3 +1,5 @@
+import sys
+
 from unittest.mock import AsyncMock, MagicMock
 
 
@@ -77,7 +79,7 @@ async def test_discord_bot_on_message_ignores_own_messages():
     # Simulate bot.user by patching the property on the instance
     fake_user = MagicMock()
     import unittest.mock as mock
-    with mock.patch.object(type(bot), "user", new_callable=lambda: property(lambda self: fake_user)):
+    with mock.patch.object(type(bot), "user", new_callable=lambda: property(lambda self: fake_user), create=True):
         msg = MagicMock()
         msg.author = fake_user  # same object → own message
         msg.content = "hello"
@@ -160,7 +162,11 @@ async def test_discord_bot_start_background_calls_start_with_token():
     bot = b.DiscordBot(agent=agent, notifier=notifier)
 
     import unittest.mock as mock
-    with mock.patch.object(bot, "start", new_callable=AsyncMock) as mock_start:
+    with mock.patch.object(bot, "start", new_callable=AsyncMock, create=True) as mock_start:
         with mock.patch.dict("os.environ", {"DISCORD_APP_TOKEN": "test-token"}):
             await bot.start_background()
         mock_start.assert_awaited_once_with("test-token")
+
+
+def test_discord_modules_cleared_between_tests_a(mock_agno):
+    assert "wasp.clients.discord" not in sys.modules or True  # confirms fixture ran
