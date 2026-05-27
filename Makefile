@@ -1,4 +1,4 @@
-.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format cc smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list
+.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format cc smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list admin-link
 
 K3D_CLUSTER ?= wasp-local
 
@@ -59,3 +59,6 @@ admin-revoke:
 
 admin-list:
 	@scripts/admin-list
+
+admin-link:
+	@scripts/admin-link "$(USER_ID)" "$(CHANNEL)" "$(ID)"

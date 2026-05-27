@@ -43,6 +43,11 @@ def main(argv: list[str] | None = None) -> int:
     bootstrap.add_argument("--channel", required=True)
     bootstrap.add_argument("--channel-id", required=True)
 
+    link = subs.add_parser("link")
+    link.add_argument("--user-id", required=True)
+    link.add_argument("--channel", required=True)
+    link.add_argument("--channel-id", required=True)
+
     args = parser.parse_args(argv)
 
     if args.cmd == "bootstrap":
@@ -52,6 +57,15 @@ def main(argv: list[str] | None = None) -> int:
             print(str(e), file=sys.stderr)
             return 1
         print(user_id)
+        return 0
+
+    if args.cmd == "link":
+        try:
+            auth.link_identity(args.user_id, args.channel, args.channel_id)
+        except Exception as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        print("linked")
         return 0
 
     if args.cmd == "invite":

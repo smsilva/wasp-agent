@@ -47,6 +47,30 @@ O operador repassa o link via canal seguro (DM, e-mail). O link é válido por 1
 
 Se o token expirou, já foi consumido, ou é inválido, o bot responde: `Link inválido ou expirado. Solicite um novo ao administrador.`
 
+## Vincular canal adicional a usuário existente
+
+Quando o mesmo operador quer usar outro canal (ex.: Discord) sem perder o histórico do canal original:
+
+```bash
+# 1. Descobrir o user_id atual
+make admin-list
+
+# 2. Vincular o novo canal ao mesmo user_id
+make admin-link USER_ID=694ba973edf3488bb3f6ba38c51e6aae CHANNEL=dc ID=708384119989600337
+```
+
+Regras:
+- O `user_id` deve existir em `auth_users` (obtido via `make admin-list`).
+- O par `(channel, channel_id)` não pode estar já vinculado.
+- Não há TTL — o vínculo é permanente até `make admin-revoke`.
+
+**Como descobrir o `channel_id` por canal:**
+
+| Canal | Como obter |
+|-------|-----------|
+| Telegram | Mandar mensagem para [@userinfobot](https://t.me/userinfobot) — campo `Id` |
+| Discord | Ativar "Modo Desenvolvedor" em Configurações → Avançado, clicar com botão direito no avatar → "Copiar ID do Usuário" |
+
 ## Listar identidades ativas
 
 ```bash
@@ -88,3 +112,4 @@ Se for necessário expor `local-chat` por rede, ver spec futuro `docs/sdlc/02-de
 - **Revogação não interrompe tools em execução** — só impede novas mensagens daquele `chat_id`.
 - **Sem multi-tenancy real** — qualquer usuário autorizado pode provisionar qualquer tenant.
 - **Bootstrap exige DB vazio** — para rotacionar o admin inicial, revogar manualmente via SQL em `agent.db` ou apagar o arquivo e refazer o bootstrap.
+- **`make admin-link` exige `user_id` conhecido** — obtenha via `make admin-list` antes de vincular.
