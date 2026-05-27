@@ -19,8 +19,8 @@ O Discord usa WebSocket Gateway permanente (discord.py), enquanto o Telegram usa
 ```
 main.py
 ├── AgentOS ← [TelegramInterface]     (agno nativo, sem mudança)
-└── DiscordBot.start()                (asyncio task no app lifespan)
-      └── on_message(msg)
+└── discord_bot.start()               (asyncio task no app lifespan)
+      └── on_message(msg)             (discord_bot = DiscordBot(agent, notifier))
             ├── auth.is_authorized("dc", user_id)
             ├── notifier.register(user_id, channel)
             └── agent.arun(session_id="dc:wasp-agent:<user_id>")
