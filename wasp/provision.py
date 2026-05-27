@@ -4,62 +4,16 @@ import wasp.telemetry as telemetry
 import yaml
 from agno.tools import tool
 from opentelemetry import trace
-from pydantic import BaseModel, Field
 from wasp.auth_guard import AuthorizationGuard
 from wasp.gitops_committer import GitOpsCommitter
 from wasp.platform_cluster import PlatformClusterReader
+from wasp.resources.platform import PlatformManifest
 from wasp.watcher import PlatformWatcherSpawner, extract_channel, extract_chat_id
 
 log = logging.getLogger(__name__)
 
 DEFAULT_DOMAIN = "wasp.silvios.me"
 DEFAULT_REGIONS = ("us-east-1",)
-
-
-class ServiceSpec(BaseModel):
-    name: str
-
-
-class RegionSpec(BaseModel):
-    name: str
-    endpoint: str
-
-
-class PlatformSpec(BaseModel):
-    domain: str
-    regions: list[RegionSpec]
-    services: list[ServiceSpec] = Field(
-        default_factory=lambda: [
-            ServiceSpec(name=s) for s in ["auth", "discovery", "callback", "portal"]
-        ]
-    )
-
-
-class MetadataSpec(BaseModel):
-    name: str
-
-
-class PlatformManifest(BaseModel):
-    apiVersion: str = "wasp.silvios.me/v1alpha1"
-    kind: str = "Platform"
-    metadata: MetadataSpec
-    spec: PlatformSpec
-
-    @classmethod
-    def build(cls, name: str, domain: str, regions: list[str]) -> "PlatformManifest":
-        return cls(
-            metadata=MetadataSpec(name=name),
-            spec=PlatformSpec(
-                domain=domain,
-                regions=[
-                    RegionSpec(
-                        name=r,
-                        endpoint=f"gateway.{r}.{name}.{domain}",
-                    )
-                    for r in regions
-                ],
-            ),
-        )
 
 
 class PlatformProvisioner:

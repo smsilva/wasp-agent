@@ -1,5 +1,5 @@
 def test_manifest_build():
-    from wasp.provision import PlatformManifest
+    from wasp.resources.platform import PlatformManifest
 
     manifest = PlatformManifest.build(
         name="wp2",
@@ -25,7 +25,7 @@ def test_manifest_build():
 
 def test_manifest_yaml_output():
     import yaml
-    from wasp.provision import PlatformManifest
+    from wasp.resources.platform import PlatformManifest
 
     manifest = PlatformManifest.build("wp2", "wasp.silvios.me", ["us-east-1"])
     yaml_str = yaml.dump(

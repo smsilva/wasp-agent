@@ -12,6 +12,7 @@ from wasp.logging import chat_id_var
 from wasp.clients import Notifier
 from wasp.clients.local import ConsoleNotifier
 from wasp.clients.telegram import TelegramNotifier
+from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
 
 log = logging.getLogger(__name__)
 
@@ -33,9 +34,6 @@ def _select_notifier(channel: str | None = None) -> Notifier | None:
     return None
 
 
-PLATFORM_GROUP = "wasp.silvios.me"
-PLATFORM_VERSION = "v1alpha1"
-PLATFORM_PLURAL = "platforms"
 POLL_INTERVAL_SECONDS = 10
 WATCH_TIMEOUT_SECONDS = 600
 
