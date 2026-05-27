@@ -111,8 +111,6 @@ See `docs/references/agno.md`.
 - **Autenticação/autorização de usuários**: implementado via allowlist multi-canal (`auth_users`). Ver `docs/runbooks/auth-admin.md`.
 - **Security review**: pendente — cobrir autorizações, inputs não sanitizados, exposição de tokens.
 
-## 9a. Security tracking
-
 Active security issues live in `docs/security/issues/SEC-NNN-<slug>.md`.
 When resolved, move to `docs/security/issues/archived/`.
 
@@ -145,21 +143,47 @@ agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.p
 
 **Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth`. `Request` é importado no topo de `wasp/clients/telegram/webhook.py` — `webhook_with_auth.__globals__` aponta para os globals desse módulo; não reimportar localmente. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
 
-**Python 3.14 + PEP 649 — annotations em closures resolvem pelo módulo, não pelo escopo local:** `get_type_hints(webhook_with_auth)` usa `webhook_with_auth.__globals__` (o módulo `main`), não o escopo de `get_router_with_auth`. Importar `Request` localmente dentro da closure é ineficaz para FastAPI e ruff o sinaliza como F401. Só importar localmente o que for *realmente* usado em código (não apenas em annotations).
+**Python 3.14 + PEP 649:** annotations em closures resolvem via `__globals__` do módulo, não o escopo local. Importar `Request` dentro de `get_router_with_auth` é ineficaz para FastAPI (ruff sinaliza F401). Só importar localmente o que for *realmente* usado em código.
 
 ## 13. Async watcher
 
 See `docs/architecture/async-watcher.md`.
-
-## 15. Makefile
-
-When a Makefile target needs more than a single command, extract the commands to a bash script in `scripts/` and call the script from the target.
 
 ## 14. Notifier abstraction
 
 `wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `wasp/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
 
 Notifier selection routes by **channel of origin**, not global env: `_select_notifier(channel)` reads the `session_id` prefix (`tg`, `local`, ...) via `extract_channel`. `WASP_AGENT_NOTIFIER` env var still overrides when explicitly set. Required because multiple channels can coexist (e.g. Telegram bot + local-chat) — selecting by env alone sends notifications to the wrong channel and silently fails.
+
+## 15. Makefile
+
+When a Makefile target needs more than a single command, extract the commands to a bash script in `scripts/` and call the script from the target.
+
+## 16. Validação
+
+**Ao fim de todo ciclo de desenvolvimento (antes de declarar a feature pronta, abrir PR ou fazer merge), rodar obrigatoriamente:**
+
+```bash
+make format
+make test
+make e2e-with-debug
+```
+
+Os três são complementares e não substituíveis:
+
+- `make test` roda a suite unitária com `mock_agno` — agno é mockado, então bugs na integração real (ex.: router do `Telegram` com prefixo `/telegram`, comportamento de `agno.os.AgentOS` em `import main`) **não aparecem aqui**.
+- `make e2e-with-debug` importa `main.py` real, sobe Gitea + k3d + `fake_reconciler`, e executa o fluxo completo turn-1/turn-2/watcher/notificação. É onde bugs como `webhook_route = next(... path == "/webhook")` quebrando contra o prefixo real do agno aparecem.
+
+Não pular o e2e por ser mais lento. Lição registrada (2026-05-23): o fix do `/telegram/webhook` prefix só foi descoberto ao rodar `make e2e-with-debug` depois de `make test` verde — a suite unitária usava `MagicMock(path="/webhook")` e nunca exercitou o router real.
+
+### Caminhos
+
+Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
+
+- **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
+- **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
+- **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
+- **GitOps real (pesado)** — `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) + `make gitops-down`. Usar apenas para mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`.
 
 ## 17. Variáveis de ambiente com prefixo WASP_AGENT_
 
@@ -172,10 +196,6 @@ O fixture `mock_agno` em `tests/conftest.py` mocka `agno.models` como `MagicMock
 O loop de `sys.modules.pop` no fixture deve incluir todo `wasp.*` module criado. Ao adicionar um novo módulo em `wasp/`, incluí-lo na lista do fixture; caso contrário, estado do módulo vaza entre testes e causa falhas intermitentes.
 
 Ao testar `telemetry.metrics_endpoint`, patchar `wasp.telemetry.generate_latest` — não `prometheus_client.generate_latest`. O nome é bound no import do módulo; patchar no módulo fonte não afeta o nome já resolvido.
-
-## 20. Logging — `wasp/logging.py`
-
-`chat_id_var` é um `ContextVar` definido em `wasp/logging.py`. Python's `threading.Thread` **não herda** ContextVar do thread pai — cada thread começa com contexto vazio. `watch_platform` roda em thread separado e chama `chat_id_var.set(chat_id)` explicitamente no início; qualquer função futura que rode em thread novo e precise de `chat_id` deve fazer o mesmo.
 
 ## 19. E2E fixture — patch `_select_notifier`, não `TelegramNotifier`
 
@@ -195,44 +215,13 @@ monkeypatch.setattr(wasp.auth, "is_authorized", lambda channel, channel_id: "e2e
 
 Sem isso, o `session_id="tg:..."` usado no teste cai no auth guard de `provision_platform_instance` e retorna `{"status": "unauthorized"}` silenciosamente — o teste falha lá embaixo no `get_file()` do Gitea com 404, mascarando a causa real.
 
-## 16. Validação
+## 20. Logging — `wasp/logging.py`
 
-**Ao fim de todo ciclo de desenvolvimento (antes de declarar a feature pronta, abrir PR ou fazer merge), rodar obrigatoriamente:**
-
-```bash
-make format
-make test
-make e2e-with-debug
-```
-
-Os dois são complementares e não substituíveis:
-
-- `make test` roda a suite unitária com `mock_agno` — agno é mockado, então bugs na integração real (ex.: router do `Telegram` com prefixo `/telegram`, comportamento de `agno.os.AgentOS` em `import main`) **não aparecem aqui**.
-- `make e2e-with-debug` importa `main.py` real, sobe Gitea + k3d + `fake_reconciler`, e executa o fluxo completo turn-1/turn-2/watcher/notificação. É onde bugs como `webhook_route = next(... path == "/webhook")` quebrando contra o prefixo real do agno aparecem.
-
-Não pular o e2e por ser mais lento. Lição registrada (2026-05-23): o fix do `/telegram/webhook` prefix só foi descoberto ao rodar `make e2e-with-debug` depois de `make test` verde — a suite unitária usava `MagicMock(path="/webhook")` e nunca exercitou o router real.
-
-### Caminhos
-
-Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
-
-- **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
-- **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
-- **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
+`chat_id_var` é um `ContextVar` definido em `wasp/logging.py`. Python's `threading.Thread` **não herda** ContextVar do thread pai — cada thread começa com contexto vazio. `watch_platform` roda em thread separado e chama `chat_id_var.set(chat_id)` explicitamente no início; qualquer função futura que rode em thread novo e precise de `chat_id` deve fazer o mesmo.
 
 ## 21. SQLite — padrão check-then-write atômico (`wasp/auth.py`)
 
 Operações de check-then-write em `wasp/auth.py` (`redeem_invite`, `bootstrap_admin`) usam `con.execute("BEGIN IMMEDIATE")` antes do primeiro SELECT para adquirir o write lock imediatamente. Após `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` retorna 0, então o módulo Python não emite outro `BEGIN` automático antes do DML. O `with con:` subsequente fecha a transação com COMMIT (sucesso) ou ROLLBACK (exceção). Early `return None` antes do `with con:` faz o `con.close()` no `finally` rolar back a transação vazia — sem efeito colateral.
-
-Para validar o ciclo GitOps real (raro — mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition), subir cluster com `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) e derrubar com `make gitops-down`. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`. Isso é validação pesada, não smoke test.
-
-## 23. Startup e ordenação de imports em `main.py`
-
-`wasp/startup.py` contém `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, e `os.umask(0o077)`. Chamada de `main.py` após `load_dotenv()`.
-
-**Por que `load_dotenv()` fica em `main.py` e não em `startup()`:** qualquer `import wasp.*` dispara `wasp/__init__.py` → `wasp.provision` → `wasp.telemetry.configure()` em tempo de importação. `load_dotenv()` deve preceder esse import; do contrário, variáveis do `.env` (ex.: `OTEL_EXPORTER_OTLP_ENDPOINT`, `PROMETHEUS_METRICS_ACTIVE`) não estarão disponíveis quando `configure()` rodar.
-
-**`GitOpsCommitter.probe()`** valida `GH_PAT` no startup sempre que a variável estiver setada (zero-config). Captura `GithubException` e re-levanta como `RuntimeError`, mantendo callers livres de imports específicos do github.
 
 ## 22. Estrutura de pacotes — `wasp/clients/`
 
@@ -254,3 +243,11 @@ wasp/clients/
 - Cada subpacote expõe sua API pública via `__init__.py`. Re-exports em `__init__.py` precisam de alias explícito (`X as X`) para ruff não reportar F401: `from wasp.clients.foo import Bar as Bar`.
 - `RecordingNotifier` (test double) fica em `tests/notifiers.py`, não em `wasp/clients/`.
 - Ao adicionar novo canal (Discord, Slack), criar `wasp/clients/<canal>/` seguindo o mesmo padrão.
+
+## 23. Startup e ordenação de imports em `main.py`
+
+`wasp/startup.py` contém `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, e `os.umask(0o077)`. Chamada de `main.py` após `load_dotenv()`.
+
+**Por que `load_dotenv()` fica em `main.py` e não em `startup()`:** qualquer `import wasp.*` dispara `wasp/__init__.py` → `wasp.provision` → `wasp.telemetry.configure()` em tempo de importação. `load_dotenv()` deve preceder esse import; do contrário, variáveis do `.env` (ex.: `OTEL_EXPORTER_OTLP_ENDPOINT`, `PROMETHEUS_METRICS_ACTIVE`) não estarão disponíveis quando `configure()` rodar.
+
+**`GitOpsCommitter.probe()`** valida `GH_PAT` no startup sempre que a variável estiver setada (zero-config). Captura `GithubException` e re-levanta como `RuntimeError`, mantendo callers livres de imports específicos do github.
