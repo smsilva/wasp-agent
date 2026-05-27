@@ -13,3 +13,12 @@ from wasp.resources.platform.manifest import (
 from wasp.resources.platform.inventory import (
     PlatformInventory as PlatformInventory,
 )
+from wasp.resources.platform.provisioner import (
+    DEFAULT_DOMAIN as DEFAULT_DOMAIN,
+)
+from wasp.resources.platform.provisioner import (
+    DEFAULT_REGIONS as DEFAULT_REGIONS,
+)
+from wasp.resources.platform.provisioner import (
+    PlatformProvisioner as PlatformProvisioner,
+)

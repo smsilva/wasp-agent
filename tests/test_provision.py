@@ -590,3 +590,75 @@ def test_list_creates_span(monkeypatch):
 
     spans = exporter.get_finished_spans()
     assert any(s.name == "list_platform_instances" for s in spans)
+
+
+def test_provision_defaults_requested_by_to_user_id(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_platform_instance
+
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr(
+        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
+    )
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:5621932873"
+
+    with patch("wasp.watcher.threading.Thread", MagicMock()):
+        provision_platform_instance(
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
+        )
+
+    msg = mock_client.create_file.call_args.kwargs["message"]
+    assert "Requested by: user-abc" in msg
+
+
+def test_provision_defaults_requested_by_to_local_operator(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_platform_instance
+
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc12345"
+
+    with patch("wasp.watcher.threading.Thread", MagicMock()):
+        provision_platform_instance(
+            name="wp2",
+            domain="wasp.silvios.me",
+            regions=["us-east-1"],
+            run_context=FakeCtx(),
+        )
+
+    msg = mock_client.create_file.call_args.kwargs["message"]
+    assert "Requested by: local-operator" in msg
+
+
+def test_provision_defaults_requested_by_to_unknown_without_context(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import provision_platform_instance
+
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
+
+    provision_platform_instance(name="wp2")
+
+    msg = mock_client.create_file.call_args.kwargs["message"]
+    assert "Requested by: unknown" in msg
