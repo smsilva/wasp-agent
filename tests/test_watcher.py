@@ -86,45 +86,6 @@ def test_ready_message_includes_endpoints():
     assert "https://gateway.sa-east-1.wp2.wasp.silvios.me" in msg
 
 
-def test_load_kube_config_auto_incluster(monkeypatch):
-    from unittest.mock import MagicMock
-    import wasp.watcher as w
-
-    incluster = MagicMock()
-    local = MagicMock()
-    monkeypatch.setattr(w.config, "load_incluster_config", incluster)
-    monkeypatch.setattr(w.config, "load_kube_config", local)
-
-    w.load_kube_config_auto()
-
-    incluster.assert_called_once()
-    local.assert_not_called()
-
-
-def test_load_kube_config_auto_fallback_local(monkeypatch):
-    from unittest.mock import MagicMock
-    import wasp.watcher as w
-
-    class FakeConfigException(Exception):
-        pass
-
-    # ConfigException must be a real Exception subclass for raise/except to work with mocked module
-    monkeypatch.setattr(w.config, "ConfigException", FakeConfigException)
-
-    def raise_(*a, **kw):
-        raise FakeConfigException("not in cluster")
-
-    incluster = MagicMock(side_effect=raise_)
-    local = MagicMock()
-    monkeypatch.setattr(w.config, "load_incluster_config", incluster)
-    monkeypatch.setattr(w.config, "load_kube_config", local)
-
-    w.load_kube_config_auto()
-
-    incluster.assert_called_once()
-    local.assert_called_once()
-
-
 async def test_telegram_notifier_send_posts_message(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
     import wasp.clients.telegram.notifier as n

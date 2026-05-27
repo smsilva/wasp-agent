@@ -5,11 +5,11 @@ import threading
 import time
 
 import wasp.telemetry as telemetry
-from kubernetes import client, config
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
 from wasp.logging import chat_id_var
 from wasp.clients import Notifier
+from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
 from wasp.clients.telegram import TelegramNotifier
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
@@ -36,14 +36,6 @@ def _select_notifier(channel: str | None = None) -> Notifier | None:
 
 POLL_INTERVAL_SECONDS = 10
 WATCH_TIMEOUT_SECONDS = 600
-
-
-def load_kube_config_auto() -> "client.CustomObjectsApi":
-    try:
-        config.load_incluster_config()
-    except config.ConfigException:
-        config.load_kube_config()
-    return client.CustomObjectsApi()
 
 
 def extract_chat_id(run_context) -> str | None:
