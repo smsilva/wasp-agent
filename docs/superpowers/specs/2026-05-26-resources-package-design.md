@@ -37,8 +37,7 @@ wasp/resources/
     inventory.py           ← PlatformInventory + _status_from_conditions
 
 wasp/clients/k8s/
-  __init__.py              ← re-exporta KubernetesResourceReader, load_kube_config_auto
-  config.py                ← load_kube_config_auto
+  __init__.py              ← load_kube_config_auto + re-export de KubernetesResourceReader
   reader.py                ← KubernetesResourceReader
 
 wasp/provision.py          ← apenas dois @tool (list_platform_instances, provision_platform_instance)
@@ -83,8 +82,9 @@ Quando `Cluster` chegar: `wasp/resources/cluster/manifest.py` cria `ClusterManif
 ## Generic k8s reader
 
 ```python
-# wasp/clients/k8s/config.py
+# wasp/clients/k8s/__init__.py
 from kubernetes import client, config
+
 
 def load_kube_config_auto() -> "client.CustomObjectsApi":
     try:
@@ -92,12 +92,16 @@ def load_kube_config_auto() -> "client.CustomObjectsApi":
     except config.ConfigException:
         config.load_kube_config()
     return client.CustomObjectsApi()
+
+
+from wasp.clients.k8s.reader import KubernetesResourceReader as KubernetesResourceReader  # noqa: E402
 ```
 
 ```python
 # wasp/clients/k8s/reader.py
 from kubernetes.client import CustomObjectsApi
-from wasp.clients.k8s.config import load_kube_config_auto
+from wasp.clients.k8s import load_kube_config_auto
+
 
 class KubernetesResourceReader:
     def __init__(self, api: CustomObjectsApi):
@@ -114,7 +118,7 @@ class KubernetesResourceReader:
         return result.get("items", [])
 ```
 
-`load_kube_config_auto` move de `wasp/watcher.py` para `wasp/clients/k8s/config.py`. `wasp/clients/k8s/__init__.py` re-exporta tanto a função quanto `KubernetesResourceReader`. Watcher importa de `wasp.clients.k8s`.
+`load_kube_config_auto` move de `wasp/watcher.py` para `wasp/clients/k8s/__init__.py`. A definição precede o `from .reader import …` para que o `reader.py` consiga importá-la sem ciclo. Watcher passa a fazer `from wasp.clients.k8s import load_kube_config_auto`.
 
 ## PlatformInventory após o refactor
 
@@ -217,13 +221,13 @@ Cobertura de teste: adicionar caso em `tests/test_provision.py` que chama `provi
 Para manter `make test` verde a cada passo:
 
 1. Criar `wasp/resources/__init__.py`, `wasp/resources/base.py`, `wasp/resources/platform/__init__.py`, `wasp/resources/platform/manifest.py`. Move `PlatformManifest`, specs e constantes `PLATFORM_GROUP/VERSION/PLURAL`. `wasp/watcher.py` passa a importar daqui.
-2. Criar `wasp/clients/k8s/{__init__,config,reader}.py`. Move `load_kube_config_auto` de `watcher.py` para `config.py`. Watcher importa de `wasp.clients.k8s`.
+2. Criar `wasp/clients/k8s/{__init__,reader}.py`. Move `load_kube_config_auto` de `watcher.py` para `__init__.py`. Watcher importa de `wasp.clients.k8s`. Atualiza `tests/test_watcher.py` (8 patches em `load_kube_config_auto` continuam funcionando porque o watcher rebind o nome via `from … import …`).
 3. Criar `wasp/resources/platform/inventory.py` com `PlatformInventory` + `_status_from_conditions`, agora usando `KubernetesResourceReader`.
 4. Criar `wasp/resources/platform/provisioner.py` com `PlatformProvisioner` + `DEFAULT_DOMAIN/REGIONS`.
 5. Atualizar `wasp/provision.py` para conter apenas os dois `@tool`.
 6. Remover `wasp/platform_cluster.py`.
 7. Atualizar imports nos testes; renomear `tests/test_platform_cluster.py` → `tests/test_k8s_reader.py`; adicionar `tests/test_platform_inventory.py` para a transformação de status.
-8. Atualizar `tests/conftest.py` — lista de `sys.modules.pop`: adicionar `wasp.resources`, `wasp.resources.base`, `wasp.resources.platform`, `wasp.resources.platform.manifest`, `wasp.resources.platform.provisioner`, `wasp.resources.platform.inventory`, `wasp.clients.k8s`, `wasp.clients.k8s.config`, `wasp.clients.k8s.reader`; remover `wasp.platform_cluster`.
+8. Atualizar `tests/conftest.py` — lista de `sys.modules.pop`: adicionar `wasp.resources`, `wasp.resources.base`, `wasp.resources.platform`, `wasp.resources.platform.manifest`, `wasp.resources.platform.provisioner`, `wasp.resources.platform.inventory`, `wasp.clients.k8s`, `wasp.clients.k8s.reader`; remover `wasp.platform_cluster`.
 9. Validação final: `make format && make test && make e2e-with-debug`.
 
 ## Files changed
@@ -236,8 +240,7 @@ Para manter `make test` verde a cada passo:
 | `wasp/resources/platform/manifest.py` | novo — `PlatformManifest`, `PlatformSpec`, `RegionSpec`, `ServiceSpec`, constantes `PLATFORM_*` |
 | `wasp/resources/platform/provisioner.py` | novo — `PlatformProvisioner`, `DEFAULT_DOMAIN`, `DEFAULT_REGIONS` |
 | `wasp/resources/platform/inventory.py` | novo — `PlatformInventory`, `_status_from_conditions` |
-| `wasp/clients/k8s/__init__.py` | novo — re-exporta `load_kube_config_auto`, `KubernetesResourceReader` |
-| `wasp/clients/k8s/config.py` | novo — `load_kube_config_auto` |
+| `wasp/clients/k8s/__init__.py` | novo — `load_kube_config_auto` + re-exporta `KubernetesResourceReader` |
 | `wasp/clients/k8s/reader.py` | novo — `KubernetesResourceReader` |
 | `wasp/provision.py` | reduz a ~25 linhas: dois `@tool` + imports |
 | `wasp/platform_cluster.py` | removido |
