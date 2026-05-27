@@ -165,6 +165,10 @@ The `sys.modules.pop` loop in the fixture must include every `wasp.*` module cre
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time; patching the source module doesn't affect the already-resolved name.
 
+### Mocked exception classes can't be raised or caught
+
+`mock_agno` mocks `kubernetes`, `kubernetes.client`, and `kubernetes.config` as `MagicMock`. Attributes like `kubernetes.config.ConfigException` are `MagicMock` instances, not `BaseException` subclasses — `raise config.ConfigException(...)` and `except config.ConfigException` both fail with `TypeError`. To test code that catches one of these, install a real subclass first: `class FakeConfigException(Exception): pass; monkeypatch.setattr(module.config, "ConfigException", FakeConfigException)`, then raise/catch the fake. Pattern in `tests/test_k8s_reader.py::test_load_kube_config_auto_fallback_local`.
+
 ### E2E fixture — patch `_select_notifier`, not `TelegramNotifier`
 
 In `tests/e2e/conftest.py`, `agent_client` patches `_select_notifier` directly:
