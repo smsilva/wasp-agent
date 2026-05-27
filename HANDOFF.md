@@ -13,11 +13,12 @@ Implementar um agente DevOps multi-canal: bot com Agno Agent que provisiona inst
 - `DiscordBot(discord.Client)` com `on_message` (auth guard + per-user session) e `on_ready` (registra o event loop para bridge cross-loop)
 - `DiscordNotifier` com `set_loop()` — bridge via `asyncio.run_coroutine_threadsafe` para enviar notificações do watcher thread para o loop do Discord
 - `InterfaceLoader.build_discord()` com singleton `discord_pkg._notifier`
-- Lifespan do Discord integrado ao FastAPI via `asynccontextmanager` wrapping do lifespan do agno (necessário porque agno define `lifespan_context` que ignora `on_startup`/`on_shutdown`)
+- Lifespan do Discord integrado ao FastAPI via `asynccontextmanager` wrapping do lifespan do agno
 - Routing `"dc"` em `_select_notifier`, `extract_channel`, `extract_chat_id`
-- `make admin-link USER_ID=<uid> CHANNEL=dc ID=<id>` — vincula canal adicional a usuário existente sem exigir DB vazio
+- `make admin-link USER_ID=<uid> CHANNEL=dc ID=<id>` — vincula canal adicional a usuário existente
 - `auth_cli link` subcomando + `scripts/admin-link` + target no Makefile
 - `docs/runbooks/auth-admin.md` atualizado com seção "Vincular canal adicional"
+- `docs/runbooks/discord-setup.md` — setup inicial, obtenção de user ID, bootstrap, convite de usuários
 - Smoke test manual: bot respondendo, provisioning + notificação watcher funcionando via Discord
 - 261 testes passando, 100% coverage
 
@@ -34,13 +35,14 @@ Nenhuma issue ativa em `docs/security/issues/`.
 
 ## Active Specs / Plans
 
-### Status: Approved (implementado, aguardando marcação)
-- `docs/superpowers/specs/2026-05-27-discord-bot-design.md` — Discord Bot Design (entregue nesta sessão; mover para Implemented após merge)
-- `docs/superpowers/specs/2026-05-26-resources-package-design.md` — Resources Package Design (entregue sessão anterior)
-- `docs/superpowers/specs/2026-05-26-interface-loader-design.md` — InterfaceLoader Design (entregue sessão anterior)
+### Implementados (aguardando marcação após merge)
+- `docs/superpowers/specs/2026-05-27-discord-bot-design.md` — Discord Bot Design
+- `docs/superpowers/plans/2026-05-27-discord-bot.md` — Discord Bot Implementation Plan
+- `docs/superpowers/specs/2026-05-26-resources-package-design.md` — Resources Package Design
+- `docs/superpowers/specs/2026-05-26-interface-loader-design.md` — InterfaceLoader Design
 
-### Status: Idea
-- `docs/sdlc/02-design/2026-05-27-discord-slash-commands.md` — Discord Slash Commands (próxima extensão natural do Discord)
+### Status: Idea (backlog de features)
+- `docs/sdlc/02-design/2026-05-27-discord-slash-commands.md` — Discord Slash Commands
 - `docs/sdlc/02-design/2026-05-26-opentelemetry-tracing.md` — Distributed Tracing
 - `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` — golden set para regressões no system prompt
 - `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` — alertas de orçamento
@@ -54,7 +56,7 @@ Nenhuma issue ativa em `docs/security/issues/`.
 ## Next Steps
 
 1. **Merge `dev` → `main`** — branch passou em `make test` (261 tests), smoke test Discord confirmado
-2. **Atualizar status dos specs entregues** — `2026-05-27-discord-bot-design.md`, `2026-05-26-resources-package-design.md`, `2026-05-26-interface-loader-design.md` → `Implemented`
+2. **Atualizar status dos specs entregues** — mover specs/plans Discord + resources + interface-loader para `archived/` ou marcar `Implemented`
 3. **Decidir próxima feature** — sugestões em ordem de valor imediato:
    - `2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
    - `2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
@@ -62,13 +64,13 @@ Nenhuma issue ativa em `docs/security/issues/`.
 
 ## Backlog
 
-- **Discord slash commands** (`docs/sdlc/02-design/2026-05-27-discord-slash-commands.md`, Idea) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
-- **Handler `/start <token>` no Discord** — hoje novos usuários Discord precisam de `make admin-link` pelo operador; implementar redeem via DM no bot elimina essa fricção
-- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
+- **Discord slash commands** (`docs/sdlc/02-design/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
+- **Handler de convite via DM no Discord** — hoje novos usuários Discord exigem `make admin-link` pelo operador; implementar redeem de token por DM elimina essa fricção (ver `wasp/clients/telegram/webhook.py` como referência)
+- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
 - **Próximo CRD: `Cluster`** — seguir padrão: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + `@tool` em `wasp/provision.py`
-- **Bidirecionalidade `watcher.py` ↔ `resources/`** — `extract_channel/extract_chat_id` vivem em `watcher.py` mas são importados por `resources/platform/`. Quando um terceiro CRD chegar, mover para módulo folha (ex: `wasp/session.py`)
+- **Mover `extract_channel`/`extract_chat_id` para módulo folha** — hoje vivem em `watcher.py` mas são importados por `resources/platform/`; quando um terceiro CRD chegar, mover para ex: `wasp/session.py`
 - **Status check manual** — tool para consultar estado de uma Platform sem depender do watcher
 - **Operações além de criar** — update, delete, status individual de tenant
 - **Authorization granular (RBAC)** — papéis (admin, operator, viewer)
-- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`
+- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E
 - **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup
