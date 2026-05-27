@@ -159,6 +159,54 @@ async def test_discord_bot_on_message_empty_content_is_ignored():
     agent.arun.assert_not_awaited()
 
 
+async def test_discord_notifier_set_loop_stores_loop():
+    from wasp.clients.discord.notifier import DiscordNotifier
+    import asyncio
+
+    notifier = DiscordNotifier()
+    loop = asyncio.get_event_loop()
+    notifier.set_loop(loop)
+    assert notifier._loop is loop
+
+
+async def test_discord_notifier_send_crossloop_uses_run_coroutine_threadsafe():
+    """When notifier._loop differs from the running loop, send bridges via run_coroutine_threadsafe."""
+    from wasp.clients.discord.notifier import DiscordNotifier
+    import asyncio
+    import unittest.mock as mock
+
+    channel = AsyncMock()
+    notifier = DiscordNotifier()
+    notifier.register("42", channel)
+
+    fake_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+    notifier.set_loop(fake_loop)
+
+    future = MagicMock()
+    future.result = MagicMock(return_value=None)
+
+    with mock.patch("asyncio.run_coroutine_threadsafe", return_value=future) as rct:
+        await notifier.send("42", "cross-loop message")
+
+    rct.assert_called_once()
+    future.result.assert_called_once()
+
+
+async def test_discord_bot_on_ready_sets_loop_on_notifier():
+    import wasp.clients.discord.bot as b
+    from wasp.clients.discord.notifier import DiscordNotifier
+    import asyncio
+    import unittest.mock as mock
+
+    agent = MagicMock()
+    notifier = DiscordNotifier()
+    bot = b.DiscordBot(agent=agent, notifier=notifier)
+
+    await bot.on_ready()
+
+    assert notifier._loop is asyncio.get_running_loop()
+
+
 async def test_discord_bot_start_background_calls_start_with_token():
     import wasp.clients.discord.bot as b
     from wasp.clients.discord.notifier import DiscordNotifier

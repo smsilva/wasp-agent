@@ -45,8 +45,10 @@ def test_build_discord_returns_bot_when_token_set(mock_agno, monkeypatch):
     agent = MagicMock()
     loader = InterfaceLoader(agent)
 
-    with patch("wasp.clients.interfaces.DiscordBot") as MockBot, \
-         patch("wasp.clients.interfaces.DiscordNotifier") as MockNotifier:
+    with (
+        patch("wasp.clients.interfaces.DiscordBot") as MockBot,
+        patch("wasp.clients.interfaces.DiscordNotifier") as MockNotifier,
+    ):
         bot = loader.build_discord()
 
     MockNotifier.assert_called_once()
@@ -73,8 +75,10 @@ def test_build_discord_stores_notifier_singleton(mock_agno, monkeypatch):
     agent = MagicMock()
     loader = InterfaceLoader(agent)
 
-    with patch("wasp.clients.interfaces.DiscordBot"), \
-         patch("wasp.clients.interfaces.DiscordNotifier") as MockNotifier:
+    with (
+        patch("wasp.clients.interfaces.DiscordBot"),
+        patch("wasp.clients.interfaces.DiscordNotifier") as MockNotifier,
+    ):
         loader.build_discord()
 
     assert dc_pkg._notifier is MockNotifier.return_value

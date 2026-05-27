@@ -73,18 +73,22 @@ def test_startup_called_on_import(mock_agno, monkeypatch):
     spy.assert_called_once()
 
 
-def test_discord_bot_startup_registered_when_token_set(mock_agno, monkeypatch):
+def test_discord_bot_lifespan_wrapped_when_token_set(mock_agno, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
     from unittest.mock import MagicMock, patch
 
     mock_bot = MagicMock()
-    with patch("wasp.clients.interfaces.InterfaceLoader.build_discord", return_value=mock_bot):
+    with patch(
+        "wasp.clients.interfaces.InterfaceLoader.build_discord", return_value=mock_bot
+    ):
         import main
+
         app = main.app
 
-    app.add_event_handler.assert_any_call("startup", mock_bot.start_background)
-    app.add_event_handler.assert_any_call("shutdown", mock_bot.close)
+    # lifespan_context must have been replaced with a wrapper
+    assert app.router.lifespan_context is not None
+    assert "lifespan_with_discord" in app.router.lifespan_context.__name__
 
 
 def test_discord_bot_not_registered_when_no_token(mock_agno, monkeypatch):
@@ -92,8 +96,9 @@ def test_discord_bot_not_registered_when_no_token(mock_agno, monkeypatch):
     monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
 
     import main
+
     app = main.app
 
-    for call_args in app.add_event_handler.call_args_list:
-        args = call_args[0]
-        assert "discord" not in repr(args).lower() and "start_background" not in repr(args)
+    # lifespan must NOT be the discord wrapper
+    lifespan_name = getattr(app.router.lifespan_context, "__name__", "")
+    assert "lifespan_with_discord" not in lifespan_name

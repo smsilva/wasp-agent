@@ -97,6 +97,7 @@ def mock_agno(monkeypatch, request):
         monkeypatch.setitem(sys.modules, name, mock)
     # Make @tool a transparent no-op so provision_platform_instance remains directly callable in tests.
     mocks["agno.tools"].tool = lambda fn: fn
+
     # discord.Client must be a plain stub class (not a MagicMock subclass) so that
     # DiscordBot can subclass it without inheriting MagicMock's __getattr__ magic,
     # which tries to create child mocks of the same type and breaks __init__.
@@ -105,7 +106,9 @@ def mock_agno(monkeypatch, request):
         pass
 
     mocks["discord"].Client = type(
-        "Client", (), {"user": None, "__init__": lambda self, **kw: None, "close": _stub_close}
+        "Client",
+        (),
+        {"user": None, "__init__": lambda self, **kw: None, "close": _stub_close},
     )
     # Prevent DISCORD_APP_TOKEN from leaking in from the shell environment so that
     # tests which don't explicitly set it don't accidentally create a DiscordBot.

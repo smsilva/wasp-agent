@@ -13,6 +13,9 @@ from wasp.startup import startup  # noqa: E402
 
 startup()
 
+import asyncio
+from contextlib import asynccontextmanager
+
 import wasp.telemetry as telemetry  # noqa: E402
 from agno.os import AgentOS  # noqa: E402
 from wasp import auth  # noqa: E402
@@ -32,8 +35,17 @@ def create_app():
     telemetry.register_prometheus_route(app)
     discord_bot = loader.build_discord()
     if discord_bot is not None:
-        app.add_event_handler("startup", discord_bot.start_background)
-        app.add_event_handler("shutdown", discord_bot.close)
+        original_lifespan = app.router.lifespan_context
+
+        @asynccontextmanager
+        async def lifespan_with_discord(app):
+            task = asyncio.ensure_future(discord_bot.start_background())
+            async with original_lifespan(app):
+                yield
+            task.cancel()
+            await discord_bot.close()
+
+        app.router.lifespan_context = lifespan_with_discord
     return app, agent_os
 
 

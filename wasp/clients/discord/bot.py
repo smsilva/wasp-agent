@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -17,6 +18,9 @@ class DiscordBot(discord.Client):
         super().__init__(intents=intents)
         self._agent = agent
         self._notifier = notifier
+
+    async def on_ready(self) -> None:
+        self._notifier.set_loop(asyncio.get_running_loop())
 
     async def on_message(self, message) -> None:
         if message.author == self.user:
