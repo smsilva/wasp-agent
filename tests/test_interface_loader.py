@@ -41,7 +41,6 @@ def test_build_installs_start_token_handler(mock_agno, monkeypatch):
 def test_build_discord_returns_bot_when_token_set(mock_agno, monkeypatch):
     monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-token-123")
     from wasp.clients.interfaces import InterfaceLoader
-    from unittest.mock import MagicMock, patch
 
     agent = MagicMock()
     loader = InterfaceLoader(agent)
@@ -58,7 +57,6 @@ def test_build_discord_returns_bot_when_token_set(mock_agno, monkeypatch):
 def test_build_discord_returns_none_when_no_token(mock_agno, monkeypatch):
     monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
     from wasp.clients.interfaces import InterfaceLoader
-    from unittest.mock import MagicMock
 
     agent = MagicMock()
     loader = InterfaceLoader(agent)
@@ -70,7 +68,6 @@ def test_build_discord_returns_none_when_no_token(mock_agno, monkeypatch):
 def test_build_discord_stores_notifier_singleton(mock_agno, monkeypatch):
     monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
     from wasp.clients.interfaces import InterfaceLoader
-    from unittest.mock import MagicMock, patch
     import wasp.clients.discord as dc_pkg
 
     agent = MagicMock()
