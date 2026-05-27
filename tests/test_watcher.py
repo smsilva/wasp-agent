@@ -481,7 +481,7 @@ def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
 def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
     from wasp.watcher import _select_notifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "discord")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "unknown_kind")
     assert _select_notifier() is None
 
 
@@ -591,3 +591,58 @@ def test_spawner_target_runs_asyncio(monkeypatch):
         target()
 
     mock_async_run.assert_called_once_with(mock_watch.return_value)
+
+
+def test_select_notifier_dc_channel_picks_discord_notifier(monkeypatch):
+    from unittest.mock import MagicMock
+    import wasp.clients.discord as dc_pkg
+    from wasp.watcher import _select_notifier
+
+    mock_notifier = MagicMock()
+    monkeypatch.setattr(dc_pkg, "_notifier", mock_notifier)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+
+    result = _select_notifier(channel="dc")
+    assert result is mock_notifier
+
+
+def test_select_notifier_dc_channel_returns_none_when_no_singleton(monkeypatch):
+    import wasp.clients.discord as dc_pkg
+    from wasp.watcher import _select_notifier
+
+    monkeypatch.setattr(dc_pkg, "_notifier", None)
+    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+
+    result = _select_notifier(channel="dc")
+    assert result is None
+
+
+def test_select_notifier_discord_kind_returns_singleton(monkeypatch):
+    from unittest.mock import MagicMock
+    import wasp.clients.discord as dc_pkg
+    from wasp.watcher import _select_notifier
+
+    mock_notifier = MagicMock()
+    monkeypatch.setattr(dc_pkg, "_notifier", mock_notifier)
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "discord")
+
+    result = _select_notifier()
+    assert result is mock_notifier
+
+
+def test_extract_channel_returns_dc_for_discord_session():
+    from wasp.watcher import extract_channel
+
+    class FakeCtx:
+        session_id = "dc:wasp-agent:123456789"
+
+    assert extract_channel(FakeCtx()) == "dc"
+
+
+def test_extract_chat_id_returns_user_id_for_discord_session():
+    from wasp.watcher import extract_chat_id
+
+    class FakeCtx:
+        session_id = "dc:wasp-agent:123456789"
+
+    assert extract_chat_id(FakeCtx()) == "123456789"

@@ -4,6 +4,7 @@ import os
 import threading
 import time
 
+import wasp.clients.discord as discord_pkg
 import wasp.telemetry as telemetry
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
@@ -25,12 +26,16 @@ def _select_notifier(channel: str | None = None) -> Notifier | None:
             kind = "console"
         elif channel == "tg":
             kind = "telegram"
+        elif channel == "dc":
+            kind = "discord"
         else:
             kind = "telegram" if token else "console"
     if kind == "console":
         return ConsoleNotifier()
     if kind == "telegram":
         return TelegramNotifier(token=token) if token else None
+    if kind == "discord":
+        return discord_pkg._notifier
     return None
 
 
@@ -46,8 +51,8 @@ def extract_chat_id(run_context) -> str | None:
         return None
     parts = session_id.split(":")
     # agno session_id: <prefix>:<agent-name>:<chat_id>[:<message_short_id>]
-    # prefix: "tg" (Telegram) | "local" (curl/CLI)
-    if len(parts) >= 3 and parts[0] in ("tg", "local"):
+    # prefix: "tg" (Telegram) | "local" (curl/CLI) | "dc" (Discord)
+    if len(parts) >= 3 and parts[0] in ("tg", "local", "dc"):
         return parts[2]
     return None
 
@@ -59,7 +64,7 @@ def extract_channel(run_context) -> str | None:
     if not session_id:
         return None
     parts = session_id.split(":")
-    if len(parts) >= 3 and parts[0] in ("tg", "local"):
+    if len(parts) >= 3 and parts[0] in ("tg", "local", "dc"):
         return parts[0]
     return None
 
