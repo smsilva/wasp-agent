@@ -13,7 +13,21 @@ fi
 
 echo "==> [1/6] Cluster k3d + ArgoCD + Crossplane (via ${argocd_lab}/run)"
 cd "${argocd_lab}"
+
+# run usa ". ./argocd-get-initial-password.sh" (source com caminho relativo),
+# então substituímos temporariamente o arquivo por um no-op para suprimir
+# as credenciais no meio da execução — elas são exibidas ao final.
+password_script="${argocd_lab}/argocd-get-initial-password.sh"
+password_script_backup=$(mktemp)
+cp "${password_script}" "${password_script_backup}"
+echo '#!/bin/bash' > "${password_script}"
+trap "cp '${password_script_backup}' '${password_script}'; rm -f '${password_script_backup}'" EXIT
+
 bash run
+
+cp "${password_script_backup}" "${password_script}"
+rm -f "${password_script_backup}"
+trap - EXIT
 
 cd "${repo_dir}"
 
@@ -48,7 +62,29 @@ echo "==> [6/6] Application wasp-gitops"
 kubectl apply \
   --filename manifests/argocd/wasp-gitops-application.yaml
 
+argocd_password=$(kubectl \
+  --namespace argocd \
+  get secret argocd-initial-admin-secret \
+  --output jsonpath="{.data.password}" | base64 -d)
+
+echo "==> Login no ArgoCD"
+argocd login localhost:32080 \
+  --username admin \
+  --password "${argocd_password}" \
+  --insecure
+
+echo "==> Status da Application wasp-gitops"
+argocd app get wasp-gitops
+
 echo
-echo "Pronto. Verifique com:"
+echo "Comandos úteis:"
 echo "  argocd app get wasp-gitops"
+echo "  argocd app sync wasp-gitops"
+echo
+echo "Credenciais ArgoCD:"
+echo "  user:     admin"
+echo "  password: ${argocd_password}"
+echo "  url:      http://localhost:32080"
+echo
+echo "Outros recursos:"
 echo "  kubectl get providers,functions,xrds,compositions"
