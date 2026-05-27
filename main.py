@@ -23,12 +23,17 @@ from wasp.clients.interfaces import InterfaceLoader  # noqa: E402
 def create_app():
     auth.init_db()
     agent = build_agent()
+    loader = InterfaceLoader(agent)
     agent_os = AgentOS(
         agents=[agent],
-        interfaces=InterfaceLoader(agent).build(),
+        interfaces=loader.build(),
     )
     app = agent_os.get_app()
     telemetry.register_prometheus_route(app)
+    discord_bot = loader.build_discord()
+    if discord_bot is not None:
+        app.add_event_handler("startup", discord_bot.start_background)
+        app.add_event_handler("shutdown", discord_bot.close)
     return app, agent_os
 
 

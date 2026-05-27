@@ -90,7 +90,9 @@ def mock_agno(monkeypatch, request):
     # instrument time, but agno.models is mocked as MagicMock below.
     monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
 
-    mocks = {name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES + DISCORD_MODULES}
+    mocks = {
+        name: MagicMock() for name in AGNO_MODULES + KUBE_MODULES + DISCORD_MODULES
+    }
     for name, mock in mocks.items():
         monkeypatch.setitem(sys.modules, name, mock)
     # Make @tool a transparent no-op so provision_platform_instance remains directly callable in tests.
@@ -99,7 +101,15 @@ def mock_agno(monkeypatch, request):
     # DiscordBot can subclass it without inheriting MagicMock's __getattr__ magic,
     # which tries to create child mocks of the same type and breaks __init__.
     # discord.Intents stays as a MagicMock instance so Intents.default() works via __getattr__.
-    mocks["discord"].Client = type("Client", (), {"user": None, "__init__": lambda self, **kw: None})
+    async def _stub_close(self) -> None:
+        pass
+
+    mocks["discord"].Client = type(
+        "Client", (), {"user": None, "__init__": lambda self, **kw: None, "close": _stub_close}
+    )
+    # Prevent DISCORD_APP_TOKEN from leaking in from the shell environment so that
+    # tests which don't explicitly set it don't accidentally create a DiscordBot.
+    monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
     # Prevent load_dotenv() from reading the real .env during tests so that
     # monkeypatch.setenv/delenv has full control over env vars.
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)

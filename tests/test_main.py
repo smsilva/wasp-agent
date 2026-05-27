@@ -71,3 +71,29 @@ def test_startup_called_on_import(mock_agno, monkeypatch):
     import main  # noqa: F401
 
     spy.assert_called_once()
+
+
+def test_discord_bot_startup_registered_when_token_set(mock_agno, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
+    from unittest.mock import MagicMock, patch
+
+    mock_bot = MagicMock()
+    with patch("wasp.clients.interfaces.InterfaceLoader.build_discord", return_value=mock_bot):
+        import main
+        app = main.app
+
+    app.add_event_handler.assert_any_call("startup", mock_bot.start_background)
+    app.add_event_handler.assert_any_call("shutdown", mock_bot.close)
+
+
+def test_discord_bot_not_registered_when_no_token(mock_agno, monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+    monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
+
+    import main
+    app = main.app
+
+    for call_args in app.add_event_handler.call_args_list:
+        args = call_args[0]
+        assert "discord" not in repr(args).lower() and "start_background" not in repr(args)
