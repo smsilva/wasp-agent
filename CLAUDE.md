@@ -1,167 +1,26 @@
 # CLAUDE.md
 
-## 1. Think Before Coding
+## Principles
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+**Think first.** State assumptions explicitly. If multiple interpretations exist, present them. If uncertain, ask before implementing.
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+**Simplicity.** Minimum code that solves the problem. No abstractions for single-use code, no flexibility that wasn't requested, no error handling for impossible scenarios. If 200 lines could be 50, rewrite it.
 
-## 2. Simplicity First
+**Surgical changes.** Touch only what the task requires. Don't refactor adjacent code, reformat, or delete pre-existing dead code (mention it instead). Only clean up orphans your own changes created. Match existing style.
 
-**Minimum code that solves the problem. Nothing speculative.**
+**Goal-driven.** Transform tasks into verifiable goals with success criteria. State a brief plan for multi-step tasks. Loop until verified.
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+## Code
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- Python + `ruff` for formatting + `uv` for dependencies.
+- 100% coverage required. Verify with `pytest --cov`.
+- `ruff check .` must pass before every commit.
 
-## 3. Surgical Changes
+Lint exceptions:
+- `# noqa: E402` on imports after `load_dotenv()` in `main.py` (env vars must precede agno imports).
+- `# noqa: F401` on `import main` inside test functions (side-effect import).
 
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
-
-## 5. TDD
-
-We are passionate about testing. We write tests for every feature, bug fix, and refactor. Tests are the safety net that allows us to move fast without breaking things.
-
-The code coverage threshold is 100%. Use `pytest --cov` (`pytest-cov` + `coverage.py`) to verify coverage.
-
-## 6. Code
-
-This project uses primarily Python. For formatting code, use `ruff`.
-
-For dependencies we use `uv`.
-
-## 7. Documentation structure (`docs/`)
-
-Single source of current state: `HANDOFF.md` at the repo root.
-
-Flow for new features: **exploration → design → execution**.
-
-Each SDLC subfolder uses an `archived/` subdirectory for completed/superseded items, same pattern as `docs/security/issues/archived/` (see §9).
-
-| Folder | Answers | Content | Archive when |
-|---|---|---|---|
-| `sdlc/01-exploration/` | *What and why?* | Problem context, alternatives, technical spikes | Exploration led to a design |
-| `sdlc/02-design/` | *How will it look?* | Solution spec: architecture, interfaces, expected behavior | Implementation merged to `main` |
-| `sdlc/03-execution/` | *How will we build it?* | Step-by-step plan: tasks, order, dependencies, verification criteria | Implementation merged to `main` |
-| `architecture/` | Living docs about the current system | `<topic>.md` | Never — update in place |
-| `references/` | Living docs about external tools/APIs | `<topic>.md` | Never — update in place |
-| `runbooks/` | Manual procedures (setup, troubleshooting) | `<topic>.md` | Never — update in place |
-| `security/issues/` | Security findings (see §9) | `SEC-NNN-<slug>.md` | Resolved (per §9) |
-
-**Spec `Status` field** (header, right after `**Date:**`):
-
-| Status | Meaning |
-|---|---|
-| `Idea` | Problem statement only; not designed yet |
-| `Draft` | Design in progress |
-| `Approved` | Ready to plan and implement |
-| `Implemented` | Merged to `main` — archive the file |
-| `Deferred` | Postponed or superseded by another spec |
-
-Lightweight reminders (one line, no context) belong in the **Backlog** section of `HANDOFF.md`, not in `sdlc/02-design/`.
-
-**Header block formatting:** when stacking multiple `**Field:**` lines without blank lines between them (e.g., `**Date:**`, `**Status:**`, `**Scope:**`), end each line with **two trailing spaces** so Markdown renders a line break instead of collapsing them onto one line.
-
-## 8. agno
-
-See `docs/references/agno.md`.
-
-## 9. Security
-
-- **Autenticação/autorização de usuários**: implementado via allowlist multi-canal (`auth_users`). Ver `docs/runbooks/auth-admin.md`.
-- **Security review**: pendente — cobrir autorizações, inputs não sanitizados, exposição de tokens.
-
-Active security issues live in `docs/security/issues/SEC-NNN-<slug>.md`.
-When resolved, move to `docs/security/issues/archived/`.
-
-Each file has: `id`, `severity`, `status`, `opened` (and `resolved` when archived), description, impact, and fix.
-
-When doing a security review, check open issues before reporting duplicates.
-
-## 10. ruff / lint
-
-- `# noqa: E402` on imports after `load_dotenv()` in `main.py` — intentional violation (env vars must be loaded before agno imports).
-- `# noqa: F401` on `import main` inside test functions — side-effect import (runs module code).
-- `ruff check .` must pass clean. Run before every commit.
-
-## 11. Platform provisioning
-
-See `docs/architecture/platform-provisioning.md`.
-
-## 12. Telegram — bot tone
-
-In the system prompt, include explicit anti-pattern instructions to control LLM tone:
-- No filler words ("Sure!", "Perfect!", "Excellent!")
-- No emojis, no exclamation marks
-- Short paragraphs separated by blank lines
-- Avoid bullet lists and bold except when structure genuinely helps
-- When relaying a successful tool result, use the `message` field from the dict — do not invent additional text
-
-## 12a. Telegram router wrapping — prefixo `/telegram`
-
-agno cria o `APIRouter` com `prefix="/telegram"`. Rotas decoradas com `@router.post("/webhook", ...)` aparecem em `router.routes` com `path="/telegram/webhook"`, **não** `"/webhook"`. Ao inspecionar/wrap as rotas em `main.py`, casar por suffix (`r.path.endswith("/webhook")`) ou por `r.name == "telegram_webhook"`, nunca por equivalência exata. Unit tests com `MagicMock(path="/webhook")` passam mesmo contra implementação quebrada — incluir pelo menos um teste com path prefixado.
-
-**Type annotations obrigatórias no wrapper:** a função de substituição (`webhook_with_auth`) **deve** ter `request: Request` e `background_tasks: BackgroundTasks` anotados. Sem anotações, FastAPI tenta resolvê-los como query params e retorna 422 em todo POST do Telegram. Importar `BackgroundTasks` de `starlette.background` dentro de `get_router_with_auth`. `Request` é importado no topo de `wasp/clients/telegram/webhook.py` — `webhook_with_auth.__globals__` aponta para os globals desse módulo; não reimportar localmente. Regressão coberta por `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature` — testes que chamam o endpoint diretamente não capturam esse bug.
-
-**Python 3.14 + PEP 649:** annotations em closures resolvem via `__globals__` do módulo, não o escopo local. Importar `Request` dentro de `get_router_with_auth` é ineficaz para FastAPI (ruff sinaliza F401). Só importar localmente o que for *realmente* usado em código.
-
-## 13. Async watcher
-
-See `docs/architecture/async-watcher.md`.
-
-## 14. Notifier abstraction
-
-`wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, and `RecordingNotifier`. `watch_platform` is channel-agnostic — it receives a `Notifier` instance. When adding a new channel (Discord, Slack, WhatsApp), add a new `Notifier` implementation in `wasp/notifier.py` and inject it from `provision.py`; never add channel-specific logic to `watcher.py`.
-
-Notifier selection routes by **channel of origin**, not global env: `_select_notifier(channel)` reads the `session_id` prefix (`tg`, `local`, ...) via `extract_channel`. `WASP_AGENT_NOTIFIER` env var still overrides when explicitly set. Required because multiple channels can coexist (e.g. Telegram bot + local-chat) — selecting by env alone sends notifications to the wrong channel and silently fails.
-
-## 15. Makefile
-
-When a Makefile target needs more than a single command, extract the commands to a bash script in `scripts/` and call the script from the target.
-
-## 16. Validação
-
-**Ao fim de todo ciclo de desenvolvimento (antes de declarar a feature pronta, abrir PR ou fazer merge), rodar obrigatoriamente:**
+## Validation (mandatory before PR/merge)
 
 ```bash
 make format
@@ -169,85 +28,148 @@ make test
 make e2e-with-debug
 ```
 
-Os três são complementares e não substituíveis:
+The three are complementary:
+- `make test` mocks agno via `mock_agno` fixture — won't catch real integration bugs (e.g., agno router prefix `/telegram`, `AgentOS` behavior on `import main`).
+- `make e2e-with-debug` imports real `main.py`, runs Gitea + k3d + `fake_reconciler`, exercises full turn-1/turn-2/watcher/notification flow.
 
-- `make test` roda a suite unitária com `mock_agno` — agno é mockado, então bugs na integração real (ex.: router do `Telegram` com prefixo `/telegram`, comportamento de `agno.os.AgentOS` em `import main`) **não aparecem aqui**.
-- `make e2e-with-debug` importa `main.py` real, sobe Gitea + k3d + `fake_reconciler`, e executa o fluxo completo turn-1/turn-2/watcher/notificação. É onde bugs como `webhook_route = next(... path == "/webhook")` quebrando contra o prefixo real do agno aparecem.
+Don't skip e2e. The `/telegram/webhook` prefix bug (2026-05-23) only surfaced when running e2e after `make test` passed — unit tests used `MagicMock(path="/webhook")` and never hit the real router.
 
-Não pular o e2e por ser mais lento. Lição registrada (2026-05-23): o fix do `/telegram/webhook` prefix só foi descoberto ao rodar `make e2e-with-debug` depois de `make test` verde — a suite unitária usava `MagicMock(path="/webhook")` e nunca exercitou o router real.
+Four validation paths — see index at `docs/runbooks/validation.md`:
+- `make e2e` — automated pipeline. k3d barebones, fake_reconciler, Gitea container, `RecordingNotifier`. No Telegram, no real GitOps.
+- **Telegram smoke test (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Validates Telegram channel + LLM behavior. No cluster needed.
+- **Prometheus** — `make smoke-prometheus` standalone, or `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus`.
+- **Real GitOps (heavy)** — `make gitops-up` / `make gitops-down`. Cluster `k3s-default`, distinct from `wasp-local` of `make k3d-up`. Only for changes in `wasp/provision.py`, `wasp/watcher.py`, or the Composition. See `docs/runbooks/k3d-argocd-wasp-gitops.md`.
 
-### Caminhos
+## Project structure
 
-Quatro caminhos distintos — ver índice em `docs/runbooks/validation.md`.
+### Documentation (`docs/`)
 
-- **`make e2e`** — pipeline automatizado. Usa `make k3d-up` (k3d barebones + CRD `Platform`), `fake_reconciler`, Gitea container, `RecordingNotifier`. Sem Telegram, sem cluster GitOps real.
-- **Smoke test Telegram (manual)** — `make run` + ngrok + webhook (`docs/runbooks/telegram-local-dev.md`). Valida canal Telegram + comportamento do LLM (confirmação, memória de sessão). **Não exige cluster.**
-- **Prometheus** — `make smoke-prometheus` (standalone) ou `PROMETHEUS_METRICS_ACTIVE=true make run` + `curl /telemetry/prometheus` (integrado). Independe dos dois acima.
-- **GitOps real (pesado)** — `make gitops-up` (cluster `k3s-default`, distinto do `wasp-local` do `make k3d-up`) + `make gitops-down`. Usar apenas para mudanças em `wasp/provision.py`, `wasp/watcher.py` ou na Composition. Detalhes em `docs/runbooks/k3d-argocd-wasp-gitops.md`.
+Single source of current state: `HANDOFF.md` at repo root.
 
-## 17. Variáveis de ambiente com prefixo WASP_AGENT_
+Flow for new features: **exploration/ → design/ → execution/**. Each SDLC subfolder uses `archived/` for completed/superseded items.
 
-Variáveis que configuram o comportamento do agent usam o prefixo `WASP_AGENT_` (ex.: `WASP_AGENT_NOTIFIER`). Ao adicionar nova variável de configuração do agent, seguir esse padrão.
+| Folder | Answers | Content | Archive when |
+|---|---|---|---|
+| `sdlc/01-exploration/` | *What and why?* | Problem context, alternatives, technical spikes | Exploration led to a design |
+| `sdlc/02-design/` | *How will it look?* | Solution spec: architecture, interfaces, expected behavior | Implementation merged to `main` |
+| `sdlc/03-execution/` | *How will we build it?* | Step-by-step plan: tasks, order, dependencies, verification criteria | Implementation merged to `main` |
+| `architecture/` | Living docs about current system | `<topic>.md` | Never — update in place |
+| `references/` | Living docs about external tools/APIs | `<topic>.md` | Never — update in place |
+| `runbooks/` | Manual procedures (setup, troubleshooting) | `<topic>.md` | Never — update in place |
+| `security/issues/` | Security findings | `SEC-NNN-<slug>.md` | Resolved |
 
-## 18. Testes e OTEL_EXPORTER_OTLP_ENDPOINT
+Spec `Status` values: `Idea`, `Draft`, `Approved`, `Implemented`, `Deferred`.
 
-O fixture `mock_agno` em `tests/conftest.py` mocka `agno.models` como `MagicMock`. Se `OTEL_EXPORTER_OTLP_ENDPOINT` estiver setado no shell, `configure()` chama `AgnoInstrumentor`, que tenta `from agno.models.base import Model` e falha contra o mock. O fixture já faz `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)` para isolar os testes — não remover essa linha.
+One-line reminders without context go in `HANDOFF.md` **Backlog**, not `sdlc/02-design/`.
 
-O loop de `sys.modules.pop` no fixture deve incluir todo `wasp.*` module criado. Ao adicionar um novo módulo em `wasp/`, incluí-lo na lista do fixture; caso contrário, estado do módulo vaza entre testes e causa falhas intermitentes.
+Markdown header blocks: when stacking `**Field:**` lines without blank lines between them, end each with **two trailing spaces** so they render as separate lines.
 
-Ao testar `telemetry.metrics_endpoint`, patchar `wasp.telemetry.generate_latest` — não `prometheus_client.generate_latest`. O nome é bound no import do módulo; patchar no módulo fonte não afeta o nome já resolvido.
+### Packages — `wasp/clients/`
 
-## 19. E2E fixture — patch `_select_notifier`, não `TelegramNotifier`
+Channel-specific code lives in `wasp/clients/<channel>/`:
 
-Em `tests/e2e/conftest.py`, o `agent_client` patcheia `_select_notifier` diretamente para retornar o `recording_notifier`:
+```
+wasp/clients/
+  __init__.py          ← Notifier Protocol only
+  telegram/
+    __init__.py        ← public re-exports
+    notifier.py
+    webhook.py
+  local/
+    notifier.py
+```
+
+Re-exports in `__init__.py` need explicit alias to avoid ruff F401: `from wasp.clients.foo import Bar as Bar`. `RecordingNotifier` (test double) lives in `tests/notifiers.py`, not `wasp/clients/`. New channels (Discord, Slack) follow this layout.
+
+### Makefile
+
+When a target needs more than one command, extract to `scripts/<name>` and call it from the target.
+
+### Startup (`wasp/startup.py`)
+
+Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umask(0o077)`. Called from `main.py` after `load_dotenv()`.
+
+`load_dotenv()` stays in `main.py` (not `startup()`) because any `import wasp.*` triggers `wasp/__init__.py` → `wasp.provision` → `wasp.telemetry.configure()` at import time. `.env` vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `PROMETHEUS_METRICS_ACTIVE`) must be loaded before that.
+
+`GitOpsCommitter.probe()` validates `GH_PAT` on startup when set (zero-config). Catches `GithubException`, re-raises as `RuntimeError` to keep callers github-import-free.
+
+## Conventions
+
+### Env vars
+
+Agent configuration uses prefix `WASP_AGENT_` (e.g., `WASP_AGENT_NOTIFIER`).
+
+### Telegram bot tone
+
+System prompt must include explicit anti-pattern instructions:
+- No filler ("Sure!", "Perfect!", "Excellent!")
+- No emojis, no exclamation marks
+- Short paragraphs separated by blank lines
+- Avoid bullet lists and bold except when structure genuinely helps
+- When relaying a tool result, use its `message` field verbatim — don't invent text
+
+### Notifier abstraction
+
+`wasp/notifier.py` defines `Notifier` (Protocol), `TelegramNotifier`, `RecordingNotifier`. `watch_platform` is channel-agnostic — receives a `Notifier` instance. New channels add a `Notifier` implementation in `wasp/notifier.py`, injected from `provision.py`. Never put channel-specific logic in `watcher.py`.
+
+`_select_notifier(channel)` routes by **channel of origin** (parsed from `session_id` prefix via `extract_channel`), not global env. `WASP_AGENT_NOTIFIER` overrides when set. Required because multiple channels coexist (Telegram + local-chat).
+
+## Security
+
+- User auth/authz via multi-channel allowlist (`auth_users`). See `docs/runbooks/auth-admin.md`.
+- Active issues: `docs/security/issues/SEC-NNN-<slug>.md`. When resolved, move to `archived/`. Each has `id`, `severity`, `status`, `opened` (+ `resolved` when archived), description, impact, fix.
+- Before reporting a security finding, check open issues for duplicates.
+
+## External references
+
+- agno: `docs/references/agno.md`
+- Platform provisioning: `docs/architecture/platform-provisioning.md`
+- Async watcher: `docs/architecture/async-watcher.md`
+
+## Technical notes (bug-prevention session learnings)
+
+### Telegram router has `/telegram` prefix
+
+agno creates the `APIRouter` with `prefix="/telegram"`. Routes decorated `@router.post("/webhook", ...)` appear in `router.routes` with `path="/telegram/webhook"`, **not** `"/webhook"`. When inspecting/wrapping routes in `main.py`, match by suffix (`r.path.endswith("/webhook")`) or by `r.name == "telegram_webhook"` — never exact equality. Unit tests with `MagicMock(path="/webhook")` pass against broken implementations; include at least one test with the prefixed path.
+
+### Webhook wrapper type annotations required
+
+`webhook_with_auth` must have `request: Request` and `background_tasks: BackgroundTasks` annotated. Without annotations, FastAPI tries to resolve them as query params and returns 422 on every Telegram POST. Import `BackgroundTasks` from `starlette.background` inside `get_router_with_auth`. `Request` is already imported at the top of `wasp/clients/telegram/webhook.py` — `webhook_with_auth.__globals__` points to that module; don't reimport locally.
+
+Regression covered by `test_webhook_with_auth_has_fastapi_type_annotations` via `inspect.signature`. Tests that call the endpoint directly don't catch this bug.
+
+Python 3.14 + PEP 649: annotations in closures resolve via the module's `__globals__`, not the local scope. Importing `Request` inside `get_router_with_auth` is ineffective for FastAPI (ruff flags F401). Only import locally what's actually used in code.
+
+### Test fixtures — `mock_agno` and OTEL
+
+`tests/conftest.py` mocks `agno.models` as `MagicMock`. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell, `configure()` calls `AgnoInstrumentor`, which does `from agno.models.base import Model` and fails against the mock. The fixture runs `monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)` — don't remove that line.
+
+The `sys.modules.pop` loop in the fixture must include every `wasp.*` module created. When adding a new module in `wasp/`, add it to the fixture list, otherwise module state leaks between tests and causes intermittent failures.
+
+When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time; patching the source module doesn't affect the already-resolved name.
+
+### E2E fixture — patch `_select_notifier`, not `TelegramNotifier`
+
+In `tests/e2e/conftest.py`, `agent_client` patches `_select_notifier` directly:
 
 ```python
 monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier)
 ```
 
-Patchear só `TelegramNotifier` não funciona: `WASP_AGENT_NOTIFIER=console` no `.env` é carregado pelo `load_dotenv()` em `main.py` no import, e `_select_notifier` retorna `ConsoleNotifier` antes de chegar na chamada de `TelegramNotifier`. O notifier vai para o console e o `RecordingNotifier` nunca recebe — teste falha com `TimeoutError` sem mensagem de erro clara.
+Patching only `TelegramNotifier` doesn't work: `WASP_AGENT_NOTIFIER=console` in `.env` is loaded by `load_dotenv()` in `main.py` at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`. The notifier goes to the console and `RecordingNotifier` never receives — test fails with `TimeoutError` and no clear error message.
 
-O mesmo fixture também monkeypatcha `wasp.auth.is_authorized` para retornar um `user_id` fake:
+The same fixture also monkeypatches `wasp.auth.is_authorized` to return a fake `user_id`:
 
 ```python
 monkeypatch.setattr(wasp.auth, "is_authorized", lambda channel, channel_id: "e2e-user")
 ```
 
-Sem isso, o `session_id="tg:..."` usado no teste cai no auth guard de `provision_platform_instance` e retorna `{"status": "unauthorized"}` silenciosamente — o teste falha lá embaixo no `get_file()` do Gitea com 404, mascarando a causa real.
+Without this, `session_id="tg:..."` hits the auth guard in `provision_platform_instance` and returns `{"status": "unauthorized"}` silently — the test fails downstream at Gitea's `get_file()` with 404, masking the real cause.
 
-## 20. Logging — `wasp/logging.py`
+### ContextVar not inherited by threads
 
-`chat_id_var` é um `ContextVar` definido em `wasp/logging.py`. Python's `threading.Thread` **não herda** ContextVar do thread pai — cada thread começa com contexto vazio. `watch_platform` roda em thread separado e chama `chat_id_var.set(chat_id)` explicitamente no início; qualquer função futura que rode em thread novo e precise de `chat_id` deve fazer o mesmo.
+`chat_id_var` is a `ContextVar` defined in `wasp/logging.py`. `threading.Thread` does **not** inherit ContextVar from the parent thread — each thread starts with empty context. `watch_platform` runs in a separate thread and explicitly calls `chat_id_var.set(chat_id)` at the start. Any future function running in a new thread that needs `chat_id` must do the same.
 
-## 21. SQLite — padrão check-then-write atômico (`wasp/auth.py`)
+### SQLite atomic check-then-write (`wasp/auth.py`)
 
-Operações de check-then-write em `wasp/auth.py` (`redeem_invite`, `bootstrap_admin`) usam `con.execute("BEGIN IMMEDIATE")` antes do primeiro SELECT para adquirir o write lock imediatamente. Após `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` retorna 0, então o módulo Python não emite outro `BEGIN` automático antes do DML. O `with con:` subsequente fecha a transação com COMMIT (sucesso) ou ROLLBACK (exceção). Early `return None` antes do `with con:` faz o `con.close()` no `finally` rolar back a transação vazia — sem efeito colateral.
-
-## 22. Estrutura de pacotes — `wasp/clients/`
-
-Código específico de um canal de notificação ou integração externa vive em `wasp/clients/<canal>/`:
-
-```
-wasp/clients/
-  __init__.py          ← Notifier Protocol
-  telegram/
-    __init__.py        ← re-exports públicos
-    notifier.py        ← implementação do Notifier
-    webhook.py         ← integração específica (ex: webhook auth)
-  local/
-    __init__.py
-    notifier.py
-```
-
-- `wasp/clients/__init__.py` define apenas o `Notifier` Protocol.
-- Cada subpacote expõe sua API pública via `__init__.py`. Re-exports em `__init__.py` precisam de alias explícito (`X as X`) para ruff não reportar F401: `from wasp.clients.foo import Bar as Bar`.
-- `RecordingNotifier` (test double) fica em `tests/notifiers.py`, não em `wasp/clients/`.
-- Ao adicionar novo canal (Discord, Slack), criar `wasp/clients/<canal>/` seguindo o mesmo padrão.
-
-## 23. Startup e ordenação de imports em `main.py`
-
-`wasp/startup.py` contém `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, e `os.umask(0o077)`. Chamada de `main.py` após `load_dotenv()`.
-
-**Por que `load_dotenv()` fica em `main.py` e não em `startup()`:** qualquer `import wasp.*` dispara `wasp/__init__.py` → `wasp.provision` → `wasp.telemetry.configure()` em tempo de importação. `load_dotenv()` deve preceder esse import; do contrário, variáveis do `.env` (ex.: `OTEL_EXPORTER_OTLP_ENDPOINT`, `PROMETHEUS_METRICS_ACTIVE`) não estarão disponíveis quando `configure()` rodar.
-
-**`GitOpsCommitter.probe()`** valida `GH_PAT` no startup sempre que a variável estiver setada (zero-config). Captura `GithubException` e re-levanta como `RuntimeError`, mantendo callers livres de imports específicos do github.
+Check-then-write operations (`redeem_invite`, `bootstrap_admin`) call `con.execute("BEGIN IMMEDIATE")` before the first SELECT to acquire the write lock immediately. After `BEGIN IMMEDIATE`, `sqlite3_get_autocommit()` returns 0, so the Python module doesn't auto-emit another `BEGIN` before the DML. The subsequent `with con:` closes the transaction with COMMIT (success) or ROLLBACK (exception). Early `return None` before `with con:` makes `con.close()` in `finally` roll back an empty transaction — no side effects.
