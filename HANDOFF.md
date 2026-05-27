@@ -2,27 +2,31 @@
 
 ## Goal
 
-Implementar um agente DevOps multi-canal: Telegram bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão, autenticação multi-canal por invite, e suporte futuro a Discord/Slack.
+Implementar um agente DevOps multi-canal: bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão, autenticação multi-canal por invite, e suporte a Telegram e Discord.
 
 ## Current State
 
-`dev` está 11 commits à frente de `main`. `main` tem o código mais completo.
+`dev` está 15 commits à frente de `main`.
 
-**Entregue nesta sessão (no branch `dev`, ainda não mergeado):**
-- Pacote `wasp/resources/` com base genérica `ResourceManifest`/`MetadataSpec` e subpacote `wasp/resources/platform/` (`manifest.py`, `inventory.py`, `provisioner.py`)
-- Pacote `wasp/clients/k8s/` com `KubernetesResourceReader.search_for_instance_of(group, version, plural)` genérico + `load_kube_config_auto` (movido de `wasp/watcher.py`)
-- `wasp/platform_cluster.py` removido (substituído pelo reader genérico + transformação em `PlatformInventory`)
-- `wasp/provision.py` reduzido a 46 linhas: apenas dois `@tool` wrappers (`list_platform_instances`, `provision_platform_instance`)
-- Novo comportamento: `provision_platform_instance` cai no `user_id` resolvido pela auth quando `requested_by` vem vazio (não mais commit message com `"Requested by: "` em branco)
-- `CLAUDE.md §Packages — wasp/resources/` documenta o padrão `wasp/resources/<crd>/` para o próximo CRD (`Cluster`)
-- `CLAUDE.md §Technical notes` adiciona "Mocked exception classes can't be raised or caught" (padrão `FakeConfigException` para testes que usam `mock_agno`)
-- Validação: `make format` ✓, `make test` ✓ (234 passed, 100% coverage), `make e2e-with-debug` ✓ (passou na segunda execução — primeira falhou por flakiness do LLM respondendo em inglês em vez de pt-BR)
+**Entregue nesta sessão (branch `dev`, aguardando merge):**
+- Discord bot completo com feature parity ao Telegram: `wasp/clients/discord/` (`bot.py`, `notifier.py`, `__init__.py`)
+- `DiscordBot(discord.Client)` com `on_message` (auth guard + per-user session) e `on_ready` (registra o event loop para bridge cross-loop)
+- `DiscordNotifier` com `set_loop()` — bridge via `asyncio.run_coroutine_threadsafe` para enviar notificações do watcher thread para o loop do Discord
+- `InterfaceLoader.build_discord()` com singleton `discord_pkg._notifier`
+- Lifespan do Discord integrado ao FastAPI via `asynccontextmanager` wrapping do lifespan do agno (necessário porque agno define `lifespan_context` que ignora `on_startup`/`on_shutdown`)
+- Routing `"dc"` em `_select_notifier`, `extract_channel`, `extract_chat_id`
+- `make admin-link USER_ID=<uid> CHANNEL=dc ID=<id>` — vincula canal adicional a usuário existente sem exigir DB vazio
+- `auth_cli link` subcomando + `scripts/admin-link` + target no Makefile
+- `docs/runbooks/auth-admin.md` atualizado com seção "Vincular canal adicional"
+- Smoke test manual: bot respondendo, provisioning + notificação watcher funcionando via Discord
+- 261 testes passando, 100% coverage
 
 **Estado anterior** (já em `main`):
-- Refatoração `wasp/clients/` por canal (Telegram, local) + `InterfaceLoader` em `wasp/clients/interfaces.py`
-- Logging estruturado (`wasp/logging.py`, `JSONFormatter`, `chat_id_var` ContextVar)
-- Auth multi-canal (Ciclo 7): `wasp/auth.py`, guard em `provision_platform_instance`, handler `/start <token>`, CLI admin, métrica `wasp_auth_denied_total`
-- `AuthorizationGuard`, `GitOpsCommitter`, `PlatformWatcherSpawner`
+- Pacote `wasp/resources/` com `ResourceManifest`/`MetadataSpec` e `wasp/resources/platform/`
+- Pacote `wasp/clients/k8s/` com `KubernetesResourceReader`
+- `wasp/provision.py` com dois `@tool` wrappers
+- Refatoração `wasp/clients/` por canal (Telegram, local) + `InterfaceLoader`
+- Logging estruturado, Auth multi-canal (invite), `make admin-bootstrap/invite/revoke/list`
 
 ## Open Security Issues
 
@@ -30,34 +34,41 @@ Nenhuma issue ativa em `docs/security/issues/`.
 
 ## Active Specs / Plans
 
-### Status: Approved (implementados, aguardando marcação)
-- `docs/superpowers/specs/2026-05-26-resources-package-design.md` — Resources Package Design (entregue nesta sessão; mover para Implemented após merge em `main`)
-- `docs/superpowers/specs/2026-05-26-interface-loader-design.md` — InterfaceLoader Design (já existe `wasp/clients/interfaces.py`; mover para Implemented)
+### Status: Approved (implementado, aguardando marcação)
+- `docs/superpowers/specs/2026-05-27-discord-bot-design.md` — Discord Bot Design (entregue nesta sessão; mover para Implemented após merge)
+- `docs/superpowers/specs/2026-05-26-resources-package-design.md` — Resources Package Design (entregue sessão anterior)
+- `docs/superpowers/specs/2026-05-26-interface-loader-design.md` — InterfaceLoader Design (entregue sessão anterior)
 
 ### Status: Idea
-- `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` — golden set para detectar regressões no system prompt
-- `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` — alertas de orçamento de tokens
-- `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — opção A de auth (OAuth direto GitHub/Google)
-- `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — opção B de auth (Cognito como hub federado)
-- 14 specs de 2026-05-26: code-quality-security-scanning, disaster-recovery, dora-metrics, eu-ai-act, helm-chart, incident-response, load-testing, opentelemetry-tracing, penetration-test, privacy-data-retention, prompt-versioning, rate-limiting, sbom, secret-rotation, supply-chain-security
+- `docs/sdlc/02-design/2026-05-27-discord-slash-commands.md` — Discord Slash Commands (próxima extensão natural do Discord)
+- `docs/sdlc/02-design/2026-05-26-opentelemetry-tracing.md` — Distributed Tracing
+- `docs/sdlc/02-design/2026-05-20-llm-behavior-evaluation.md` — golden set para regressões no system prompt
+- `docs/sdlc/02-design/2026-05-20-token-cost-budget.md` — alertas de orçamento
+- `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md` — auth OAuth device flow
+- `docs/sdlc/02-design/2026-05-21-auth-cognito-federation.md` — auth Cognito federation
+- 14 specs de 2026-05-26: helm-chart, dora-metrics, rate-limiting, prompt-versioning, load-testing, sbom, supply-chain-security, secret-rotation, code-quality-security-scanning, penetration-test, eu-ai-act, privacy-data-retention, disaster-recovery, incident-response
 
 ### Status: Deferred
 - `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` — persistir `platform_watches` em SQLite
 
 ## Next Steps
 
-1. **Validar o branch `dev`** (já feito nesta sessão; passa em `make test` + `make e2e-with-debug`) e decidir merge em `main`
-2. **Atualizar status dos specs entregues:** `2026-05-26-resources-package-design.md` e `2026-05-26-interface-loader-design.md` → `Implemented` após merge
-3. **Decidir próxima feature:** muitos specs em Idea cobrem áreas distintas (auth A/B, observability, security, governance). Triar prioridade — sugestão: começar por `2026-05-20-llm-behavior-evaluation.md` (golden set evita regressões silenciosas no system prompt, como a que causou a falha intermitente do E2E nesta sessão)
+1. **Merge `dev` → `main`** — branch passou em `make test` (261 tests), smoke test Discord confirmado
+2. **Atualizar status dos specs entregues** — `2026-05-27-discord-bot-design.md`, `2026-05-26-resources-package-design.md`, `2026-05-26-interface-loader-design.md` → `Implemented`
+3. **Decidir próxima feature** — sugestões em ordem de valor imediato:
+   - `2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
+   - `2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
+   - `2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
 
 ## Backlog
 
-- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite
-- **Próximo CRD: `Cluster`** — seguir o padrão recém-criado: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + dois `@tool` em `wasp/provision.py`
-- **Tightening do edge watcher ↔ resources** — `wasp/watcher.py` importa `PLATFORM_*` de `wasp.resources.platform` enquanto `wasp.resources.platform.{inventory,provisioner}` importam `extract_channel/extract_chat_id` de `wasp.watcher`. Bidirecional, funciona hoje; quando um terceiro CRD chegar, considere mover `extract_channel/extract_chat_id` para um módulo folha (ex: `wasp/session.py`)
-- **Extensão do padrão `clients/`** (`docs/sdlc/01-exploration/clients-package-pattern.md`) — decidir se `git_client` e `gitops_committer` migram para `wasp/clients/<backend>/`
-- **Status check manual** — tool para perguntar estado de uma Platform sem depender do watcher
+- **Discord slash commands** (`docs/sdlc/02-design/2026-05-27-discord-slash-commands.md`, Idea) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
+- **Handler `/start <token>` no Discord** — hoje novos usuários Discord precisam de `make admin-link` pelo operador; implementar redeem via DM no bot elimina essa fricção
+- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`, Deferred) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
+- **Próximo CRD: `Cluster`** — seguir padrão: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + `@tool` em `wasp/provision.py`
+- **Bidirecionalidade `watcher.py` ↔ `resources/`** — `extract_channel/extract_chat_id` vivem em `watcher.py` mas são importados por `resources/platform/`. Quando um terceiro CRD chegar, mover para módulo folha (ex: `wasp/session.py`)
+- **Status check manual** — tool para consultar estado de uma Platform sem depender do watcher
 - **Operações além de criar** — update, delete, status individual de tenant
+- **Authorization granular (RBAC)** — papéis (admin, operator, viewer)
 - **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`
-- **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup com mensagens explícitas
-- **Authorization granular (RBAC)** — papéis (admin, operator, viewer) e mapeamento `user_id → role`
+- **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup
