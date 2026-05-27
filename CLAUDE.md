@@ -81,6 +81,23 @@ wasp/clients/
 
 Re-exports in `__init__.py` need explicit alias to avoid ruff F401: `from wasp.clients.foo import Bar as Bar`. `RecordingNotifier` (test double) lives in `tests/notifiers.py`, not `wasp/clients/`. New channels (Discord, Slack) follow this layout.
 
+### Packages — `wasp/resources/`
+
+CRD definitions live in `wasp/resources/<kind>/`:
+
+```
+wasp/resources/
+  base.py              ← ResourceManifest base, MetadataSpec
+  platform/
+    manifest.py        ← PlatformManifest + group/version/plural constants
+    provisioner.py     ← PlatformProvisioner
+    inventory.py       ← PlatformInventory + status transformation
+```
+
+`wasp/provision.py` é a fachada de agent-tools — só `@tool` wrappers; a lógica vive em `wasp/resources/`. Acesso genérico à API do Kubernetes passa por `wasp/clients/k8s/KubernetesResourceReader.search_for_instance_of(group, version, plural)`.
+
+Novo CRD (ex: Cluster): criar `wasp/resources/cluster/{manifest,provisioner,inventory}.py`, adicionar `@tool provision_cluster_instance` e `@tool list_cluster_instances` em `wasp/provision.py`.
+
 ### Makefile
 
 When a target needs more than one command, extract to `scripts/<name>` and call it from the target.
