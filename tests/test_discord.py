@@ -148,6 +148,8 @@ async def test_discord_bot_on_message_empty_content_is_ignored():
 
     await bot.on_message(msg)
 
+    agent.arun.assert_not_awaited()
+
 
 async def test_discord_bot_start_background_calls_start_with_token():
     import wasp.clients.discord.bot as b

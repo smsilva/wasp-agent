@@ -1,4 +1,5 @@
 import logging
+import os
 
 import discord
 
@@ -33,5 +34,5 @@ class DiscordBot(discord.Client):
         await message.channel.send(result.content)
 
     async def start_background(self) -> None:
-        token = __import__("os").getenv("DISCORD_APP_TOKEN", "")
+        token = os.getenv("DISCORD_APP_TOKEN", "")
         await self.start(token)
