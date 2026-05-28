@@ -4,7 +4,7 @@
 
 Bootstrap específico de canal (Telegram, Discord) vaza para três sítios — `main.py::create_app()` (lifespan inline do Discord), `wasp/clients/interfaces.py` (APIs assimétricas `build()`/`build_discord()` + singleton `discord_pkg._notifier`), `wasp/watcher.py::_select_notifier` (ifs hardcoded por kind). Adicionar Google Chat ou outro canal exige editar os três.
 
-Abordagem aprovada: `Channel` Protocol por canal (`enabled()`, `build_interface()`, `lifespan()`, `notifier()`); registry global em `wasp/clients/channels.py`; `ChannelLoader` único ponto que `main.py` conhece (`channel_loader.build_app()`). Canais se auto-registram no import do package. Spec completo em `docs/superpowers/specs/2026-05-28-channel-loader-design.md` (commit `598f1ed`).
+Abordagem aprovada: `Channel` Protocol por canal (`enabled()`, `build_interface()`, `lifespan()`, `notifier()`); registry global em `wasp/clients/channels.py`; `ChannelLoader` único ponto que `main.py` conhece (`channel_loader.build_app()`). Canais se auto-registram no import do package. Spec completo em `docs/sdlc/02-design/2026-05-28-channel-loader-design.md` (commit `598f1ed`).
 
 Alternativas rejeitadas:
 - Escopo apenas main.py+loader (deixaria `watcher._select_notifier` com ifs hardcoded — não cumpriria o objetivo de "evoluir próximos canais da mesma maneira").
@@ -55,7 +55,7 @@ Spec aprovado e commitado em `dev`. Próximo passo: gerar plano de implementaç�
 ## How to Resume
 
 ```
-cat docs/superpowers/specs/2026-05-28-channel-loader-design.md
+cat docs/sdlc/02-design/2026-05-28-channel-loader-design.md
 ```
 
 Depois invoque `/superpowers:writing-plans` referenciando o spec acima.
@@ -68,7 +68,7 @@ Depois invoque `/superpowers:writing-plans` referenciando o spec acima.
    - `01-exploration/2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
    - `01-exploration/2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
    - `01-exploration/2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
-1. Invocar `superpowers:writing-plans` para gerar plano de implementação a partir de `docs/superpowers/specs/2026-05-28-channel-loader-design.md`.
+1. Invocar `superpowers:writing-plans` para gerar plano de implementação a partir de `docs/sdlc/02-design/2026-05-28-channel-loader-design.md`.
 2. Executar plano (criar `wasp/clients/channels.py`, `wasp/clients/telegram/channel.py`, `wasp/clients/discord/channel.py`; refatorar `main.py` e `wasp/watcher.py`; deletar `wasp/clients/interfaces.py` e `discord_pkg._notifier`).
 3. Validar: `make format`, `make test`, `make e2e-with-debug`.
 4. Marcar spec como `Implemented` após merge.
