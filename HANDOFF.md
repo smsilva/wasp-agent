@@ -1,12 +1,17 @@
 # Handoff
 
-## Goal
+## Why
 
-Implementar um agente DevOps multi-canal: bot com Agno Agent que provisiona instâncias de plataforma via GitOps (Crossplane + `smsilva/wasp-gitops`), com memória de sessão, autenticação multi-canal por invite, e suporte a Telegram e Discord.
+Bootstrap específico de canal (Telegram, Discord) vaza para três sítios — `main.py::create_app()` (lifespan inline do Discord), `wasp/clients/interfaces.py` (APIs assimétricas `build()`/`build_discord()` + singleton `discord_pkg._notifier`), `wasp/watcher.py::_select_notifier` (ifs hardcoded por kind). Adicionar Google Chat ou outro canal exige editar os três.
 
-## Current State
+Abordagem aprovada: `Channel` Protocol por canal (`enabled()`, `build_interface()`, `lifespan()`, `notifier()`); registry global em `wasp/clients/channels.py`; `ChannelLoader` único ponto que `main.py` conhece (`channel_loader.build_app()`). Canais se auto-registram no import do package. Spec completo em `docs/superpowers/specs/2026-05-28-channel-loader-design.md` (commit `598f1ed`).
 
-`dev` está 15 commits à frente de `main`.
+Alternativas rejeitadas:
+- Escopo apenas main.py+loader (deixaria `watcher._select_notifier` com ifs hardcoded — não cumpriria o objetivo de "evoluir próximos canais da mesma maneira").
+- API granular `build_interfaces() + iter_lifespans()` em main.py (mantém boilerplate).
+- Hooks `register(loader)` invertidos (dispersa o que cada canal faz).
+- Singleton de módulo `active_loader` ou parâmetro `notifier_resolver` no watcher (preferido auto-registro via registry global).
+- Promover `local` a `Channel` (não tem token nem interface; permanece resolvido por fallback explícito em `_select_notifier`).
 
 **Entregue nesta sessão (branch `dev`, aguardando merge):**
 - Discord bot completo com feature parity ao Telegram: `wasp/clients/discord/` (`bot.py`, `notifier.py`, `__init__.py`)
@@ -21,19 +26,15 @@ Implementar um agente DevOps multi-canal: bot com Agno Agent que provisiona inst
 - `docs/runbooks/discord-setup.md` — setup inicial, obtenção de user ID, bootstrap, convite de usuários
 - Smoke test manual: bot respondendo, provisioning + notificação watcher funcionando via Discord
 - 261 testes passando, 100% coverage
+## In Progress
 
-**Estado anterior** (já em `main`):
-- Pacote `wasp/resources/` com `ResourceManifest`/`MetadataSpec` e `wasp/resources/platform/`
-- Pacote `wasp/clients/k8s/` com `KubernetesResourceReader`
-- `wasp/provision.py` com dois `@tool` wrappers
-- Refatoração `wasp/clients/` por canal (Telegram, local) + `InterfaceLoader`
-- Logging estruturado, Auth multi-canal (invite), `make admin-bootstrap/invite/revoke/list`
+Spec aprovado e commitado em `dev`. Próximo passo: gerar plano de implementação invocando `superpowers:writing-plans` com o spec como entrada. Implementação ainda **não** iniciada.
 
-## Open Security Issues
+## Open Questions / Hypotheses
 
-Nenhuma issue ativa em `docs/security/issues/`.
+- Nenhuma. Decisões de design fechadas no spec.
 
-## Active Specs / Plans
+## Known Broken
 
 ### Implementados (aguardando marcação após merge)
 - `docs/sdlc/02-design/archived/2026-05-27-discord-bot-design.md` — Discord Bot Design
@@ -49,9 +50,15 @@ Nenhuma issue ativa em `docs/security/issues/`.
 - `docs/sdlc/01-exploration/2026-05-21-cli-device-flow-oauth.md` — auth OAuth device flow
 - `docs/sdlc/01-exploration/2026-05-21-auth-cognito-federation.md` — auth Cognito federation
 - 14 explorações de 2026-05-26 em `docs/sdlc/01-exploration/`: helm-chart, dora-metrics, rate-limiting, prompt-versioning, load-testing, sbom, supply-chain-security, secret-rotation, code-quality-security-scanning, penetration-test, eu-ai-act, privacy-data-retention, disaster-recovery, incident-response
+- Nada quebrado. Branch `dev` segue passando em `make test` (261 tests, 100% coverage). Spec é só documentação.
 
-### Status: Deferred
-- `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` — persistir `platform_watches` em SQLite
+## How to Resume
+
+```
+cat docs/superpowers/specs/2026-05-28-channel-loader-design.md
+```
+
+Depois invoque `/superpowers:writing-plans` referenciando o spec acima.
 
 ## Next Steps
 
@@ -61,8 +68,12 @@ Nenhuma issue ativa em `docs/security/issues/`.
    - `01-exploration/2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
    - `01-exploration/2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
    - `01-exploration/2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
+1. Invocar `superpowers:writing-plans` para gerar plano de implementação a partir de `docs/superpowers/specs/2026-05-28-channel-loader-design.md`.
+2. Executar plano (criar `wasp/clients/channels.py`, `wasp/clients/telegram/channel.py`, `wasp/clients/discord/channel.py`; refatorar `main.py` e `wasp/watcher.py`; deletar `wasp/clients/interfaces.py` e `discord_pkg._notifier`).
+3. Validar: `make format`, `make test`, `make e2e-with-debug`.
+4. Marcar spec como `Implemented` após merge.
 
-## Backlog
+## Backlog (carry-over)
 
 - **Discord slash commands** (`docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
 - **Handler de convite via DM no Discord** — hoje novos usuários Discord exigem `make admin-link` pelo operador; implementar redeem de token por DM elimina essa fricção (ver `wasp/clients/telegram/webhook.py` como referência)
@@ -72,5 +83,7 @@ Nenhuma issue ativa em `docs/security/issues/`.
 - **Status check manual** — tool para consultar estado de uma Platform sem depender do watcher
 - **Operações além de criar** — update, delete, status individual de tenant
 - **Authorization granular (RBAC)** — papéis (admin, operator, viewer)
-- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E
+- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`
 - **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup
+
+> Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
