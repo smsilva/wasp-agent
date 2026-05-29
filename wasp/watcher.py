@@ -8,7 +8,7 @@ import wasp.telemetry as telemetry
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
 from wasp.logging import chat_id_var
-from wasp.clients import Notifier
+from wasp.clients import Notifier, channels
 from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
@@ -18,27 +18,16 @@ log = logging.getLogger(__name__)
 
 def _select_notifier(channel: str | None = None) -> Notifier | None:
     kind = os.getenv("WASP_AGENT_NOTIFIER")
-    token = os.getenv("TELEGRAM_TOKEN")
-    if kind is None:
-        if channel == "local":
-            kind = "console"
-        elif channel == "tg":
-            kind = "telegram"
-        elif channel == "dc":
-            kind = "discord"
-        else:
-            kind = "telegram" if token else "console"
-    if kind == "console":
+    if kind == "console" or (kind is None and channel == "local"):
         return ConsoleNotifier()
-    if kind == "telegram":
+    target = kind or channel
+    if target is None:
         from wasp.clients.telegram import TelegramNotifier
 
-        return TelegramNotifier(token=token) if token else None
-    if kind == "discord":
-        import wasp.clients.discord as discord_pkg
-
-        return discord_pkg._notifier
-    return None
+        token = os.getenv("TELEGRAM_TOKEN")
+        return TelegramNotifier(token=token) if token else ConsoleNotifier()
+    registered = channels.get(target)
+    return registered.notifier() if registered else None
 
 
 POLL_INTERVAL_SECONDS = 10

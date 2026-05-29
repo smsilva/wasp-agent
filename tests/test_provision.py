@@ -80,6 +80,7 @@ def test_provision_commits(monkeypatch):
 
 
 def test_provision_spawns_watcher(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
 
@@ -112,6 +113,7 @@ def test_provision_spawns_watcher(monkeypatch):
 
 
 def test_provision_watcher_target_runs_asyncio(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
 
@@ -375,6 +377,7 @@ def test_provision_skips_auth_for_local_channel(monkeypatch):
 
 
 def test_provision_proceeds_when_tg_authorized(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
 

@@ -437,10 +437,11 @@ def test_select_notifier_console_when_env_explicit(monkeypatch):
 
 
 def test_select_notifier_telegram_when_env_explicit(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
     from wasp.watcher import _select_notifier
     from wasp.clients.telegram import TelegramNotifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "tg")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -470,9 +471,10 @@ def test_select_notifier_default_console_without_token(monkeypatch):
 
 
 def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
     from wasp.watcher import _select_notifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "tg")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     assert _select_notifier() is None
@@ -593,41 +595,41 @@ def test_spawner_target_runs_asyncio(monkeypatch):
     mock_async_run.assert_called_once_with(mock_watch.return_value)
 
 
-def test_select_notifier_dc_channel_picks_discord_notifier(monkeypatch):
+def test_select_notifier_dc_channel_uses_registered_channel(monkeypatch):
     from unittest.mock import MagicMock
-    import wasp.clients.discord as dc_pkg
+    from wasp.clients import channels
     from wasp.watcher import _select_notifier
 
-    mock_notifier = MagicMock()
-    monkeypatch.setattr(dc_pkg, "_notifier", mock_notifier)
+    fake_notifier = MagicMock()
+    fake_channel = MagicMock()
+    fake_channel.name = "dc"
+    fake_channel.notifier = MagicMock(return_value=fake_notifier)
+    channels.register(fake_channel)
+
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
-
-    result = _select_notifier(channel="dc")
-    assert result is mock_notifier
+    assert _select_notifier(channel="dc") is fake_notifier
 
 
-def test_select_notifier_dc_channel_returns_none_when_no_singleton(monkeypatch):
-    import wasp.clients.discord as dc_pkg
+def test_select_notifier_dc_channel_returns_none_when_unregistered(monkeypatch):
     from wasp.watcher import _select_notifier
 
-    monkeypatch.setattr(dc_pkg, "_notifier", None)
     monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
-
-    result = _select_notifier(channel="dc")
-    assert result is None
+    assert _select_notifier(channel="dc") is None
 
 
-def test_select_notifier_discord_kind_returns_singleton(monkeypatch):
+def test_select_notifier_env_kind_resolves_via_registry(monkeypatch):
     from unittest.mock import MagicMock
-    import wasp.clients.discord as dc_pkg
+    from wasp.clients import channels
     from wasp.watcher import _select_notifier
 
-    mock_notifier = MagicMock()
-    monkeypatch.setattr(dc_pkg, "_notifier", mock_notifier)
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "discord")
+    fake_notifier = MagicMock()
+    fake_channel = MagicMock()
+    fake_channel.name = "dc"
+    fake_channel.notifier = MagicMock(return_value=fake_notifier)
+    channels.register(fake_channel)
 
-    result = _select_notifier()
-    assert result is mock_notifier
+    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "dc")
+    assert _select_notifier() is fake_notifier
 
 
 def test_extract_channel_returns_dc_for_discord_session():
