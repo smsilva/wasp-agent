@@ -16,8 +16,6 @@ startup()
 from wasp import auth  # noqa: E402
 from wasp.agent import build_agent  # noqa: E402
 from wasp.clients.channels import ChannelLoader  # noqa: E402
-import wasp.clients.telegram  # noqa: E402 F401 — registers TelegramChannel
-import wasp.clients.discord  # noqa: E402 F401 — registers DiscordChannel
 
 
 def create_app():

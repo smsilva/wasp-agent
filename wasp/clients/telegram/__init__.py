@@ -6,4 +6,5 @@ from wasp.clients.telegram.webhook import (
 )
 from wasp.clients.telegram.webhook import _process_start_token as _process_start_token
 
-channels.register(TelegramChannel())
+if channels.get("tg") is None:
+    channels.register(TelegramChannel())

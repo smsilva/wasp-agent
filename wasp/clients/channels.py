@@ -1,14 +1,20 @@
 """Channel registry and ChannelLoader.
 
 Each channel package (telegram, discord, …) provides a :class:`Channel`
-implementation and calls :func:`register` at package-import time. This mirrors
-the side-effect import pattern already used by ``wasp/__init__.py`` to trigger
-``wasp.telemetry.configure()``. Tests must call :func:`reset` between cases
+implementation and calls :func:`register` at package-import time, guarded by
+``if channels.get(NAME) is None`` so tests can pre-register fakes without
+being clobbered by the side-effect import.
+
+:func:`discover` walks ``wasp.clients`` and imports every subpackage so that
+their ``__init__`` side-effects populate the registry without ``main.py``
+having to know each channel name. Tests call :func:`reset` between cases
 to keep the registry deterministic; see ``tests/conftest.py``.
 """
 
 from __future__ import annotations
 
+import importlib
+import pkgutil
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, AsyncContextManager, Iterable, Protocol
 
@@ -46,6 +52,19 @@ def reset() -> None:
     _registry.clear()
 
 
+def discover() -> None:
+    """Import every subpackage under ``wasp.clients`` so their channel
+    self-registration runs. Skips ``wasp.clients.channels`` itself and the
+    ``local`` package, which has no ``Channel``.
+    """
+    import wasp.clients as pkg
+
+    for info in pkgutil.iter_modules(pkg.__path__, prefix="wasp.clients."):
+        if not info.ispkg or info.name == "wasp.clients.local":
+            continue
+        importlib.import_module(info.name)
+
+
 class ChannelLoader:
     def __init__(self, agent) -> None:
         self._agent = agent
@@ -54,6 +73,7 @@ class ChannelLoader:
         from agno.os import AgentOS
         import wasp.telemetry as telemetry
 
+        discover()
         active = [c for c in iter_channels() if c.enabled()]
         interfaces = [
             iface
