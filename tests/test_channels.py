@@ -229,3 +229,86 @@ async def test_build_app_chains_multiple_channel_lifespans(mock_agno):
     assert exit_calls[0] == "orig"
     assert set(enter_calls[:-1]) == {"a", "b"}
     assert set(exit_calls[1:]) == {"a", "b"}
+
+
+def test_telegram_channel_name_is_tg():
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    assert TelegramChannel().name == "tg"
+
+
+def test_telegram_channel_enabled_when_token_set(monkeypatch):
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok-123")
+    assert TelegramChannel().enabled() is True
+
+
+def test_telegram_channel_disabled_when_no_token(monkeypatch):
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    assert TelegramChannel().enabled() is False
+
+
+def test_telegram_channel_build_interface_constructs_and_wraps(mock_agno, monkeypatch):
+    from unittest.mock import patch
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok-xyz")
+    agent = MagicMock()
+    with patch("wasp.clients.telegram.channel._install_start_token_handler") as install:
+        iface = TelegramChannel().build_interface(agent)
+
+    mock_agno["agno.os.interfaces.telegram"].Telegram.assert_called_once_with(
+        agent=agent, token="tok-xyz"
+    )
+    install.assert_called_once_with(iface)
+
+
+def test_telegram_channel_build_interface_returns_none_without_token(mock_agno, monkeypatch):
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    assert TelegramChannel().build_interface(MagicMock()) is None
+    mock_agno["agno.os.interfaces.telegram"].Telegram.assert_not_called()
+
+
+def test_telegram_channel_lifespan_is_none():
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    assert TelegramChannel().lifespan() is None
+
+
+def test_telegram_channel_notifier_returns_telegram_notifier(monkeypatch):
+    from wasp.clients.telegram.channel import TelegramChannel
+    from wasp.clients.telegram import TelegramNotifier
+
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tok-1")
+    notifier = TelegramChannel().notifier()
+    assert isinstance(notifier, TelegramNotifier)
+
+
+def test_telegram_channel_notifier_returns_none_without_token(monkeypatch):
+    from wasp.clients.telegram.channel import TelegramChannel
+
+    monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
+    assert TelegramChannel().notifier() is None
+
+
+def test_importing_telegram_package_registers_channel(monkeypatch):
+    import sys
+    from wasp.clients import channels
+
+    # Importing channels may pull in wasp.clients.telegram transitively
+    # (via watcher → provision). Reset the registry and evict the telegram
+    # package so we can observe the registration side-effect in isolation.
+    channels.reset()
+    sys.modules.pop("wasp.clients.telegram", None)
+    sys.modules.pop("wasp.clients.telegram.channel", None)
+
+    assert channels.get("tg") is None
+    import wasp.clients.telegram  # noqa: F401
+    ch = channels.get("tg")
+    assert ch is not None
+    assert ch.name == "tg"

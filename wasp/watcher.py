@@ -4,7 +4,6 @@ import os
 import threading
 import time
 
-import wasp.clients.discord as discord_pkg
 import wasp.telemetry as telemetry
 from kubernetes.client import ApiException
 from opentelemetry.trace import Link
@@ -12,7 +11,6 @@ from wasp.logging import chat_id_var
 from wasp.clients import Notifier
 from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
-from wasp.clients.telegram import TelegramNotifier
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
 
 log = logging.getLogger(__name__)
@@ -33,8 +31,12 @@ def _select_notifier(channel: str | None = None) -> Notifier | None:
     if kind == "console":
         return ConsoleNotifier()
     if kind == "telegram":
+        from wasp.clients.telegram import TelegramNotifier
+
         return TelegramNotifier(token=token) if token else None
     if kind == "discord":
+        import wasp.clients.discord as discord_pkg
+
         return discord_pkg._notifier
     return None
 
