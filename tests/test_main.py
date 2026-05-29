@@ -1,4 +1,4 @@
-def test_agent_os_with_token(mock_agno, monkeypatch):
+def test_agent_os_with_telegram_token(mock_agno, monkeypatch):
     """AgentOS receives the agent and Telegram interface when TELEGRAM_TOKEN is set."""
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("TELEGRAM_TOKEN", "test-token-123")
@@ -14,7 +14,6 @@ def test_agent_os_with_token(mock_agno, monkeypatch):
 
 
 def test_telegram_not_added_without_token(mock_agno, monkeypatch):
-    """No interfaces are added when TELEGRAM_TOKEN is absent."""
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
@@ -26,7 +25,6 @@ def test_telegram_not_added_without_token(mock_agno, monkeypatch):
 
 
 def test_prometheus_route_registered(mock_agno, monkeypatch):
-    """main.py delegates Prometheus route registration to telemetry."""
     from unittest.mock import MagicMock
     import wasp.telemetry as telemetry
 
@@ -49,7 +47,6 @@ def test_main_initializes_auth_db(mock_agno, monkeypatch):
 
 
 def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
-    """When TELEGRAM_TOKEN is set, the wrapper is installed on the interface."""
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tk")
 
@@ -61,7 +58,6 @@ def test_install_start_token_handler_called_with_token(mock_agno, monkeypatch):
 
 
 def test_startup_called_on_import(mock_agno, monkeypatch):
-    """main.py calls startup() during import."""
     from unittest.mock import MagicMock
     import wasp.startup as _startup
 
@@ -73,32 +69,28 @@ def test_startup_called_on_import(mock_agno, monkeypatch):
     spy.assert_called_once()
 
 
-def test_discord_bot_lifespan_wrapped_when_token_set(mock_agno, monkeypatch):
+def test_discord_lifespan_wraps_app_when_token_set(mock_agno, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
-    from unittest.mock import MagicMock, patch
 
-    mock_bot = MagicMock()
-    with patch(
-        "wasp.clients.interfaces.InterfaceLoader.build_discord", return_value=mock_bot
-    ):
-        import main
+    import main
 
-        app = main.app
-
-    # lifespan_context must have been replaced with a wrapper
-    assert app.router.lifespan_context is not None
-    assert "lifespan_with_discord" in app.router.lifespan_context.__name__
+    lifespan_name = getattr(main.app.router.lifespan_context, "__name__", "")
+    assert lifespan_name == "composed_lifespan"
 
 
-def test_discord_bot_not_registered_when_no_token(mock_agno, monkeypatch):
+def test_no_discord_lifespan_wrap_without_token(mock_agno, monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "ollama")
     monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
 
     import main
 
-    app = main.app
+    lifespan_name = getattr(main.app.router.lifespan_context, "__name__", "")
+    assert lifespan_name != "composed_lifespan"
 
-    # lifespan must NOT be the discord wrapper
-    lifespan_name = getattr(app.router.lifespan_context, "__name__", "")
-    assert "lifespan_with_discord" not in lifespan_name
+
+def test_create_app_returns_app_and_agent_os(mock_agno, monkeypatch):
+    import main
+
+    assert main.app is not None
+    assert main.agent_os is mock_agno["agno.os"].AgentOS.return_value
