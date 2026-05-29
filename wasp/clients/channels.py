@@ -6,6 +6,7 @@ the side-effect import pattern already used by ``wasp/__init__.py`` to trigger
 ``wasp.telemetry.configure()``. Tests must call :func:`reset` between cases
 to keep the registry deterministic; see ``tests/conftest.py``.
 """
+
 from __future__ import annotations
 
 from contextlib import AsyncExitStack, asynccontextmanager

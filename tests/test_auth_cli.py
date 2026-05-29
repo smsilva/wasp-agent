@@ -76,7 +76,15 @@ def test_bootstrap_fails_when_db_not_empty(capsys):
 def test_link_adds_identity_to_existing_user(capsys):
     user_id = auth.create_user("Silvio")
     rc = auth_cli.main(
-        ["link", "--user-id", user_id, "--channel", "dc", "--channel-id", "708384119989600337"]
+        [
+            "link",
+            "--user-id",
+            user_id,
+            "--channel",
+            "dc",
+            "--channel-id",
+            "708384119989600337",
+        ]
     )
     assert rc == 0
     assert capsys.readouterr().out.strip() == "linked"

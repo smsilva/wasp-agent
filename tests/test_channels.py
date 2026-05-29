@@ -53,7 +53,9 @@ def test_reset_clears_registry():
     assert list(channels.iter_channels()) == []
 
 
-def _fake_channel(name, *, enabled=True, interface=None, lifespan_cm=None, notifier=None):
+def _fake_channel(
+    name, *, enabled=True, interface=None, lifespan_cm=None, notifier=None
+):
     ch = MagicMock()
     ch.name = name
     ch.enabled = MagicMock(return_value=enabled)
@@ -203,6 +205,7 @@ async def test_build_app_chains_multiple_channel_lifespans(mock_agno):
                 yield
             finally:
                 exit_calls.append(label)
+
         return cm()
 
     @asynccontextmanager
@@ -266,7 +269,9 @@ def test_telegram_channel_build_interface_constructs_and_wraps(mock_agno, monkey
     install.assert_called_once_with(iface)
 
 
-def test_telegram_channel_build_interface_returns_none_without_token(mock_agno, monkeypatch):
+def test_telegram_channel_build_interface_returns_none_without_token(
+    mock_agno, monkeypatch
+):
     from wasp.clients.telegram.channel import TelegramChannel
 
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
@@ -309,6 +314,7 @@ def test_importing_telegram_package_registers_channel(monkeypatch):
 
     assert channels.get("tg") is None
     import wasp.clients.telegram  # noqa: F401
+
     ch = channels.get("tg")
     assert ch is not None
     assert ch.name == "tg"
@@ -396,6 +402,7 @@ def test_importing_discord_package_registers_channel(monkeypatch):
 
     assert channels.get("dc") is None
     import wasp.clients.discord  # noqa: F401
+
     ch = channels.get("dc")
     assert ch is not None
     assert ch.name == "dc"
