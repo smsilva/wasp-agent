@@ -312,3 +312,96 @@ def test_importing_telegram_package_registers_channel(monkeypatch):
     ch = channels.get("tg")
     assert ch is not None
     assert ch.name == "tg"
+
+
+def test_discord_channel_name_is_dc():
+    from wasp.clients.discord.channel import DiscordChannel
+
+    assert DiscordChannel().name == "dc"
+
+
+def test_discord_channel_enabled_when_token_set(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
+    assert DiscordChannel().enabled() is True
+
+
+def test_discord_channel_disabled_when_no_token(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
+    assert DiscordChannel().enabled() is False
+
+
+def test_discord_channel_build_interface_returns_none(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
+    assert DiscordChannel().build_interface(MagicMock()) is None
+
+
+def test_discord_channel_notifier_returns_same_instance_twice(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+    from wasp.clients.discord.notifier import DiscordNotifier
+
+    monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
+    ch = DiscordChannel()
+    n1 = ch.notifier()
+    n2 = ch.notifier()
+    assert isinstance(n1, DiscordNotifier)
+    assert n1 is n2
+
+
+def test_discord_channel_notifier_returns_none_without_token(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
+    assert DiscordChannel().notifier() is None
+
+
+@pytest.mark.asyncio
+async def test_discord_channel_lifespan_starts_and_stops_bot(monkeypatch, mock_agno):
+    import asyncio
+    from unittest.mock import AsyncMock, patch
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.setenv("DISCORD_APP_TOKEN", "dc-tok")
+
+    fake_bot = MagicMock()
+    fake_bot.start_background = AsyncMock()
+    fake_bot.close = AsyncMock()
+
+    with patch("wasp.clients.discord.channel.DiscordBot", return_value=fake_bot):
+        ch = DiscordChannel()
+        ch._agent = MagicMock()  # set by build_interface in real flow; bypass here
+        cm = ch.lifespan()
+        assert cm is not None
+
+        async with cm:
+            await asyncio.sleep(0)
+
+    fake_bot.close.assert_awaited_once()
+
+
+def test_discord_channel_lifespan_is_none_without_token(monkeypatch):
+    from wasp.clients.discord.channel import DiscordChannel
+
+    monkeypatch.delenv("DISCORD_APP_TOKEN", raising=False)
+    assert DiscordChannel().lifespan() is None
+
+
+def test_importing_discord_package_registers_channel(monkeypatch):
+    from wasp.clients import channels
+
+    assert channels.get("dc") is None
+    import wasp.clients.discord  # noqa: F401
+    ch = channels.get("dc")
+    assert ch is not None
+    assert ch.name == "dc"
+
+
+def test_discord_package_no_longer_exposes_notifier_singleton():
+    import wasp.clients.discord as dc_pkg
+
+    assert not hasattr(dc_pkg, "_notifier")
