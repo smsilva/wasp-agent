@@ -2,14 +2,6 @@ import pytest
 from unittest.mock import MagicMock
 
 
-@pytest.fixture(autouse=True)
-def _reset_channels():
-    from wasp.clients import channels
-    channels.reset()
-    yield
-    channels.reset()
-
-
 def test_register_and_get_returns_channel():
     from wasp.clients import channels
 

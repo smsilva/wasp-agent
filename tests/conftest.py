@@ -58,7 +58,9 @@ def mock_agno(monkeypatch, request):
         "wasp.models",
         "wasp.agent",
         "wasp.clients",
+        "wasp.clients.channels",
         "wasp.clients.telegram",
+        "wasp.clients.telegram.channel",
         "wasp.clients.telegram.notifier",
         "wasp.clients.telegram.webhook",
         "wasp.clients.interfaces",
@@ -68,6 +70,7 @@ def mock_agno(monkeypatch, request):
         "wasp.clients.local.notifier",
         "wasp.clients.discord",
         "wasp.clients.discord.bot",
+        "wasp.clients.discord.channel",
         "wasp.clients.discord.notifier",
         "wasp.provision",
         "wasp.watcher",
@@ -116,7 +119,18 @@ def mock_agno(monkeypatch, request):
     # Prevent load_dotenv() from reading the real .env during tests so that
     # monkeypatch.setenv/delenv has full control over env vars.
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **kw: None)
+
+    # Channel registry is process-global; clear it so each test starts empty.
+    # Use sys.modules.get to avoid triggering a fresh wasp import (which would
+    # cache wasp.telemetry and break tests that need to import it themselves).
+    _channels_setup = sys.modules.get("wasp.clients.channels")
+    if _channels_setup is not None:
+        _channels_setup.reset()
     yield mocks
+
+    # Grab the live module object before evicting it so the reset call below
+    # does not trigger a fresh import (which would cascade through wasp/__init__).
+    _channels_teardown = sys.modules.get("wasp.clients.channels")
 
     for mod in (
         "main",
@@ -125,7 +139,9 @@ def mock_agno(monkeypatch, request):
         "wasp.models",
         "wasp.agent",
         "wasp.clients",
+        "wasp.clients.channels",
         "wasp.clients.telegram",
+        "wasp.clients.telegram.channel",
         "wasp.clients.telegram.notifier",
         "wasp.clients.telegram.webhook",
         "wasp.clients.interfaces",
@@ -135,6 +151,7 @@ def mock_agno(monkeypatch, request):
         "wasp.clients.local.notifier",
         "wasp.clients.discord",
         "wasp.clients.discord.bot",
+        "wasp.clients.discord.channel",
         "wasp.clients.discord.notifier",
         "wasp.provision",
         "wasp.watcher",
@@ -152,3 +169,6 @@ def mock_agno(monkeypatch, request):
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
+
+    if _channels_teardown is not None:
+        _channels_teardown.reset()

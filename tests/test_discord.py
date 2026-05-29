@@ -196,7 +196,6 @@ async def test_discord_bot_on_ready_sets_loop_on_notifier():
     import wasp.clients.discord.bot as b
     from wasp.clients.discord.notifier import DiscordNotifier
     import asyncio
-    import unittest.mock as mock
 
     agent = MagicMock()
     notifier = DiscordNotifier()
