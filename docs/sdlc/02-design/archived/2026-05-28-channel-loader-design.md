@@ -1,6 +1,6 @@
 # Channel loader — design
 
-**Status:** Approved
+**Status:** Implemented
 **Date:** 2026-05-28
 **Scope:** `main.py`, `wasp/clients/interfaces.py`, `wasp/watcher.py`, `wasp/clients/telegram/`, `wasp/clients/discord/`
 
