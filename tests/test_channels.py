@@ -132,3 +132,108 @@ def test_build_app_ignores_disabled_channels(mock_agno):
     disabled.build_interface.assert_not_called()
     agent_os_kwargs = mock_agno["agno.os"].AgentOS.call_args.kwargs
     assert agent_os_kwargs["interfaces"] == []
+
+
+@pytest.mark.asyncio
+async def test_build_app_wraps_lifespan_for_channels_that_provide_one(mock_agno):
+    from contextlib import asynccontextmanager
+    from wasp.clients import channels
+    from wasp.clients.channels import ChannelLoader
+
+    enter_calls: list[str] = []
+    exit_calls: list[str] = []
+
+    @asynccontextmanager
+    async def fake_channel_lifespan():
+        enter_calls.append("ch")
+        try:
+            yield
+        finally:
+            exit_calls.append("ch")
+
+    @asynccontextmanager
+    async def original_lifespan(app):
+        enter_calls.append("orig")
+        try:
+            yield
+        finally:
+            exit_calls.append("orig")
+
+    # Force AgentOS.get_app() to return an app whose router lifespan we control.
+    fake_app = MagicMock()
+    fake_app.router.lifespan_context = original_lifespan
+    mock_agno["agno.os"].AgentOS.return_value.get_app.return_value = fake_app
+
+    channels.register(_fake_channel("dc", lifespan_cm=fake_channel_lifespan()))
+    app, _ = ChannelLoader(MagicMock()).build_app()
+
+    async with app.router.lifespan_context(app):
+        pass
+
+    assert enter_calls == ["ch", "orig"]
+    assert exit_calls == ["orig", "ch"]
+
+
+@pytest.mark.asyncio
+async def test_build_app_does_not_wrap_lifespan_when_no_channel_provides_one(mock_agno):
+    from contextlib import asynccontextmanager
+    from wasp.clients import channels
+    from wasp.clients.channels import ChannelLoader
+
+    @asynccontextmanager
+    async def original_lifespan(app):
+        yield
+
+    fake_app = MagicMock()
+    fake_app.router.lifespan_context = original_lifespan
+    mock_agno["agno.os"].AgentOS.return_value.get_app.return_value = fake_app
+
+    channels.register(_fake_channel("tg", lifespan_cm=None))
+    app, _ = ChannelLoader(MagicMock()).build_app()
+
+    assert app.router.lifespan_context is original_lifespan
+
+
+@pytest.mark.asyncio
+async def test_build_app_chains_multiple_channel_lifespans(mock_agno):
+    from contextlib import asynccontextmanager
+    from wasp.clients import channels
+    from wasp.clients.channels import ChannelLoader
+
+    enter_calls: list[str] = []
+    exit_calls: list[str] = []
+
+    def make_cm(label):
+        @asynccontextmanager
+        async def cm():
+            enter_calls.append(label)
+            try:
+                yield
+            finally:
+                exit_calls.append(label)
+        return cm()
+
+    @asynccontextmanager
+    async def original_lifespan(app):
+        enter_calls.append("orig")
+        try:
+            yield
+        finally:
+            exit_calls.append("orig")
+
+    fake_app = MagicMock()
+    fake_app.router.lifespan_context = original_lifespan
+    mock_agno["agno.os"].AgentOS.return_value.get_app.return_value = fake_app
+
+    channels.register(_fake_channel("a", lifespan_cm=make_cm("a")))
+    channels.register(_fake_channel("b", lifespan_cm=make_cm("b")))
+    app, _ = ChannelLoader(MagicMock()).build_app()
+
+    async with app.router.lifespan_context(app):
+        pass
+
+    # Both channel CMs must enter before the original and exit after it.
+    assert enter_calls[-1] == "orig"
+    assert exit_calls[0] == "orig"
+    assert set(enter_calls[:-1]) == {"a", "b"}
+    assert set(exit_calls[1:]) == {"a", "b"}

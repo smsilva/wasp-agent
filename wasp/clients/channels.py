@@ -8,6 +8,7 @@ to keep the registry deterministic; see ``tests/conftest.py``.
 """
 from __future__ import annotations
 
+from contextlib import AsyncExitStack, asynccontextmanager
 from typing import TYPE_CHECKING, AsyncContextManager, Iterable, Protocol
 
 if TYPE_CHECKING:
@@ -61,4 +62,19 @@ class ChannelLoader:
         agent_os = AgentOS(agents=[self._agent], interfaces=interfaces)
         app = agent_os.get_app()
         telemetry.register_prometheus_route(app)
+
+        channel_cms = [cm for c in active if (cm := c.lifespan()) is not None]
+        if channel_cms:
+            original_lifespan = app.router.lifespan_context
+
+            @asynccontextmanager
+            async def composed_lifespan(app):
+                async with AsyncExitStack() as stack:
+                    for cm in channel_cms:
+                        await stack.enter_async_context(cm)
+                    async with original_lifespan(app):
+                        yield
+
+            app.router.lifespan_context = composed_lifespan
+
         return app, agent_os
