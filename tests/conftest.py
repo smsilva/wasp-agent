@@ -75,6 +75,10 @@ def mock_agno(monkeypatch, request):
         "wasp.watcher",
         "wasp.telemetry",
         "wasp.auth",
+        "wasp.auth.protocol",
+        "wasp.auth.sqlite_repository",
+        "wasp.auth._schema",
+        "wasp.auth._connection",
         "wasp.auth_cli",
         "wasp.auth_guard",
         "wasp.gitops_committer",
@@ -125,6 +129,11 @@ def mock_agno(monkeypatch, request):
     _channels_setup = sys.modules.get("wasp.clients.channels")
     if _channels_setup is not None:
         _channels_setup.reset()
+    # Auth repository singleton survives sys.modules.pop because test modules
+    # hold a reference to the wasp.auth module object. Reset explicitly.
+    _auth_setup = sys.modules.get("wasp.auth")
+    if _auth_setup is not None:
+        _auth_setup._reset_repository()
     yield mocks
 
     # Grab the live module object before evicting it so the reset call below
@@ -155,6 +164,10 @@ def mock_agno(monkeypatch, request):
         "wasp.watcher",
         "wasp.telemetry",
         "wasp.auth",
+        "wasp.auth.protocol",
+        "wasp.auth.sqlite_repository",
+        "wasp.auth._schema",
+        "wasp.auth._connection",
         "wasp.auth_cli",
         "wasp.auth_guard",
         "wasp.gitops_committer",
@@ -170,3 +183,6 @@ def mock_agno(monkeypatch, request):
 
     if _channels_teardown is not None:
         _channels_teardown.reset()
+    _auth_teardown = sys.modules.get("wasp.auth")
+    if _auth_teardown is not None:
+        _auth_teardown._reset_repository()

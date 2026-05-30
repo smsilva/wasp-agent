@@ -129,9 +129,22 @@ System prompt must include explicit anti-pattern instructions:
 
 `chat_id_var` is a `ContextVar` in `wasp/logging.py`. `threading.Thread` does **not** inherit ContextVar — each thread starts with empty context. `watch_platform` explicitly calls `chat_id_var.set(chat_id)` at the start. Any future code running in a new thread that needs `chat_id` must do the same.
 
-### SQLite atomic check-then-write (`wasp/auth.py`)
+### SQLite atomic check-then-write (`wasp/auth/sqlite_repository.py`)
 
 Check-then-write operations call `con.execute("BEGIN IMMEDIATE")` before the first SELECT to acquire the write lock immediately. The subsequent `with con:` commits (success) or rolls back (exception). Early `return None` before `with con:` triggers a rollback of an empty transaction — no side effects.
+
+### Repository pattern via Protocol (data access)
+
+Quando um módulo de acesso a dados crescer ou misturar responsabilidades, considerar extrair para pacote `wasp/<dominio>/` com:
+
+- `protocol.py` — interface via `Protocol` (PEP 544), structural typing
+- `<backend>_repository.py` — implementação (ex: `sqlite_repository.py`)
+- `_schema.py`, `_connection.py` — módulos privados de infraestrutura
+- `__init__.py` — Protocol + `get_repository()` (singleton por env) + shims funcionais preservando call sites antigos
+
+Só aplicar quando há motivação real (ex: migração futura SQLite → Postgres). Sem segundo backend planejado, funções de módulo bastam — Repository sem propósito vira cargo cult de Java.
+
+Exemplo de referência: `wasp/auth/` (refactor 2026-05-30, ver `docs/sdlc/02-design/2026-05-30-auth-repository.md`).
 
 ## Security
 

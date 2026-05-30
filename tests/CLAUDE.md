@@ -4,7 +4,9 @@
 
 `tests/conftest.py` mocks `agno.models` as `MagicMock`. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell, `configure()` calls `AgnoInstrumentor` which imports `agno.models.base.Model` and fails against the mock — the fixture delenvs it; don't remove that line.
 
-The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures.
+The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures. Para pacotes (ex: `wasp/auth/`), incluir o pacote E todos os submódulos (`wasp.auth`, `wasp.auth.protocol`, `wasp.auth.sqlite_repository`, etc.).
+
+Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`) precisam de `_reset_repository()` no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados.
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time.
 
@@ -22,4 +24,4 @@ monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recordi
 
 Patching only `TelegramNotifier` doesn't work: `WASP_AGENT_NOTIFIER=console` in `.env` is loaded at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`.
 
-Also monkeypatch `wasp.auth.is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404.
+Also monkeypatch `wasp.auth.is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404. O shim funcional em `wasp/auth/__init__.py` preserva esse monkeypatch — patcheie no shim, não em `SqliteAuthRepository`.

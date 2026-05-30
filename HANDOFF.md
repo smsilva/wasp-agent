@@ -2,62 +2,67 @@
 
 ## Why
 
-Pedido "checklist de production readiness" foi respondido ad-hoc apesar de existir `docs/references/project-scaffolding-checklist.md` cobrindo o mesmo terreno — agente esqueceu da doc. Causa: nome sugeria só scaffolding e não havia entrada em `CLAUDE.md` apontando para ele.
+Reorganizar `wasp/auth.py` (310 linhas, 4 responsabilidades misturadas) em pacote `wasp/auth/` com Repository Protocol + implementação SQLite + shims funcionais. Motivação registrada pelo usuário: migração futura para Postgres em ambientes gerenciados de cloud. Repository com Protocol passa a ter propósito real, não cargo cult de Java.
 
-Solução desta sessão:
+Alternativas rejeitadas:
 
-- Renomeado `docs/references/project-scaffolding-checklist.md` → `docs/references/production-readiness-checklist.md` (git mv preserva histórico).
-- Reescrita a intro do checklist cobrindo dois usos: scaffolding inicial + PRR pré-deploy.
-- Importado vocabulário **gate/score** e níveis **Bronze/Prata/Ouro** do `good-citizen-test.md`.
-- Nova seção 12 "Canais de entrada (multi-channel)" — gap detectado no rascunho ad-hoc.
-- Seção "Uso por agente" agora descreve fluxos separados de scaffolding e PRR.
-- `CLAUDE.md`: nova seção `## Production readiness` com regra de discoverability + entrada em `## External references`.
-- `~/Downloads/good-citizen-test.md` copiado para `docs/sdlc/02-design/2026-05-30-good-citizen-test.md` (é spec de feature `waspctl good-citizen`, não referência viva).
+- Splits granulares (`UsersRepository` + `InvitesRepository`) — deixaria órfãs as operações transacionais cross-table (`redeem_invite`, `bootstrap_admin`).
+- Funções de módulo agrupadas por arquivo sem Protocol — não prepara para segundo backend.
+- Apenas extrair `_db.py` interno — não resolve organização a médio prazo.
 
-Alternativa rejeitada: manter o nome `project-scaffolding-checklist.md`. Descartado porque o documento é usado também em PRR pré-deploy, não só greenfield.
+Spec aprovado: `docs/sdlc/02-design/2026-05-30-auth-repository.md`.
 
 ## In Progress
 
-Sessão pediu commit ao final via `/commit`. Mudanças staged/unstaged:
+Refactor implementado e validado. Working tree tem alterações não-commitadas, aguardando `/commit`:
 
-- `renamed: docs/references/project-scaffolding-checklist.md -> docs/references/production-readiness-checklist.md` (staged pelo `git mv`)
-- `modified: CLAUDE.md` (unstaged)
-- `modified: docs/references/production-readiness-checklist.md` (unstaged)
-- `untracked: docs/sdlc/02-design/2026-05-30-good-citizen-test.md`
+- Pacote `wasp/auth/` criado (`__init__.py`, `protocol.py`, `sqlite_repository.py`, `_schema.py`, `_connection.py`).
+- `wasp/auth.py` deletado.
+- `tests/conftest.py` modificado (sys.modules + `_reset_repository()`).
+- `tests/test_auth_repository.py` criado.
+- `CLAUDE.md` (raiz): nova seção "Repository pattern via Protocol", título da seção SQLite ajustado.
+- `tests/CLAUDE.md`: notas sobre sys.modules.pop em pacotes + singleton + monkeypatch via shim.
+- `docs/sdlc/02-design/2026-05-30-auth-repository.md` criado.
 
-Próximo passo: dois commits separados conforme proposto ao usuário:
-
-1. `docs(refs): rename to production-readiness-checklist and add PRR usage` — inclui o rename, edição no checklist e a entrada nova em `CLAUDE.md`.
-2. `docs(sdlc): add good-citizen-test design spec` — só o arquivo novo em `sdlc/02-design/`.
+Próximo passo: rodar `make e2e-with-debug` antes do merge para `main` (CLAUDE.md exige).
 
 ## Open Questions / Hypotheses
 
-- O slug `2026-05-30-good-citizen-test.md` segue a convenção do `CLAUDE.md` ("mesmo slug para o par design+execução"). Quando o plano de execução for escrito, usar o mesmo slug em `docs/sdlc/03-execution/`.
-- Implementar `waspctl good-citizen run` requer decisão sobre onde mora `waspctl` — hoje não existe CLI separado do `wasp-agent`. Pode entrar como subcomando do CLI atual (`auth_cli.py` é o único hoje) ou como projeto irmão.
+- Shim `_repo(None)` instancia `SqliteAuthRepository()` nova por chamada em vez de usar o singleton de `get_repository()`. Desvio do spec §6 feito pelo agente para não quebrar `test_init_db_without_args_uses_env_var` e testes de `auth_cli` que trocam `WASP_AGENT_DB_FILE` por teste. Custo é desprezível (`init_schema` idempotente), mas o singleton fica subutilizado pelos shims. Decidir se mantém ou força singleton estrito com fixture de reset.
+- `WASP_AGENT_DB_BACKEND` documentado no spec mas ainda não adicionado a `docs/runbooks/auth-admin.md`.
 
 ## Known Broken
 
-Nada. Mudanças são puramente documentais — nenhum código tocado, validações originais do branch `dev` continuam válidas (290 testes unit + 1 e2e, 100% cov, ruff clean).
+Nada. `make format`, `ruff check`, `make test` passam (317 passed, 1 skipped, 100% coverage). `make e2e-with-debug` **não foi executado** — *intentional*, agente não rodou por ser caro; rodar localmente antes de mergear.
 
 ## How to Resume
 
 ```bash
-cd /home/silvios/git/wasp-agent && git status
+cd /home/silvios/git/wasp-agent && git status && ls wasp/auth/
 ```
 
-Esperado: rename staged + 2 modificados + 1 untracked listados em "In Progress".
+Esperado: arquivos modificados + pacote `wasp/auth/` com 5 arquivos.
 
 ## Next Steps
 
-1. Revisar diff final dos dois arquivos editados:
-   - `git diff CLAUDE.md`
-   - `git diff docs/references/production-readiness-checklist.md`
-2. Stage seletivo e commit 1: `git add CLAUDE.md docs/references/production-readiness-checklist.md` (rename já staged) + mensagem `docs(refs): rename to production-readiness-checklist and add PRR usage`.
-3. Stage e commit 2: `git add docs/sdlc/02-design/2026-05-30-good-citizen-test.md` + mensagem `docs(sdlc): add good-citizen-test design spec`.
-4. Depois retomar os Next Steps do handoff anterior: merge `dev` → `main` e escolher próxima feature (discord slash commands / LLM behavior eval / OTel tracing).
+1. Rodar `make e2e-with-debug` para validar integração real.
+2. Decidir sobre o desvio do `_repo(None)` (singleton estrito vs. instância descartável).
+3. Adicionar `WASP_AGENT_DB_BACKEND` em `docs/runbooks/auth-admin.md`.
+4. Atualizar Status do spec `2026-05-30-auth-repository.md` para `Implemented` após merge.
 
-## Carry-over do handoff anterior
+## Backlog (carry-over)
 
-Backlog, Idea-stage explorations e Next Steps do handoff anterior continuam válidos — não duplicar aqui. Recuperar com `git show HEAD:HANDOFF.md` antes do commit desta sessão.
+- **Discord slash commands** (`docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
+- **Handler de convite via DM no Discord** — hoje novos usuários Discord exigem `make admin-link` pelo operador; implementar redeem de token por DM elimina essa fricção (ver `wasp/clients/telegram/webhook.py` como referência)
+- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
+- **Próximo CRD: `Cluster`** — seguir padrão: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + `@tool` em `wasp/provision.py`
+- **Mover `extract_channel`/`extract_chat_id` para módulo folha** — hoje vivem em `watcher.py` mas são importados por `resources/platform/`; quando um terceiro CRD chegar, mover para ex: `wasp/session.py`
+- **Status check manual** — tool para consultar estado de uma Platform sem depender do watcher
+- **Operações além de criar** — update, delete, status individual de tenant
+- **Authorization granular (RBAC)** — papéis (admin, operator, viewer)
+- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`
+- **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup
+- **PostgresAuthRepository** — implementar `wasp/auth/postgres_repository.py` quando migração for priorizada (Protocol já está pronto)
+- **`waspctl good-citizen`** — `docs/sdlc/02-design/2026-05-30-good-citizen-test.md` precisa de plano de execução
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
