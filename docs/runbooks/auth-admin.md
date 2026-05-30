@@ -106,6 +106,18 @@ O canal `local` **não** passa por allowlist — é tratado como "operador confi
 
 Se for necessário expor `local-chat` por rede, ver spec futuro `docs/sdlc/02-design/2026-05-21-cli-device-flow-oauth.md`.
 
+## Configuração de backend
+
+O acesso a dados de auth é abstraído via `AuthRepository` (Protocol em `wasp/auth/protocol.py`). Backend selecionado por env var:
+
+| Env var | Default | Valores | Efeito |
+|---------|---------|---------|--------|
+| `WASP_AGENT_DB_BACKEND` | `sqlite` | `sqlite` | Usa `SqliteAuthRepository` apontando para `WASP_AGENT_DB_FILE` (default `agent.db`). Outros valores levantam `ValueError`. |
+| `WASP_AGENT_DB_FILE` | `agent.db` | path | Arquivo SQLite. Ignorado se o backend não for `sqlite`. |
+| `WASP_AGENT_INVITE_TTL_HOURS` | `1` | int | TTL do invite gerado por `make admin-invite`. |
+
+Implementações adicionais (ex: Postgres gerenciado) seguem o Protocol e são registradas em `wasp/auth/__init__.py::get_repository()`.
+
 ## Limitações conhecidas
 
 - **TTL 1h** (configurável). Se o link expirar antes do uso, admin emite um novo invite.

@@ -1,8 +1,10 @@
 # Reorganização de `wasp/auth.py` em pacote com Repository Protocol
 
-**Status:** Draft  
+**Status:** Implemented  
 **Data:** 2026-05-30  
 **Motivação:** organização — `wasp/auth.py` cresceu para 310 linhas misturando 4 responsabilidades (infraestrutura de DB, identidades, convites, bootstrap). Migração futura para Postgres justifica encapsulamento via Repository, evitando reescrita posterior dos call sites.
+
+> **Implementação:** commits `a2bdb2c` (refactor) e `7589733` (decisão sobre singleton). Desvio do §6: `_repo(None)` cria instância descartável em vez de usar `get_repository()` — tentativa de singleton estrito quebra `monkeypatch.setattr("wasp.auth.is_authorized", ...)` em testes que dependem do `sys.modules.pop` do `mock_agno`. `get_repository()` permanece disponível para callers explícitos (Postgres futuro). Documentado em `docs/runbooks/auth-admin.md::Configuração de backend`.
 
 ---
 
