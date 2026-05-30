@@ -49,10 +49,11 @@ def main(argv: list[str] | None = None) -> int:
     link.add_argument("--channel-id", required=True)
 
     args = parser.parse_args(argv)
+    repo = auth.get_repository()
 
     if args.cmd == "bootstrap":
         try:
-            user_id = auth.bootstrap_admin(args.name, args.channel, args.channel_id)
+            user_id = repo.bootstrap_admin(args.name, args.channel, args.channel_id)
         except RuntimeError as e:
             print(str(e), file=sys.stderr)
             return 1
@@ -61,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "link":
         try:
-            auth.link_identity(args.user_id, args.channel, args.channel_id)
+            repo.link_identity(args.user_id, args.channel, args.channel_id)
         except Exception as e:
             print(str(e), file=sys.stderr)
             return 1
@@ -69,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "invite":
-        token = auth.create_invite(
+        token = repo.create_invite(
             display_name=args.name,
             created_by=args.created_by,
             channel=args.channel,
@@ -78,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "revoke":
-        ok = auth.revoke(args.channel, args.channel_id)
+        ok = repo.revoke(args.channel, args.channel_id)
         if ok:
             print("revoked")
             return 0
@@ -86,7 +87,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # args.cmd == "list"
-    rows = auth.list_identities()
+    rows = repo.list_identities()
     if not rows:
         print("(no identities)")
         return 0

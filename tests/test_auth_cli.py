@@ -6,6 +6,9 @@ from wasp import auth, auth_cli
 @pytest.fixture(autouse=True)
 def _db_isolation(tmp_path, monkeypatch):
     monkeypatch.setenv("WASP_AGENT_DB_FILE", str(tmp_path / "agent.db"))
+    auth._reset_repository()
+    yield
+    auth._reset_repository()
 
 
 def test_invite_prints_token_returns_zero(capsys):
@@ -14,7 +17,7 @@ def test_invite_prints_token_returns_zero(capsys):
     out = capsys.readouterr().out.strip()
     assert out  # non-empty token
     # Token must be redeemable.
-    result = auth.redeem_invite(out, "tg", "111")
+    result = auth.get_repository().redeem_invite(out, "tg", "111")
     assert result is not None
     assert result[1] == "Alice"
 
@@ -26,8 +29,8 @@ def test_invite_with_channel(capsys):
     assert rc == 0
     token = capsys.readouterr().out.strip()
     # Bound to channel "tg" — redeem on "local" must fail.
-    assert auth.redeem_invite(token, "local", "1") is None
-    assert auth.redeem_invite(token, "tg", "222") is not None
+    assert auth.get_repository().redeem_invite(token, "local", "1") is None
+    assert auth.get_repository().redeem_invite(token, "tg", "222") is not None
 
 
 def test_revoke_not_found_returns_one(capsys):
@@ -38,13 +41,13 @@ def test_revoke_not_found_returns_one(capsys):
 
 
 def test_revoke_after_linking_returns_zero(capsys):
-    token = auth.create_invite(display_name="Carol", created_by="admin")
-    auth.redeem_invite(token, "tg", "333")
+    token = auth.get_repository().create_invite(display_name="Carol", created_by="admin")
+    auth.get_repository().redeem_invite(token, "tg", "333")
 
     rc = auth_cli.main(["revoke", "--channel", "tg", "--channel-id", "333"])
     assert rc == 0
     assert capsys.readouterr().out.strip() == "revoked"
-    assert auth.is_authorized("tg", "333") is None
+    assert auth.get_repository().is_authorized("tg", "333") is None
 
 
 def test_list_empty(capsys):
@@ -60,11 +63,11 @@ def test_bootstrap_creates_first_user(capsys):
     assert rc == 0
     user_id = capsys.readouterr().out.strip()
     assert user_id
-    assert auth.is_authorized("tg", "12345678") == user_id
+    assert auth.get_repository().is_authorized("tg", "12345678") == user_id
 
 
 def test_bootstrap_fails_when_db_not_empty(capsys):
-    auth.create_user("First")
+    auth.get_repository().create_user("First")
     rc = auth_cli.main(
         ["bootstrap", "--name", "Silvio", "--channel", "tg", "--channel-id", "12345678"]
     )
@@ -74,7 +77,7 @@ def test_bootstrap_fails_when_db_not_empty(capsys):
 
 
 def test_link_adds_identity_to_existing_user(capsys):
-    user_id = auth.create_user("Silvio")
+    user_id = auth.get_repository().create_user("Silvio")
     rc = auth_cli.main(
         [
             "link",
@@ -88,12 +91,12 @@ def test_link_adds_identity_to_existing_user(capsys):
     )
     assert rc == 0
     assert capsys.readouterr().out.strip() == "linked"
-    assert auth.is_authorized("dc", "708384119989600337") == user_id
+    assert auth.get_repository().is_authorized("dc", "708384119989600337") == user_id
 
 
 def test_link_fails_on_duplicate_identity(capsys):
-    user_id = auth.create_user("Silvio")
-    auth.link_identity(user_id, "dc", "111")
+    user_id = auth.get_repository().create_user("Silvio")
+    auth.get_repository().link_identity(user_id, "dc", "111")
     rc = auth_cli.main(
         ["link", "--user-id", user_id, "--channel", "dc", "--channel-id", "111"]
     )
@@ -101,8 +104,8 @@ def test_link_fails_on_duplicate_identity(capsys):
 
 
 def test_list_prints_table(capsys):
-    token = auth.create_invite(display_name="Dave", created_by="admin")
-    auth.redeem_invite(token, "tg", "444")
+    token = auth.get_repository().create_invite(display_name="Dave", created_by="admin")
+    auth.get_repository().redeem_invite(token, "tg", "444")
 
     rc = auth_cli.main(["list"])
     assert rc == 0
