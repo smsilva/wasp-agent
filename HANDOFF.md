@@ -2,63 +2,62 @@
 
 ## Why
 
-Channel-specific bootstrap was leaking across `main.py`, `wasp/clients/interfaces.py` e `wasp/watcher.py`. Cada novo canal (Telegram, Discord, Google Chat…) exigia editar três sítios.
+Pedido "checklist de production readiness" foi respondido ad-hoc apesar de existir `docs/references/project-scaffolding-checklist.md` cobrindo o mesmo terreno — agente esqueceu da doc. Causa: nome sugeria só scaffolding e não havia entrada em `CLAUDE.md` apontando para ele.
 
-Solução entregue (commits `29811b4`..`51b20ca` no branch `dev`):
+Solução desta sessão:
 
-- `wasp/clients/channels.py` — `Channel` Protocol + global registry (`register/get/iter_channels/reset`) + `ChannelLoader.build_app()` que compõe interfaces e lifespans via `AsyncExitStack`.
-- `wasp/clients/telegram/channel.py` — `TelegramChannel` (auto-registra no import do package).
-- `wasp/clients/discord/channel.py` — `DiscordChannel` (auto-registra; lifespan inline que sobe e fecha o bot).
-- `main.py::create_app()` reduzido a 3 linhas: `ChannelLoader(agent).build_app()`.
-- `wasp/watcher.py::_select_notifier` resolve via `channels.get(target).notifier()`.
-- `wasp/clients/interfaces.py` e o singleton `discord_pkg._notifier` deletados.
+- Renomeado `docs/references/project-scaffolding-checklist.md` → `docs/references/production-readiness-checklist.md` (git mv preserva histórico).
+- Reescrita a intro do checklist cobrindo dois usos: scaffolding inicial + PRR pré-deploy.
+- Importado vocabulário **gate/score** e níveis **Bronze/Prata/Ouro** do `good-citizen-test.md`.
+- Nova seção 12 "Canais de entrada (multi-channel)" — gap detectado no rascunho ad-hoc.
+- Seção "Uso por agente" agora descreve fluxos separados de scaffolding e PRR.
+- `CLAUDE.md`: nova seção `## Production readiness` com regra de discoverability + entrada em `## External references`.
+- `~/Downloads/good-citizen-test.md` copiado para `docs/sdlc/02-design/2026-05-30-good-citizen-test.md` (é spec de feature `waspctl good-citizen`, não referência viva).
 
-Adicionar Google Chat agora: criar `wasp/clients/google_chat/{__init__.py, channel.py}` + uma linha `import wasp.clients.google_chat` em `main.py`. Zero edições centrais.
+Alternativa rejeitada: manter o nome `project-scaffolding-checklist.md`. Descartado porque o documento é usado também em PRR pré-deploy, não só greenfield.
 
-**Validação:** 290 testes unit + 1 e2e, 100% cov, ruff clean.
+## In Progress
 
-## Implementados (aguardando marcação após merge)
+Sessão pediu commit ao final via `/commit`. Mudanças staged/unstaged:
 
-- `docs/sdlc/02-design/archived/2026-05-28-channel-loader-design.md`
-- `docs/sdlc/03-execution/archived/2026-05-28-channel-loader.md`
-- `docs/sdlc/02-design/archived/2026-05-27-discord-bot-design.md`
-- `docs/sdlc/03-execution/archived/2026-05-27-discord-bot-plan.md`
-- `docs/sdlc/02-design/archived/2026-05-26-resources-package-design.md`
-- `docs/sdlc/02-design/archived/2026-05-26-interface-loader-design.md`
+- `renamed: docs/references/project-scaffolding-checklist.md -> docs/references/production-readiness-checklist.md` (staged pelo `git mv`)
+- `modified: CLAUDE.md` (unstaged)
+- `modified: docs/references/production-readiness-checklist.md` (unstaged)
+- `untracked: docs/sdlc/02-design/2026-05-30-good-citizen-test.md`
 
-## Next Steps
+Próximo passo: dois commits separados conforme proposto ao usuário:
 
-1. **Merge `dev` → `main`.**
-2. **Escolher próxima feature** — sugestões em ordem de valor:
-   - `01-exploration/2026-05-27-discord-slash-commands.md` — ergonomia para usuários Discord
-   - `01-exploration/2026-05-20-llm-behavior-evaluation.md` — previne regressões silenciosas no system prompt
-   - `01-exploration/2026-05-26-opentelemetry-tracing.md` — observabilidade end-to-end
+1. `docs(refs): rename to production-readiness-checklist and add PRR usage` — inclui o rename, edição no checklist e a entrada nova em `CLAUDE.md`.
+2. `docs(sdlc): add good-citizen-test design spec` — só o arquivo novo em `sdlc/02-design/`.
 
-## Backlog (carry-over)
+## Open Questions / Hypotheses
 
-- **Discord slash commands** (`01-exploration/2026-05-27-discord-slash-commands.md`) — `/provision`, `/list`, `/status` como alternativa à linguagem natural
-- **Handler de convite via DM no Discord** — hoje novos usuários Discord exigem `make admin-link` pelo operador; implementar redeem de token por DM elimina essa fricção (ver `wasp/clients/telegram/webhook.py` como referência)
-- **Restart resilience do watcher** (`02-design/2026-05-16-platform-watcher-restart-resilience.md`) — persistir `platform_watches` em SQLite; restart do servidor cancela watchers em curso
-- **Próximo CRD: `Cluster`** — seguir padrão: `wasp/resources/cluster/{manifest,provisioner,inventory}.py` + `@tool` em `wasp/provision.py`
-- **Mover `extract_channel`/`extract_chat_id` para módulo folha** — hoje vivem em `watcher.py` mas são importados por `resources/platform/`; quando um terceiro CRD chegar, mover para ex.: `wasp/session.py`
-- **Status check manual** — tool para consultar estado de uma Platform sem depender do watcher
-- **Operações além de criar** — update, delete, status individual de tenant
-- **Authorization granular (RBAC)** — papéis (admin, operator, viewer)
-- **Testcontainers** — avaliar substituir setup manual de k3d/Gitea nos E2E por `testcontainers-python`
-- **Falha clara em configuração ausente** — validar variáveis obrigatórias no startup
+- O slug `2026-05-30-good-citizen-test.md` segue a convenção do `CLAUDE.md` ("mesmo slug para o par design+execução"). Quando o plano de execução for escrito, usar o mesmo slug em `docs/sdlc/03-execution/`.
+- Implementar `waspctl good-citizen run` requer decisão sobre onde mora `waspctl` — hoje não existe CLI separado do `wasp-agent`. Pode entrar como subcomando do CLI atual (`auth_cli.py` é o único hoje) ou como projeto irmão.
 
 ## Known Broken
 
-Nada. Branch `dev` passa em `make test` (290 testes, 100% cov), `make e2e-with-debug`, `ruff check .`.
+Nada. Mudanças são puramente documentais — nenhum código tocado, validações originais do branch `dev` continuam válidas (290 testes unit + 1 e2e, 100% cov, ruff clean).
 
-## Idea-stage explorations
+## How to Resume
 
-- `01-exploration/2026-05-27-discord-slash-commands.md`
-- `01-exploration/2026-05-26-opentelemetry-tracing.md`
-- `01-exploration/2026-05-20-llm-behavior-evaluation.md`
-- `01-exploration/2026-05-20-token-cost-budget.md`
-- `01-exploration/2026-05-21-cli-device-flow-oauth.md`
-- `01-exploration/2026-05-21-auth-cognito-federation.md`
-- 14 explorações de 2026-05-26 em `01-exploration/`: helm-chart, dora-metrics, rate-limiting, prompt-versioning, load-testing, sbom, supply-chain-security, secret-rotation, code-quality-security-scanning, penetration-test, eu-ai-act, privacy-data-retention, disaster-recovery, incident-response
+```bash
+cd /home/silvios/git/wasp-agent && git status
+```
+
+Esperado: rename staged + 2 modificados + 1 untracked listados em "In Progress".
+
+## Next Steps
+
+1. Revisar diff final dos dois arquivos editados:
+   - `git diff CLAUDE.md`
+   - `git diff docs/references/production-readiness-checklist.md`
+2. Stage seletivo e commit 1: `git add CLAUDE.md docs/references/production-readiness-checklist.md` (rename já staged) + mensagem `docs(refs): rename to production-readiness-checklist and add PRR usage`.
+3. Stage e commit 2: `git add docs/sdlc/02-design/2026-05-30-good-citizen-test.md` + mensagem `docs(sdlc): add good-citizen-test design spec`.
+4. Depois retomar os Next Steps do handoff anterior: merge `dev` → `main` e escolher próxima feature (discord slash commands / LLM behavior eval / OTel tracing).
+
+## Carry-over do handoff anterior
+
+Backlog, Idea-stage explorations e Next Steps do handoff anterior continuam válidos — não duplicar aqui. Recuperar com `git show HEAD:HANDOFF.md` antes do commit desta sessão.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.

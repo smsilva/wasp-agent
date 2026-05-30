@@ -139,9 +139,14 @@ Check-then-write operations call `con.execute("BEGIN IMMEDIATE")` before the fir
 - Active issues: `docs/security/issues/SEC-NNN-<slug>.md`. When resolved, move to `archived/`.
 - Before reporting a security finding, check open issues for duplicates.
 
+## Production readiness
+
+Para pedidos como "checklist de production readiness", "está pronto pra produção?", "review de readiness" ou "scaffolding de projeto novo" — consultar `docs/references/production-readiness-checklist.md` antes de responder ad-hoc. O documento é o superconjunto vivo das verificações; respostas a esses pedidos devem citá-lo e filtrar a parte relevante.
+
 ## External references
 
 - agno: `docs/references/agno.md`
+- Production readiness / scaffolding checklist: `docs/references/production-readiness-checklist.md`
 - Platform provisioning: `docs/architecture/platform-provisioning.md`
 - Async watcher: `docs/architecture/async-watcher.md`
 - Tests gotchas: `tests/CLAUDE.md`

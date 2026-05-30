@@ -1,8 +1,21 @@
-# Project Scaffolding Checklist
+# Production Readiness Checklist
 
-Checklist para uso por um agente ao iniciar um novo projeto de software — especialmente projetos com componentes LLM, APIs, e deploy em Kubernetes. Derivado do corpo de conhecimento acumulado no `wasp-agent`.
+Checklist vivo para dois usos:
 
-Cada item indica a área, o que verificar/decidir/implementar, e uma referência ao spec de origem quando aplicável.
+1. **Scaffolding de projeto novo** — agente percorre as seções 1–2 integralmente e identifica as demais conforme o tipo de projeto.
+2. **Production Readiness Review (PRR)** — antes de cada deploy/merge significativo, percorrer o checklist e filtrar a parte relevante ao escopo da mudança.
+
+Derivado do corpo de conhecimento acumulado no `wasp-agent`. Cada item indica a área, o que verificar/decidir/implementar, e uma referência ao spec de origem quando aplicável.
+
+## Classificação de itens
+
+Vocabulário importado do `docs/sdlc/02-design/2026-05-30-good-citizen-test.md` (spec da automação dessa verificação):
+
+- **gate** — bloqueia o deploy/merge se falhar, salvo exceção registrada e dentro do TTL.
+- **score** — soma para nível de maturidade; não bloqueia, mas atrasa promoção a tiers superiores.
+- Níveis: **Bronze** (gates ok), **Prata** (gates + resiliência/observabilidade), **Ouro** (apto a workloads tier-1).
+
+Quando um item não puder ser cumprido, registrar exceção com TTL em `exceptions.yaml` no GitOps em vez de marcar `N/A` silenciosamente.
 
 ---
 
@@ -184,7 +197,19 @@ Cada item indica a área, o que verificar/decidir/implementar, e uma referência
 
 ---
 
-## 12. Runbooks mínimos
+## 12. Canais de entrada (multi-channel)
+
+Para projetos com mais de um canal de entrada (Telegram, Discord, Slack, webhook genérico), validar **cada canal individualmente** antes do deploy — gates em cluster não cobrem isso.
+
+- [ ] Webhook/bot registrado no endpoint correto do ambiente alvo (gate).
+- [ ] Token/segredo do canal válido e dentro do prazo de expiração (gate).
+- [ ] Mensagem de teste fim-a-fim: input → auth → agent → notifier → resposta (gate).
+- [ ] Fallback `local` (ou equivalente sem dependência externa) testado para diagnóstico (score).
+- [ ] Comportamento sob token revogado/inválido: erro logado sem crash do processo (score).
+
+---
+
+## 13. Runbooks mínimos
 
 - [ ] `docs/runbooks/validation.md` — índice de todos os caminhos de validação.
 - [ ] Setup local (dependências, variáveis de ambiente, primeiro run).
@@ -196,10 +221,18 @@ Cada item indica a área, o que verificar/decidir/implementar, e uma referência
 
 ## Uso por agente
 
-Ao iniciar scaffolding de projeto novo:
+**Scaffolding de projeto novo:**
 
 1. Percorrer seções 1–2 integralmente — são pré-requisitos para tudo mais.
-2. Identificar quais seções são relevantes para o tipo de projeto (LLM? API pública? Kubernetes?).
+2. Identificar quais seções são relevantes para o tipo de projeto (LLM? API pública? Kubernetes? multi-channel?).
 3. Criar um spec em `docs/sdlc/02-design/` para cada item marcado como "a decidir" antes de implementar.
 4. Marcar itens como `N/A` com justificativa quando explicitamente fora de escopo — não silenciosamente ignorar.
 5. Rever o checklist ao final de cada milestone para itens novos que se tornaram relevantes.
+
+**Production Readiness Review (pedido tipo "está pronto pra prod?", "checklist de readiness"):**
+
+1. Identificar o escopo da mudança (deploy de feature nova? release pontual? migração de infra?).
+2. Filtrar as seções relevantes — não despejar o documento inteiro.
+3. Reportar gates obrigatórios separados dos itens de score (mostrar o nível alvo vs. atingido).
+4. Para itens não cumpridos, sugerir registrar exceção com TTL em `exceptions.yaml` em vez de simplesmente listar como pendente.
+5. Se houver `2026-05-30-good-citizen-test.md` implementado, preferir executar `waspctl good-citizen run` em vez de checklist manual.
