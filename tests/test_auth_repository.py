@@ -159,6 +159,52 @@ def test_bootstrap_fails_when_db_not_empty(repo):
         repo.bootstrap_admin("Silvio", "tg", "12345678")
 
 
+def test_create_user_persists_display_name_in_sqlite(repo):
+    user_id = repo.create_user("Alice")
+    con = sqlite3.connect(repo._db_file)
+    try:
+        row = con.execute(
+            "SELECT display_name FROM auth_users WHERE user_id=?", (user_id,)
+        ).fetchone()
+        assert row is not None
+        assert row[0] == "Alice"
+    finally:
+        con.close()
+
+
+def test_create_invite_default_ttl_is_one_hour(repo, monkeypatch):
+    monkeypatch.delenv("WASP_AGENT_INVITE_TTL_HOURS", raising=False)
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin)
+    con = sqlite3.connect(repo._db_file)
+    try:
+        row = con.execute(
+            "SELECT created_at, expires_at FROM auth_invites WHERE token=?",
+            (token,),
+        ).fetchone()
+    finally:
+        con.close()
+    created = datetime.fromisoformat(row[0])
+    expires = datetime.fromisoformat(row[1])
+    assert expires - created == timedelta(hours=1)
+
+
+def test_init_schema_no_args_uses_env_var(tmp_path, monkeypatch):
+    target = str(tmp_path / "init_env.db")
+    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
+    SqliteAuthRepository().init_schema()
+    con = sqlite3.connect(target)
+    try:
+        names = {row[0] for row in con.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()}
+    finally:
+        con.close()
+    assert "auth_users" in names
+    assert "auth_identities" in names
+    assert "auth_invites" in names
+
+
 def test_create_invite_uses_env_ttl(repo, monkeypatch):
     monkeypatch.setenv("WASP_AGENT_INVITE_TTL_HOURS", "5")
     admin = repo.create_user("Admin")
@@ -243,3 +289,22 @@ def test_shim_resolves_env_per_call(monkeypatch, tmp_path):
     assert auth.is_authorized("tg", "x") is None
     auth.link_identity(user_id, "tg", "x")
     assert auth.is_authorized("tg", "x") == user_id
+
+
+def test_shim_covers_remaining_functions(monkeypatch, tmp_path):
+    """Covers shim wrappers for init_db, create_invite, redeem_invite, revoke,
+    list_identities, has_any_user, and bootstrap_admin."""
+    target = str(tmp_path / "shim_full.db")
+    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
+    from wasp import auth
+
+    auth.init_db()
+    assert auth.has_any_user() is False
+    admin_id = auth.bootstrap_admin("Admin", "tg", "9999")
+    assert auth.has_any_user() is True
+    token = auth.create_invite("Bob", created_by=admin_id)
+    result = auth.redeem_invite(token, "tg", "1234")
+    assert result is not None
+    rows = auth.list_identities()
+    assert any(r["channel_id"] == "9999" for r in rows)
+    assert auth.revoke("tg", "1234") is True
