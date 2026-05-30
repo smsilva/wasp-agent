@@ -14,7 +14,7 @@ def build_model():
         from agno.models.anthropic import Claude
 
         return Claude(
-            id=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929"),
+            id=os.getenv("ANTHROPIC_MODEL", "anthropic.claude-4-6-sonnet"),
             auth_token=os.getenv("ANTHROPIC_AUTH_TOKEN"),
         )
     if provider == "openai":
