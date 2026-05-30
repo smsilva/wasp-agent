@@ -281,3 +281,13 @@ def test_get_repository_unknown_backend_raises_value_error(monkeypatch):
     with pytest.raises(ValueError, match="unsupported backend"):
         auth.get_repository()
     auth._reset_repository()
+
+
+def test_get_repository_postgres_raises_not_implemented(monkeypatch):
+    monkeypatch.setenv("DATABASE_BACKEND", "postgres")
+    from wasp import auth
+
+    auth._reset_repository()
+    with pytest.raises(NotImplementedError, match="Postgres backend not yet implemented"):
+        auth.get_repository()
+    auth._reset_repository()

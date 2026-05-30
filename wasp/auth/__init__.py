@@ -14,6 +14,16 @@ def get_repository() -> AuthRepository:
         backend = os.getenv("DATABASE_BACKEND", "sqlite")
         if backend == "sqlite":
             _repository = SqliteAuthRepository()
+        elif backend == "postgres":
+            try:
+                from wasp.auth.postgres_repository import PostgresAuthRepository
+            except ImportError as e:
+                raise NotImplementedError(
+                    "Postgres backend not yet implemented "
+                    "(wasp/auth/postgres_repository.py missing). "
+                    "See docs/sdlc/02-design/2026-05-30-postgres-readiness.md"
+                ) from e
+            _repository = PostgresAuthRepository()  # pragma: no cover
         else:
             raise ValueError(f"unsupported backend: {backend}")
     return _repository

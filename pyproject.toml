@@ -44,4 +44,5 @@ fail_under = 100
 exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
+    "# pragma: no cover",
 ]
