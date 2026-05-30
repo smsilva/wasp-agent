@@ -5,7 +5,7 @@ Checklist vivo para dois usos:
 1. **Scaffolding de projeto novo** — agente percorre as seções 1–2 integralmente e identifica as demais conforme o tipo de projeto.
 2. **Production Readiness Review (PRR)** — antes de cada deploy/merge significativo, percorrer o checklist e filtrar a parte relevante ao escopo da mudança.
 
-Derivado do corpo de conhecimento acumulado no `wasp-agent`. Cada item indica a área, o que verificar/decidir/implementar, e uma referência ao spec de origem quando aplicável.
+Derivado do corpo de conhecimento acumulado no `wasp-agent` e incorpora [Kubernetes Production Best Practices](https://learnkube.com/production-best-practices). Cada item indica a área, o que verificar/decidir/implementar, e uma referência ao spec de origem quando aplicável.
 
 ## Classificação de itens
 
@@ -94,6 +94,13 @@ Quando um item não puder ser cumprido, registrar exceção com TTL em `exceptio
 - [ ] `debug=False` em FastAPI (ou equivalente) antes de qualquer deploy externo.
 - [ ] Ref: `2026-05-26-penetration-test.md`
 
+### Kubernetes security
+- [ ] ServiceAccount dedicada por workload; `automountServiceAccountToken: false` por padrão.
+- [ ] Pod Security Standards: namespace anotado com `restricted` ou `baseline` via Pod Security Admission.
+- [ ] Workload Identity (IRSA, GCP WI, Azure Entra) em vez de credenciais fixas em Secret.
+- [ ] Admission controller (Kyverno ou ValidatingAdmissionPolicy) para enforcement de políticas de deployment.
+- [ ] Ref: [learnkube.com/production-best-practices](https://learnkube.com/production-best-practices)
+
 ---
 
 ## 5. Observabilidade
@@ -117,6 +124,8 @@ Quando um item não puder ser cumprido, registrar exceção com TTL em `exceptio
 - [ ] `Dockerfile` com imagem mínima (distroless ou alpine), usuário não-root, `readOnlyRootFilesystem`.
 - [ ] `.dockerignore` excluindo `.env`, `__pycache__`, arquivos de teste.
 - [ ] Imagem versionada por tag imutável (`appVersion`) — nunca `latest` em produção.
+- [ ] Container stateless: nenhum dado permanente em disco local — usar PersistentVolume ou store externo.
+- [ ] Reconexão explícita implementada para conexões longas (gRPC, WebSocket, HTTP/2).
 
 ### Helm chart (se Kubernetes)
 - [ ] `Chart.yaml` com `appVersion` sincronizado com a versão da imagem.
@@ -126,7 +135,16 @@ Quando um item não puder ser cumprido, registrar exceção com TTL em `exceptio
 - [ ] `securityContext` no Deployment: `runAsNonRoot`, `readOnlyRootFilesystem`, `allowPrivilegeEscalation: false`.
 - [ ] `ServiceMonitor` opcional para Prometheus Operator.
 - [ ] `NOTES.txt` com requisitos pós-install (TLS para webhook, namespace, etc.).
-- [ ] Ref: `2026-05-26-helm-chart.md`
+- [ ] Graceful shutdown: handler de SIGTERM + `terminationGracePeriodSeconds` alinhado ao draining.
+- [ ] Startup, readiness e liveness probes definidas com timing explícito (não usar defaults do Kubernetes).
+- [ ] `resources.requests` (CPU + memória) em todo container — base em dados de uso real.
+- [ ] `resources.limits` de memória definido; usar `ephemeral-storage` em containers com escrita local.
+- [ ] Rolling update: `maxUnavailable`, `maxSurge` e `minReadySeconds` explícitos no Deployment.
+- [ ] `PodDisruptionBudget` com `minAvailable` para workloads que não toleram zero réplicas.
+- [ ] `topologySpreadConstraints` quando há mais de uma réplica (distribuição multi-nó/zona).
+- [ ] Labels `app.kubernetes.io/*` (`name`, `version`, `component`, `part-of`) em todos os recursos.
+- [ ] Segredos montados como volume — nunca via `env[].valueFrom.secretKeyRef`.
+- [ ] Ref: `2026-05-26-helm-chart.md`, [learnkube.com/production-best-practices](https://learnkube.com/production-best-practices)
 
 ### CI/CD
 - [ ] Pipeline com: lint → test → build → scan (SBOM + CVE) → sign (COSIGN) → push.
@@ -135,6 +153,13 @@ Quando um item não puder ser cumprido, registrar exceção com TTL em `exceptio
 - [ ] Semantic versioning adotado; `CHANGELOG.md` gerado automaticamente ou mantido manualmente.
 - [ ] Dependabot ou Renovate configurado para PRs automáticos de atualização de dependências.
 - [ ] Multi-environment (dev/staging/prod) definido: configs e segredos diferem por ambiente.
+
+### Escalabilidade (Kubernetes)
+- [ ] HPA configurado: `minReplicas`, `maxReplicas` e `stabilizationWindowSeconds` para scale-down conservador.
+- [ ] KEDA se escala por fila ou lag (Kafka, SQS, RabbitMQ, etc.).
+- [ ] `PriorityClass` definida por tier de criticidade — controla ordem de evicção sob pressão de recursos.
+- [ ] Cost review após 1–2 semanas de produção: comparar `resources.requests` com uso real e ajustar.
+- [ ] Ref: [learnkube.com/production-best-practices](https://learnkube.com/production-best-practices)
 
 ---
 
