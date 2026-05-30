@@ -52,11 +52,12 @@ async def test_discord_bot_on_message_authorized_calls_agent():
     # bot.user is None on a bare instance — on_message checks msg.author != self.user
     # so we just need msg.author != bot.user (None != MagicMock() is True)
 
-    monkeypatch_auth = MagicMock(return_value="user-001")
+    mock_repo = MagicMock()
+    mock_repo.is_authorized = MagicMock(return_value="user-001")
 
     import unittest.mock as mock
 
-    with mock.patch.object(b.auth, "is_authorized", monkeypatch_auth):
+    with mock.patch.object(b.auth, "get_repository", return_value=mock_repo):
         await bot.on_message(msg)
 
     agent.arun.assert_awaited_once()
@@ -110,7 +111,10 @@ async def test_discord_bot_on_message_unauthorized_user_is_silent():
 
     import unittest.mock as mock
 
-    with mock.patch.object(b.auth, "is_authorized", return_value=None):
+    mock_repo = MagicMock()
+    mock_repo.is_authorized = MagicMock(return_value=None)
+
+    with mock.patch.object(b.auth, "get_repository", return_value=mock_repo):
         await bot.on_message(msg)
 
     agent.arun.assert_not_awaited()
@@ -134,7 +138,10 @@ async def test_discord_bot_registers_channel_on_authorized_message():
 
     import unittest.mock as mock
 
-    with mock.patch.object(b.auth, "is_authorized", return_value="user-002"):
+    mock_repo = MagicMock()
+    mock_repo.is_authorized = MagicMock(return_value="user-002")
+
+    with mock.patch.object(b.auth, "get_repository", return_value=mock_repo):
         await bot.on_message(msg)
 
     assert notifier._channels.get("222") is msg.channel

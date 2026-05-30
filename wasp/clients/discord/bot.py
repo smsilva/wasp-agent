@@ -29,7 +29,7 @@ class DiscordBot(discord.Client):
             return
 
         user_id = str(message.author.id)
-        if auth.is_authorized("dc", user_id) is None:
+        if auth.get_repository().is_authorized("dc", user_id) is None:
             return
 
         self._notifier.register(user_id, message.channel)
