@@ -191,7 +191,7 @@ def test_create_invite_default_ttl_is_one_hour(repo, monkeypatch):
 
 def test_init_schema_no_args_uses_env_var(tmp_path, monkeypatch):
     target = str(tmp_path / "init_env.db")
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
+    monkeypatch.setenv("DATABASE_FILE", target)
     SqliteAuthRepository().init_schema()
     con = sqlite3.connect(target)
     try:
@@ -227,7 +227,7 @@ def test_create_invite_uses_env_ttl(repo, monkeypatch):
 
 def test_db_file_defaults_to_env_var(tmp_path, monkeypatch):
     target = str(tmp_path / "from_env.db")
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
+    monkeypatch.setenv("DATABASE_FILE", target)
     repo = SqliteAuthRepository()
     assert repo.has_any_user() is False
     user_id = repo.create_user("Alice")
@@ -263,7 +263,7 @@ def test_redeem_invite_concurrent_unbound_token_only_succeeds_once(repo):
 
 
 def test_get_repository_returns_singleton(monkeypatch, tmp_path):
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", str(tmp_path / "singleton.db"))
+    monkeypatch.setenv("DATABASE_FILE", str(tmp_path / "singleton.db"))
     from wasp import auth
 
     auth._reset_repository()
@@ -273,8 +273,8 @@ def test_get_repository_returns_singleton(monkeypatch, tmp_path):
     auth._reset_repository()
 
 
-def test_get_repository_unsupported_backend_raises(monkeypatch):
-    monkeypatch.setenv("WASP_AGENT_DB_BACKEND", "postgres")
+def test_get_repository_unknown_backend_raises_value_error(monkeypatch):
+    monkeypatch.setenv("DATABASE_BACKEND", "mongo")
     from wasp import auth
 
     auth._reset_repository()

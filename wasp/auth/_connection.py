@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 def _resolve_db_file(db_file: str | None) -> str:
     if db_file is not None:
         return db_file
-    return os.getenv("WASP_AGENT_DB_FILE", "agent.db")
+    return os.getenv("DATABASE_FILE", "agent.db")
 
 
 def _connect(db_file: str) -> sqlite3.Connection:

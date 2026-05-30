@@ -5,7 +5,7 @@ from wasp import auth, auth_cli
 
 @pytest.fixture(autouse=True)
 def _db_isolation(tmp_path, monkeypatch):
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", str(tmp_path / "agent.db"))
+    monkeypatch.setenv("DATABASE_FILE", str(tmp_path / "agent.db"))
     auth._reset_repository()
     yield
     auth._reset_repository()

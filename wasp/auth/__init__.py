@@ -11,7 +11,7 @@ _repository: AuthRepository | None = None
 def get_repository() -> AuthRepository:
     global _repository
     if _repository is None:
-        backend = os.getenv("WASP_AGENT_DB_BACKEND", "sqlite")
+        backend = os.getenv("DATABASE_BACKEND", "sqlite")
         if backend == "sqlite":
             _repository = SqliteAuthRepository()
         else:
