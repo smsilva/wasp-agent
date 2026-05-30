@@ -5,12 +5,12 @@ K3D_CLUSTER ?= wasp-local
 run:
 	uv run python main.py
 
-# Preserva postgres_data. Para destruir dados: docker compose down -v
+# Preserva postgres_data. Para destruir dados: docker compose down postgres -v
 postgres-up:
 	docker compose up --detach postgres
 
 postgres-down:
-	docker compose down
+	docker compose down postgres
 
 test:
 	uv run pytest --cov=. --cov-report=term-missing

@@ -186,12 +186,12 @@ Nova linha:
 Adicionar após o target `run:` (linha 5):
 
 ```makefile
-# Preserva postgres_data. Para destruir dados: docker compose down -v
+# Preserva postgres_data. Para destruir dados: docker compose down postgres -v
 postgres-up:
 	docker compose up --detach postgres
 
 postgres-down:
-	docker compose down
+	docker compose down postgres
 ```
 
 **Atenção:** a indentação dos comandos deve ser TAB, não espaços. O Makefile falha silenciosamente com espaços.
@@ -230,7 +230,7 @@ make postgres-up   # sobe Postgres em background (porta 5432)
 make postgres-down # derruba; dados em postgres_data sobrevivem
 ```
 
-Para destruir os dados: `docker compose down -v`
+Para destruir os dados: `docker compose down postgres -v`
 
 DATABASE_URL de desenvolvimento: `postgresql://wasp:wasp@localhost:5432/wasp_agent`
 
