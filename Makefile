@@ -1,9 +1,16 @@
-.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format cc smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list admin-link
+.PHONY: run test e2e e2e-with-debug k3d-up k3d-down gitops-up gitops-down build lint format cc smoke smoke-prometheus local-chat admin-bootstrap admin-invite admin-revoke admin-list admin-link postgres-up postgres-down
 
 K3D_CLUSTER ?= wasp-local
 
 run:
 	uv run python main.py
+
+# Preserva postgres_data. Para destruir dados: docker compose down -v
+postgres-up:
+	docker compose up --detach postgres
+
+postgres-down:
+	docker compose down
 
 test:
 	uv run pytest --cov=. --cov-report=term-missing
