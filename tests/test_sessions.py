@@ -41,5 +41,7 @@ def test_build_session_db_postgres_raises_not_implemented(mock_agno, monkeypatch
 
     from wasp.sessions import build_session_db
 
-    with pytest.raises(NotImplementedError, match="Postgres backend for agno sessions not yet wired"):
+    with pytest.raises(
+        NotImplementedError, match="Postgres backend for agno sessions not yet wired"
+    ):
         build_session_db()

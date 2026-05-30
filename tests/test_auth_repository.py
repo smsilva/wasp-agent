@@ -288,6 +288,8 @@ def test_get_repository_postgres_raises_not_implemented(monkeypatch):
     from wasp import auth
 
     auth._reset_repository()
-    with pytest.raises(NotImplementedError, match="Postgres backend not yet implemented"):
+    with pytest.raises(
+        NotImplementedError, match="Postgres backend not yet implemented"
+    ):
         auth.get_repository()
     auth._reset_repository()

@@ -112,8 +112,8 @@ O acesso a dados de auth é abstraído via `AuthRepository` (Protocol em `wasp/a
 
 | Env var | Default | Valores | Efeito |
 |---------|---------|---------|--------|
-| `WASP_AGENT_DB_BACKEND` | `sqlite` | `sqlite` | Usa `SqliteAuthRepository` apontando para `WASP_AGENT_DB_FILE` (default `agent.db`). Outros valores levantam `ValueError`. |
-| `WASP_AGENT_DB_FILE` | `agent.db` | path | Arquivo SQLite. Ignorado se o backend não for `sqlite`. |
+| `DATABASE_BACKEND` | `sqlite` | `sqlite` \| `postgres` | `sqlite` usa `SqliteAuthRepository` apontando para `DATABASE_FILE` (default `agent.db`). `postgres` ainda não implementado — levanta `NotImplementedError`. Outros valores levantam `ValueError`. |
+| `DATABASE_FILE` | `agent.db` | path | Arquivo SQLite. Ignorado se `DATABASE_BACKEND` não for `sqlite`. |
 | `WASP_AGENT_INVITE_TTL_HOURS` | `1` | int | TTL do invite gerado por `make admin-invite`. |
 
 Implementações adicionais (ex: Postgres gerenciado) seguem o Protocol e são registradas em `wasp/auth/__init__.py::get_repository()`.

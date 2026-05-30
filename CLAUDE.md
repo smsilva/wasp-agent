@@ -110,6 +110,12 @@ Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umas
 
 Agent configuration uses prefix `WASP_AGENT_` (e.g., `WASP_AGENT_NOTIFIER`).
 
+Exceção: variáveis de database usam o prefixo universal `DATABASE_*`
+(`DATABASE_BACKEND`, `DATABASE_FILE`, `DATABASE_URL`) — alinhado com a
+convenção de `DATABASE_URL`. Ver
+`docs/sdlc/02-design/2026-05-30-postgres-readiness.md` e
+`docs/sdlc/01-exploration/2026-05-30-env-var-prefix-naming.md`.
+
 ### Bot tone
 
 System prompt must include explicit anti-pattern instructions:

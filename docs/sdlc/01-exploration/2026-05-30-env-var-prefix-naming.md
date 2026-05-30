@@ -13,9 +13,11 @@ Env vars conhecidas com o prefixo `WASP_AGENT_`:
 | Variável | Onde |
 |---|---|
 | `WASP_AGENT_NOTIFIER` | `wasp/clients/__init__.py` (override de canal) |
-| `WASP_AGENT_DB_BACKEND` | `wasp/auth/__init__.py` |
-| `WASP_AGENT_DB_FILE` | `wasp/auth/_connection.py` |
 | `WASP_AGENT_INVITE_TTL_HOURS` | `wasp/auth/sqlite_repository.py` |
+
+Variáveis de database (`DATABASE_BACKEND`, `DATABASE_FILE`, `DATABASE_URL`)
+saíram do prefixo `WASP_AGENT_*` em 2026-05-30 — ver
+`docs/sdlc/02-design/2026-05-30-postgres-readiness.md`.
 
 Documentadas em:
 - `CLAUDE.md` (seção "Env vars")
@@ -33,7 +35,6 @@ Documentadas em:
 
 A renomeação não é urgente nem bloqueante. Ficará para um spec dedicado quando houver decisão sobre o nome novo. Até lá, novos env vars adicionados ao projeto continuam usando `WASP_AGENT_` para coerência.
 
-Próximas vars que entrariam: `WASP_AGENT_DB_URL` (DSN do Postgres, ainda a ser implementado — ver spec da preparação para PostgreSQL).
 
 ## 4. Quando retomar
 

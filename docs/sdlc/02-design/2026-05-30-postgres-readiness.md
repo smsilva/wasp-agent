@@ -1,6 +1,6 @@
 # Preparação para PostgreSQL — abstração sem implementação
 
-**Status:** Draft
+**Status:** Implemented
 **Data:** 2026-05-30
 **Motivação:** preparar o código para a chegada do PostgreSQL sem migrar dados nem implementar o backend. Remover hardcodes (path do SQLite em `wasp/agent.py`), simetrizar a abstração de sessões agno com a abstração já existente de auth, e deixar os branches `elif backend == "postgres"` explícitos no código, com import condicional, para servirem de "slot" visível ao backend futuro.
 
