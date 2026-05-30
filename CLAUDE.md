@@ -100,6 +100,12 @@ New CRD (e.g. Cluster): create `wasp/resources/cluster/{manifest,provisioner,inv
 
 When a target needs more than one command, extract to `scripts/<name>` and call it from the target.
 
+`docker compose down [SERVICE]` scopes the teardown to a specific service — use `docker compose down postgres` (not `docker compose down`) in service-specific targets to avoid stopping unrelated services (e.g. Jaeger).
+
+### Infra local
+
+Postgres e Jaeger rodam via docker-compose. Ver `docs/runbooks/local-infra.md`. `make postgres-up` / `make postgres-down` gerenciam só o serviço postgres; volume `postgres_data` sobrevive ao down (use `docker compose down postgres -v` para destruir).
+
 ### Startup (`wasp/startup.py`)
 
 Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umask(0o077)`. Called from `main.py` after `load_dotenv()`.
