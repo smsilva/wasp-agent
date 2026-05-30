@@ -19,7 +19,7 @@ from wasp.clients.channels import ChannelLoader  # noqa: E402
 
 
 def create_app():
-    auth.init_db()
+    auth.get_repository().init_schema()
     agent = build_agent()
     return ChannelLoader(agent).build_app()
 

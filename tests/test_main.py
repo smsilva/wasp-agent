@@ -38,9 +38,10 @@ def test_prometheus_route_registered(mock_agno, monkeypatch):
 
 def test_main_initializes_auth_db(mock_agno, monkeypatch):
     init_called = []
-    monkeypatch.setattr(
-        "wasp.auth.init_db", lambda db_file=None: init_called.append(db_file)
-    )
+    from wasp import auth
+
+    repo = auth.get_repository()
+    monkeypatch.setattr(repo, "init_schema", lambda: init_called.append(None))
     import main  # noqa: F401
 
     assert init_called
