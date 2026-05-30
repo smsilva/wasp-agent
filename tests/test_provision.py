@@ -83,15 +83,14 @@ def test_provision_spawns_watcher(monkeypatch):
     import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr(
-        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
-    )
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -116,15 +115,14 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
     import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr(
-        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
-    )
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread = MagicMock()
     mock_thread_cls = MagicMock(return_value=mock_thread)
@@ -302,6 +300,7 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.git_client import FileAlreadyExistsError
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
     mock_client_cls = MagicMock()
     mock_client = mock_client_cls.return_value
@@ -311,9 +310,7 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr(
-        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
-    )
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_thread_cls = MagicMock()
 
@@ -330,8 +327,9 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
 
 def test_provision_returns_unauthorized_when_tg_chat_id_unknown(monkeypatch):
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda channel, channel_id: None)
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: None)
 
     class FakeCtx:
         session_id = "tg:wasp-agent:999999"
@@ -349,10 +347,12 @@ def test_provision_skips_auth_for_local_channel(monkeypatch):
     """local channel é trusted — não tem identidade verificável, boundary é a rede."""
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
     is_authorized_called = []
     monkeypatch.setattr(
-        "wasp.auth.is_authorized",
+        _auth.get_repository(),
+        "is_authorized",
         lambda c, i: is_authorized_called.append((c, i)) or None,
     )
 
@@ -380,10 +380,9 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
     import wasp.clients.telegram  # noqa: F401
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
-    monkeypatch.setattr(
-        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
-    )
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc")
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
@@ -413,11 +412,12 @@ def test_provision_sets_auth_channel_span_attribute_on_deny(monkeypatch):
         InMemorySpanExporter,
     )
     import wasp.telemetry as telemetry
+    from wasp import auth as _auth
 
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: None)
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda c, i: None)
 
     from wasp.provision import provision_platform_instance
 
@@ -443,11 +443,12 @@ def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
         InMemorySpanExporter,
     )
     import wasp.telemetry as telemetry
+    from wasp import auth as _auth
 
     exporter = InMemorySpanExporter()
     telemetry.configure(span_exporter=exporter)
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: "user-abc")
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda c, i: "user-abc")
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
@@ -486,8 +487,9 @@ def test_provision_missing_pat(monkeypatch):
 
 def test_list_returns_unauthorized_when_unknown_tg_chat_id(monkeypatch):
     from wasp.provision import list_platform_instances
+    from wasp import auth as _auth
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: None)
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda c, i: None)
 
     class FakeCtx:
         session_id = "tg:wasp-agent:999"
@@ -598,6 +600,7 @@ def test_list_creates_span(monkeypatch):
 def test_provision_defaults_requested_by_to_user_id(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.provision import provision_platform_instance
+    from wasp import auth as _auth
 
     mock_client_cls = MagicMock()
     mock_client = mock_client_cls.return_value
@@ -605,9 +608,7 @@ def test_provision_defaults_requested_by_to_user_id(monkeypatch):
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
-    monkeypatch.setattr(
-        "wasp.auth.is_authorized", lambda channel, channel_id: "user-abc"
-    )
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc")
 
     class FakeCtx:
         session_id = "tg:wasp-agent:5621932873"

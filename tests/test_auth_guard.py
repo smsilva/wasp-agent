@@ -26,8 +26,9 @@ def test_guard_returns_local_operator_for_trusted_channel():
 
 def test_guard_authorizes_known_tg_user(monkeypatch):
     from wasp.auth_guard import AuthorizationGuard
+    from wasp import auth
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: "user-abc")
+    monkeypatch.setattr(auth.get_repository(), "is_authorized", lambda c, i: "user-abc")
     span = MagicMock()
     user_id, err = AuthorizationGuard().check(channel="tg", chat_id="111", span=span)
 
@@ -40,8 +41,9 @@ def test_guard_authorizes_known_tg_user(monkeypatch):
 def test_guard_denies_unknown_tg_user(monkeypatch):
     from wasp.auth_guard import AuthorizationGuard
     import wasp.telemetry as telemetry
+    from wasp import auth
 
-    monkeypatch.setattr("wasp.auth.is_authorized", lambda c, i: None)
+    monkeypatch.setattr(auth.get_repository(), "is_authorized", lambda c, i: None)
     auth_denied_calls = []
     monkeypatch.setattr(
         telemetry, "auth_denied", lambda **kw: auth_denied_calls.append(kw)
@@ -59,10 +61,12 @@ def test_guard_denies_unknown_tg_user(monkeypatch):
 def test_guard_denies_when_chat_id_missing(monkeypatch):
     from wasp.auth_guard import AuthorizationGuard
     import wasp.telemetry as telemetry
+    from wasp import auth
 
     called = []
     monkeypatch.setattr(
-        "wasp.auth.is_authorized",
+        auth.get_repository(),
+        "is_authorized",
         lambda c, i: called.append((c, i)) or "user-abc",
     )
     monkeypatch.setattr(telemetry, "auth_denied", lambda **kw: None)

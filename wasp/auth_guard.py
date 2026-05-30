@@ -22,7 +22,7 @@ class AuthorizationGuard:
             span.set_attribute("user.id", user_id)
             return user_id, None
 
-        user_id = auth.is_authorized(channel, chat_id) if chat_id else None
+        user_id = auth.get_repository().is_authorized(channel, chat_id) if chat_id else None
         if user_id is None:
             log.warning("auth denied: channel=%s channel_id=%s", channel, chat_id)
             telemetry.auth_denied(channel=channel, reason="unknown_identity")
