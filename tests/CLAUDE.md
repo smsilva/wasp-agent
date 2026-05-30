@@ -8,7 +8,7 @@ The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new
 
 Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`) precisam de `_reset_repository()` no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados. Capturar a referência do módulo **antes** do `sys.modules.pop` (`_auth_teardown = sys.modules.get("wasp.auth")`); fazer o `get` depois retorna `None` e o reset é silenciosamente pulado.
 
-Cuidado ao remover `wasp.auth` do `sys.modules.pop`: testes como `test_auth_guard.py` e `test_provision.py` fazem `monkeypatch.setattr("wasp.auth.is_authorized", ...)`, que pytest resolve via `getattr(wasp, "auth")`. Se `wasp` (raiz) for popped mas `wasp.auth` permanecer, o `getattr` falha porque `wasp/__init__.py` recarrega vazio.
+Testes que precisam mockar auth devem fazer `monkeypatch.setattr(auth.get_repository(), "is_authorized", ...)` — patchando a instância singleton em vez do nome no módulo. O `mock_agno` chama `_reset_repository()` no setup e teardown, garantindo que cada teste começa com singleton limpo e que o patch atinge a instância usada pelo caller.
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time.
 
@@ -26,4 +26,4 @@ monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recordi
 
 Patching only `TelegramNotifier` doesn't work: `WASP_AGENT_NOTIFIER=console` in `.env` is loaded at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`.
 
-Also monkeypatch `wasp.auth.is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404. O shim funcional em `wasp/auth/__init__.py` preserva esse monkeypatch — patcheie no shim, não em `SqliteAuthRepository`.
+Also monkeypatch `wasp.auth.get_repository().is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404. Patcheie a instância do singleton, não o `SqliteAuthRepository` diretamente.

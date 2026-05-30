@@ -278,33 +278,3 @@ def test_get_repository_unsupported_backend_raises(monkeypatch):
     with pytest.raises(ValueError, match="unsupported backend"):
         auth.get_repository()
     auth._reset_repository()
-
-
-def test_shim_resolves_env_per_call(monkeypatch, tmp_path):
-    target = str(tmp_path / "shim_env.db")
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
-    from wasp import auth
-
-    user_id = auth.create_user("Alice")
-    assert auth.is_authorized("tg", "x") is None
-    auth.link_identity(user_id, "tg", "x")
-    assert auth.is_authorized("tg", "x") == user_id
-
-
-def test_shim_covers_remaining_functions(monkeypatch, tmp_path):
-    """Covers shim wrappers for init_db, create_invite, redeem_invite, revoke,
-    list_identities, has_any_user, and bootstrap_admin."""
-    target = str(tmp_path / "shim_full.db")
-    monkeypatch.setenv("WASP_AGENT_DB_FILE", target)
-    from wasp import auth
-
-    auth.init_db()
-    assert auth.has_any_user() is False
-    admin_id = auth.bootstrap_admin("Admin", "tg", "9999")
-    assert auth.has_any_user() is True
-    token = auth.create_invite("Bob", created_by=admin_id)
-    result = auth.redeem_invite(token, "tg", "1234")
-    assert result is not None
-    rows = auth.list_identities()
-    assert any(r["channel_id"] == "9999" for r in rows)
-    assert auth.revoke("tg", "1234") is True
