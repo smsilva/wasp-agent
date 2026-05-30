@@ -4,6 +4,8 @@
 **Data:** 2026-05-30
 **Motivação:** preparar o código para a chegada do PostgreSQL sem migrar dados nem implementar o backend. Remover hardcodes (path do SQLite em `wasp/agent.py`), simetrizar a abstração de sessões agno com a abstração já existente de auth, e deixar os branches `elif backend == "postgres"` explícitos no código, com import condicional, para servirem de "slot" visível ao backend futuro.
 
+**Pós-implementação:** `agno.db.postgres` está presente no agno upstream — o branch postgres em `wasp/sessions.py` está, de fato, **funcional** quando `DATABASE_URL` é fornecido. Apenas o branch postgres em `wasp/auth/__init__.py` permanece como slot (`NotImplementedError`), aguardando o `PostgresAuthRepository` (próximo spec).
+
 ---
 
 ## 1. Contexto
@@ -45,7 +47,7 @@ Este spec consolida a preparação restante.
 
 | Variável | Função |
 |---|---|
-| `DATABASE_BACKEND` | `sqlite` (default) \| `postgres` (`NotImplementedError`) |
+| `DATABASE_BACKEND` | `sqlite` (default) \| `postgres` (auth ainda não implementado; agno sessions funcional) |
 | `DATABASE_FILE` | path do SQLite (default `agent.db`) — ignorado se backend != sqlite |
 | `DATABASE_URL` | DSN do Postgres — ignorado se backend == sqlite |
 
@@ -70,13 +72,8 @@ def build_session_db():
             session_table="agent_sessions",
         )
     elif backend == "postgres":
-        try:
-            from agno.db.postgres import PostgresDb
-        except ImportError as e:
-            raise NotImplementedError(
-                "Postgres backend for agno sessions not yet wired. "
-                "See docs/sdlc/02-design/2026-05-30-postgres-readiness.md"
-            ) from e
+        from agno.db.postgres import PostgresDb
+
         return PostgresDb(db_url=os.environ["DATABASE_URL"])
     raise ValueError(f"unsupported backend: {backend}")
 ```

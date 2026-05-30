@@ -24,6 +24,7 @@ AGNO_MODULES = [
     "agno.db",
     "agno.db.sqlite",
     "agno.db.sqlite.sqlite",
+    "agno.db.postgres",
     "agno.os",
     "agno.os.interfaces",
     "agno.os.interfaces.telegram",

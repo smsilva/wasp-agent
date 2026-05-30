@@ -112,7 +112,7 @@ O acesso a dados de auth é abstraído via `AuthRepository` (Protocol em `wasp/a
 
 | Env var | Default | Valores | Efeito |
 |---------|---------|---------|--------|
-| `DATABASE_BACKEND` | `sqlite` | `sqlite` \| `postgres` | `sqlite` usa `SqliteAuthRepository` apontando para `DATABASE_FILE` (default `agent.db`). `postgres` ainda não implementado — levanta `NotImplementedError`. Outros valores levantam `ValueError`. |
+| `DATABASE_BACKEND` | `sqlite` | `sqlite` \| `postgres` | `sqlite` usa `SqliteAuthRepository` apontando para `DATABASE_FILE` (default `agent.db`). `postgres` para auth ainda não implementado (levanta `NotImplementedError`); para sessões agno é funcional via `DATABASE_URL`. Outros valores levantam `ValueError`. |
 | `DATABASE_FILE` | `agent.db` | path | Arquivo SQLite. Ignorado se `DATABASE_BACKEND` não for `sqlite`. |
 | `WASP_AGENT_INVITE_TTL_HOURS` | `1` | int | TTL do invite gerado por `make admin-invite`. |
 

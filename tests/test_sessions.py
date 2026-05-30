@@ -36,12 +36,14 @@ def test_build_session_db_unknown_backend_raises_value_error(monkeypatch):
         build_session_db()
 
 
-def test_build_session_db_postgres_raises_not_implemented(mock_agno, monkeypatch):
+def test_build_session_db_postgres_reads_database_url(mock_agno, monkeypatch):
     monkeypatch.setenv("DATABASE_BACKEND", "postgres")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://user:pass@host:5432/db")
 
     from wasp.sessions import build_session_db
 
-    with pytest.raises(
-        NotImplementedError, match="Postgres backend for agno sessions not yet wired"
-    ):
-        build_session_db()
+    build_session_db()
+
+    mock_agno["agno.db.postgres"].PostgresDb.assert_called_once_with(
+        db_url="postgresql://user:pass@host:5432/db"
+    )

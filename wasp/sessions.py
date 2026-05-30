@@ -11,12 +11,7 @@ def build_session_db():
             session_table="agent_sessions",
         )
     elif backend == "postgres":
-        try:
-            from agno.db.postgres import PostgresDb
-        except ImportError as e:
-            raise NotImplementedError(
-                "Postgres backend for agno sessions not yet wired. "
-                "See docs/sdlc/02-design/2026-05-30-postgres-readiness.md"
-            ) from e
-        return PostgresDb(db_url=os.environ["DATABASE_URL"])  # pragma: no cover
+        from agno.db.postgres import PostgresDb
+
+        return PostgresDb(db_url=os.environ["DATABASE_URL"])
     raise ValueError(f"unsupported backend: {backend}")
