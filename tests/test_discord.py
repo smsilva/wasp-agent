@@ -53,7 +53,7 @@ async def test_discord_bot_on_message_authorized_calls_agent():
     # so we just need msg.author != bot.user (None != MagicMock() is True)
 
     mock_repo = MagicMock()
-    mock_repo.is_authorized = MagicMock(return_value="user-001")
+    mock_repo.is_authorized.return_value = "user-001"
 
     import unittest.mock as mock
 
@@ -112,7 +112,7 @@ async def test_discord_bot_on_message_unauthorized_user_is_silent():
     import unittest.mock as mock
 
     mock_repo = MagicMock()
-    mock_repo.is_authorized = MagicMock(return_value=None)
+    mock_repo.is_authorized.return_value = None
 
     with mock.patch.object(b.auth, "get_repository", return_value=mock_repo):
         await bot.on_message(msg)
@@ -139,7 +139,7 @@ async def test_discord_bot_registers_channel_on_authorized_message():
     import unittest.mock as mock
 
     mock_repo = MagicMock()
-    mock_repo.is_authorized = MagicMock(return_value="user-002")
+    mock_repo.is_authorized.return_value = "user-002"
 
     with mock.patch.object(b.auth, "get_repository", return_value=mock_repo):
         await bot.on_message(msg)
