@@ -1,8 +1,8 @@
 from agno.agent import Agent
-from agno.db.sqlite.sqlite import SqliteDb
 
 from wasp import list_platform_instances, provision_platform_instance
 from wasp.models import build_model
+from wasp.sessions import build_session_db
 
 INSTRUCTIONS = [
     "You are a DevOps assistant.",
@@ -33,7 +33,7 @@ def build_agent() -> Agent:
     return Agent(
         name="wasp-agent",
         model=build_model(),
-        db=SqliteDb(db_file="agent.db", session_table="agent_sessions"),
+        db=build_session_db(),
         add_history_to_context=True,
         instructions=INSTRUCTIONS,
         tools=[provision_platform_instance, list_platform_instances],
