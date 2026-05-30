@@ -140,6 +140,7 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     from unittest.mock import MagicMock, AsyncMock
     import wasp.clients.telegram.webhook as telegram_mod
     from wasp.clients.telegram import _install_start_token_handler
+    import wasp.auth as auth
 
     monkeypatch.setenv("APP_ENV", "development")
 
@@ -159,7 +160,7 @@ async def test_install_start_token_handler_wraps_webhook(mock_agno, monkeypatch)
     _install_start_token_handler(iface)
 
     monkeypatch.setattr(
-        telegram_mod.auth, "redeem_invite", lambda *a, **kw: ("uid", "Carol")
+        auth.get_repository(), "redeem_invite", lambda *a, **kw: ("uid", "Carol")
     )
     import sys
 
@@ -224,8 +225,8 @@ async def test_install_start_token_handler_finds_webhook_with_router_prefix(mock
 
 async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
     from unittest.mock import MagicMock, AsyncMock
-    import wasp.clients.telegram.webhook as telegram_mod
     from wasp.clients.telegram import _install_start_token_handler
+    import wasp.auth as auth
 
     monkeypatch.delenv("APP_ENV", raising=False)
 
@@ -249,7 +250,7 @@ async def test_webhook_rejects_missing_secret_token(mock_agno, monkeypatch):
         redeem_calls.append(args)
         return ("uid", "Mallory")
 
-    monkeypatch.setattr(telegram_mod.auth, "redeem_invite", fake_redeem)
+    monkeypatch.setattr(auth.get_repository(), "redeem_invite", fake_redeem)
     import sys
 
     sys.modules[

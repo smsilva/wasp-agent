@@ -68,7 +68,7 @@ def _install_start_token_handler(iface) -> None:
 
             body = await request.json()
             handled = await _process_start_token(
-                body, auth.redeem_invite, notifier.send
+                body, lambda *a: auth.get_repository().redeem_invite(*a), notifier.send
             )
             if handled:
                 return JSONResponse({"status": "ok"})
