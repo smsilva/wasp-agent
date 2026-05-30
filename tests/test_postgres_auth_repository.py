@@ -1,40 +1,50 @@
-import sqlite3
 import threading
 from datetime import datetime, timedelta, timezone
 
+import psycopg
 import pytest
+from testcontainers.postgres import PostgresContainer
 
-from wasp.auth.sqlite_repository import SqliteAuthRepository
+pytestmark = pytest.mark.postgres
+
+
+@pytest.fixture(scope="session")
+def pg_url():
+    with PostgresContainer("postgres:16-alpine") as pg:
+        yield pg.get_connection_url(driver=None)
 
 
 @pytest.fixture
-def repo(tmp_path):
-    return SqliteAuthRepository(str(tmp_path / "agent.db"))
+def repo(pg_url):
+    from wasp.auth.postgres_repository import PostgresAuthRepository
+
+    r = PostgresAuthRepository(pg_url)
+    r.init_schema()
+    with psycopg.connect(pg_url) as con:
+        con.execute("TRUNCATE auth_invites, auth_identities, auth_users CASCADE")
+        con.commit()
+    return r
 
 
-def _table_names(db_file):
-    con = sqlite3.connect(db_file)
-    try:
+def _table_names(pg_url):
+    with psycopg.connect(pg_url) as con:
         rows = con.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema='public'"
         ).fetchall()
-        return {row[0] for row in rows}
-    finally:
-        con.close()
+    return {row[0] for row in rows}
 
 
-def test_init_schema_creates_three_tables(repo):
-    repo.init_schema()
-    names = _table_names(repo._db_file)
+def test_init_schema_creates_three_tables(repo, pg_url):
+    names = _table_names(pg_url)
     assert "auth_users" in names
     assert "auth_identities" in names
     assert "auth_invites" in names
 
 
-def test_init_schema_is_idempotent(repo):
+def test_init_schema_is_idempotent(repo, pg_url):
     repo.init_schema()
-    repo.init_schema()
-    names = _table_names(repo._db_file)
+    names = _table_names(pg_url)
     assert "auth_users" in names
 
 
@@ -48,6 +58,12 @@ def test_create_user_and_link_identity(repo):
     assert len(user_id) == 32
     repo.link_identity(user_id, "tg", "12345")
     assert repo.is_authorized("tg", "12345") == user_id
+
+
+def test_has_any_user_false_then_true(repo):
+    assert repo.has_any_user() is False
+    repo.create_user("Alice")
+    assert repo.has_any_user() is True
 
 
 def test_create_invite_returns_urlsafe_token(repo):
@@ -68,20 +84,18 @@ def test_redeem_invite_creates_identity_and_returns_user(repo):
 
 
 def test_redeem_invite_returns_none_for_unknown_token(repo):
-    repo.init_schema()
     assert repo.redeem_invite("nonexistent", "tg", "1") is None
 
 
-def test_redeem_invite_returns_none_when_expired(repo):
+def test_redeem_invite_returns_none_when_expired(repo, pg_url):
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
     past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
-    con = sqlite3.connect(repo._db_file)
-    try:
-        con.execute("UPDATE auth_invites SET expires_at=? WHERE token=?", (past, token))
+    with psycopg.connect(pg_url) as con:
+        con.execute(
+            "UPDATE auth_invites SET expires_at=%s WHERE token=%s", (past, token)
+        )
         con.commit()
-    finally:
-        con.close()
     assert repo.redeem_invite(token, "tg", "67890") is None
 
 
@@ -102,18 +116,15 @@ def test_redeem_invite_rejects_channel_mismatch(repo):
     assert repo.redeem_invite(token, "tg", "67890") is not None
 
 
-def test_redeem_invite_rejects_when_identity_already_linked(repo):
+def test_redeem_invite_rejects_when_identity_already_linked(repo, pg_url):
     user1 = repo.create_user("Existing")
     repo.link_identity(user1, "tg", "111")
     token = repo.create_invite("New", created_by=user1)
     assert repo.redeem_invite(token, "tg", "111") is None
-    con = sqlite3.connect(repo._db_file)
-    try:
+    with psycopg.connect(pg_url) as con:
         used_at = con.execute(
-            "SELECT used_at FROM auth_invites WHERE token=?", (token,)
+            "SELECT used_at FROM auth_invites WHERE token=%s", (token,)
         ).fetchone()[0]
-    finally:
-        con.close()
     assert used_at is None
 
 
@@ -125,7 +136,6 @@ def test_revoke_removes_identity_keeps_user(repo):
 
 
 def test_revoke_returns_false_when_not_found(repo):
-    repo.init_schema()
     assert repo.revoke("tg", "missing") is False
 
 
@@ -141,12 +151,6 @@ def test_list_identities_returns_dicts(repo):
     assert "linked_at" in rows[0]
 
 
-def test_has_any_user_false_then_true(repo):
-    assert repo.has_any_user() is False
-    repo.create_user("Alice")
-    assert repo.has_any_user() is True
-
-
 def test_bootstrap_creates_first_user_when_db_empty(repo):
     user_id = repo.bootstrap_admin("Silvio", "tg", "12345678")
     assert user_id
@@ -159,80 +163,32 @@ def test_bootstrap_fails_when_db_not_empty(repo):
         repo.bootstrap_admin("Silvio", "tg", "12345678")
 
 
-def test_create_user_persists_display_name_in_sqlite(repo):
-    user_id = repo.create_user("Alice")
-    con = sqlite3.connect(repo._db_file)
-    try:
-        row = con.execute(
-            "SELECT display_name FROM auth_users WHERE user_id=?", (user_id,)
-        ).fetchone()
-        assert row is not None
-        assert row[0] == "Alice"
-    finally:
-        con.close()
-
-
-def test_create_invite_default_ttl_is_one_hour(repo, monkeypatch):
+def test_create_invite_default_ttl_is_one_hour(repo, pg_url, monkeypatch):
     monkeypatch.delenv("WASP_AGENT_INVITE_TTL_HOURS", raising=False)
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
-    con = sqlite3.connect(repo._db_file)
-    try:
+    with psycopg.connect(pg_url) as con:
         row = con.execute(
-            "SELECT created_at, expires_at FROM auth_invites WHERE token=?",
+            "SELECT created_at, expires_at FROM auth_invites WHERE token=%s",
             (token,),
         ).fetchone()
-    finally:
-        con.close()
     created = datetime.fromisoformat(row[0])
     expires = datetime.fromisoformat(row[1])
     assert expires - created == timedelta(hours=1)
 
 
-def test_init_schema_no_args_uses_env_var(tmp_path, monkeypatch):
-    target = str(tmp_path / "init_env.db")
-    monkeypatch.setenv("DATABASE_FILE", target)
-    SqliteAuthRepository().init_schema()
-    con = sqlite3.connect(target)
-    try:
-        names = {
-            row[0]
-            for row in con.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()
-        }
-    finally:
-        con.close()
-    assert "auth_users" in names
-    assert "auth_identities" in names
-    assert "auth_invites" in names
-
-
-def test_create_invite_uses_env_ttl(repo, monkeypatch):
+def test_create_invite_uses_env_ttl(repo, pg_url, monkeypatch):
     monkeypatch.setenv("WASP_AGENT_INVITE_TTL_HOURS", "5")
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
-    con = sqlite3.connect(repo._db_file)
-    try:
+    with psycopg.connect(pg_url) as con:
         row = con.execute(
-            "SELECT created_at, expires_at FROM auth_invites WHERE token=?",
+            "SELECT created_at, expires_at FROM auth_invites WHERE token=%s",
             (token,),
         ).fetchone()
-    finally:
-        con.close()
     created = datetime.fromisoformat(row[0])
     expires = datetime.fromisoformat(row[1])
     assert expires - created == timedelta(hours=5)
-
-
-def test_db_file_defaults_to_env_var(tmp_path, monkeypatch):
-    target = str(tmp_path / "from_env.db")
-    monkeypatch.setenv("DATABASE_FILE", target)
-    repo = SqliteAuthRepository()
-    assert repo.has_any_user() is False
-    user_id = repo.create_user("Alice")
-    repo.link_identity(user_id, "tg", "1")
-    assert repo.is_authorized("tg", "1") == user_id
 
 
 def test_redeem_invite_concurrent_unbound_token_only_succeeds_once(repo):
@@ -262,34 +218,9 @@ def test_redeem_invite_concurrent_unbound_token_only_succeeds_once(repo):
     assert len(successes) == 1
 
 
-def test_get_repository_returns_singleton(monkeypatch, tmp_path):
-    monkeypatch.setenv("DATABASE_FILE", str(tmp_path / "singleton.db"))
-    from wasp import auth
-
-    auth._reset_repository()
-    a = auth.get_repository()
-    b = auth.get_repository()
-    assert a is b
-    auth._reset_repository()
-
-
-def test_get_repository_unknown_backend_raises_value_error(monkeypatch):
-    monkeypatch.setenv("DATABASE_BACKEND", "mongo")
-    from wasp import auth
-
-    auth._reset_repository()
-    with pytest.raises(ValueError, match="unsupported backend"):
-        auth.get_repository()
-    auth._reset_repository()
-
-
-def test_get_repository_postgres_returns_postgres_repository(monkeypatch):
-    monkeypatch.setenv("DATABASE_BACKEND", "postgres")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/db")
-    from wasp import auth
+def test_dsn_defaults_to_env_var(pg_url, monkeypatch):
     from wasp.auth.postgres_repository import PostgresAuthRepository
 
-    auth._reset_repository()
-    repo = auth.get_repository()
-    assert isinstance(repo, PostgresAuthRepository)
-    auth._reset_repository()
+    monkeypatch.setenv("DATABASE_URL", pg_url)
+    repo = PostgresAuthRepository()
+    assert repo.has_any_user() in (True, False)

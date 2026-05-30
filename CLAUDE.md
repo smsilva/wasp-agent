@@ -30,7 +30,8 @@ make e2e-with-debug
 ```
 
 - `make test` mocks agno via `mock_agno` fixture — won't catch real integration bugs.
-- `make e2e-with-debug` imports real `main.py`, runs Gitea + k3d + `fake_reconciler`, exercises full flow.
+- `make e2e-with-debug` imports real `main.py`, runs Gitea + k3d + `fake_reconciler`, exercises full flow. Self-contained: spins up and tears down the ephemeral k3d cluster + Gitea itself — don't run `make k3d-up`/`gitops-up` first.
+- `make test` now requires Docker: Postgres auth tests (marker `postgres`) run a real container via testcontainers and are not gated out.
 
 Don't skip e2e. The `/telegram/webhook` prefix bug (2026-05-23) only surfaced in e2e.
 
@@ -139,6 +140,10 @@ System prompt must include explicit anti-pattern instructions:
 ### SQLite atomic check-then-write (`wasp/auth/sqlite_repository.py`)
 
 Check-then-write operations call `con.execute("BEGIN IMMEDIATE")` before the first SELECT to acquire the write lock immediately. The subsequent `with con:` commits (success) or rolls back (exception). Early `return None` before `with con:` triggers a rollback of an empty transaction — no side effects.
+
+### Postgres auth (`wasp/auth/postgres_repository.py`)
+
+Mirrors the sqlite repo behaviorally — keeps timestamps as TEXT ISO and `user_id` as TEXT hex (parity, not native `TIMESTAMPTZ`/`UUID`) so the SQL differs only by `?`→`%s`. Postgres equivalents of `BEGIN IMMEDIATE`: `SELECT ... FOR UPDATE` on the invite row in `redeem_invite`, `LOCK TABLE auth_users IN ACCESS EXCLUSIVE MODE` in `bootstrap_admin`. psycopg3 `with psycopg.connect() as con:` runs one transaction and closes on exit; an early `return None` inside it commits/closes cleanly.
 
 ### Repository pattern via Protocol (data access)
 

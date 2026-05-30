@@ -1,5 +1,9 @@
 # tests/
 
+## Postgres tests via testcontainers
+
+Tests marked `postgres` (`test_postgres_auth_repository.py`, `test_postgres_skeleton.py`) spin a real `postgres:16-alpine` via testcontainers and run inside `make test` — Docker required, not gated. Connect with psycopg3 using `pg.get_connection_url(driver=None)` (yields `postgresql://...`). The container is a session-scoped fixture (`pg_url`); per-test isolation via `TRUNCATE ... CASCADE`, not a fresh DB. They run under autouse `mock_agno` (no bypass) since importing `wasp.auth` needs agno mocked.
+
 ## `mock_agno` fixture and OTEL
 
 `tests/conftest.py` mocks `agno.models` as `MagicMock`. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell, `configure()` calls `AgnoInstrumentor` which imports `agno.models.base.Model` and fails against the mock — the fixture delenvs it; don't remove that line.

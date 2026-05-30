@@ -28,13 +28,18 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "ruff>=0.4.0",
     "radon>=6.0.1",
+    "testcontainers[postgres]>=4.0",
+    "psycopg[binary]>=3.1",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-markers = ["e2e: end-to-end tests requiring k3d and Gitea"]
+markers = [
+    "e2e: end-to-end tests requiring k3d and Gitea",
+    "postgres: tests requiring a real Postgres via testcontainers (Docker)",
+]
 
 [tool.coverage.run]
 omit = ["tests/*"]
