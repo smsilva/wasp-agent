@@ -6,7 +6,9 @@
 
 The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures. Para pacotes (ex: `wasp/auth/`), incluir o pacote E todos os submódulos (`wasp.auth`, `wasp.auth.protocol`, `wasp.auth.sqlite_repository`, etc.).
 
-Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`) precisam de `_reset_repository()` no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados.
+Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`) precisam de `_reset_repository()` no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados. Capturar a referência do módulo **antes** do `sys.modules.pop` (`_auth_teardown = sys.modules.get("wasp.auth")`); fazer o `get` depois retorna `None` e o reset é silenciosamente pulado.
+
+Cuidado ao remover `wasp.auth` do `sys.modules.pop`: testes como `test_auth_guard.py` e `test_provision.py` fazem `monkeypatch.setattr("wasp.auth.is_authorized", ...)`, que pytest resolve via `getattr(wasp, "auth")`. Se `wasp` (raiz) for popped mas `wasp.auth` permanecer, o `getattr` falha porque `wasp/__init__.py` recarrega vazio.
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time.
 
