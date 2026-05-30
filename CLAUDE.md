@@ -14,6 +14,7 @@
 
 - Python + `ruff` for formatting + `uv` for dependencies.
 - 100% coverage required. Verify with `pytest --cov`.
+- `pyproject.toml::[tool.coverage.report].exclude_lines` REPLACES coverage.py defaults — when adding entries, include `"# pragma: no cover"` explicitly, otherwise the annotation is silently ignored. Alternative: use `exclude_also` instead (preserves defaults).
 - `ruff check .` must pass before every commit.
 
 Lint exceptions:

@@ -2,6 +2,7 @@
 
 - Minimum version: `agno>=2.0.0`. The 1.x API is different and incompatible.
 - SQLite session: `db=SqliteDb(db_file=..., session_table=...)` via `agno.db.sqlite.sqlite`. `SqliteAgentStorage` does not exist.
+- Postgres session: `db=PostgresDb(db_url=...)` via `agno.db.postgres`. The module ships with agno — no extra install needed. `from agno.db.postgres import PostgresDb` works in production; only mocked test envs need `"agno.db.postgres"` in `AGNO_MODULES` for `mock_agno` to intercept.
 - Context history: `add_history_to_context=True` (not `add_history_to_messages`).
 - `SqliteDb` requires `sqlalchemy` — declare it as an explicit dependency.
 - Before writing agno code, verify import paths in the installed package (`.venv/lib/`). Official docs often diverge from the installed version.
