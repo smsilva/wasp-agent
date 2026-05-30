@@ -17,7 +17,7 @@ Decisões fechadas na conversa:
 
 ## In Progress
 
-Spec `2026-05-30-auth-singleton-migration.md` escrita e revisada (Status: Draft, com as 3 decisões acima já incorporadas). Próximo passo: gerar o plano de execução via `superpowers:writing-plans` em `docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md`.
+Plano de execução gerado em `docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md` (10 tasks, TDD-style com commits incrementais). Próximo passo: executar via `superpowers:subagent-driven-development` ou `superpowers:executing-plans`.
 
 ## Open Questions / Hypotheses
 
@@ -30,17 +30,16 @@ Nada. *Intentional*: shim `_repo(None)` ainda cria instância descartável por c
 ## How to Resume
 
 ```bash
-xdg-open docs/sdlc/02-design/2026-05-30-auth-singleton-migration.md
+xdg-open docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md
 ```
 
-Depois invocar `superpowers:writing-plans` apontando o output para `docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md` (mesmo slug, pasta de execução).
+Executar o plano task a task — recomendado via `superpowers:subagent-driven-development` (fresh subagent por task + review entre tasks) ou `superpowers:executing-plans` (batch inline com checkpoints).
 
 ## Next Steps
 
-1. Gerar plano de execução para a migração (writing-plans).
-2. Executar: atualizar callers (`auth_guard`, `auth_cli`, `webhook`, `bot`, `main`), migrar testes para patchar instância via `get_repository()`, deletar `test_auth.py`, remover shims de `wasp/auth/__init__.py`.
-3. Validar com `make format && make test && make e2e-with-debug` em cada etapa do plano.
-4. Atualizar Status do spec para `Implemented`.
+1. Executar Tasks 1–10 do plano em ordem.
+2. Atualizar Status do spec para `Implemented` (Task 10).
+3. Limpar este HANDOFF.md (Task 10).
 
 ## Backlog (carry-over)
 
