@@ -2,44 +2,27 @@
 
 ## Why
 
-Refactor de `wasp/auth.py` (310 linhas, 4 responsabilidades) em pacote `wasp/auth/` com Repository Protocol + implementação SQLite. Motivação: migração futura para Postgres em cloud gerenciada justifica a abstração. Implementação **concluída** e validada (`make e2e-with-debug` passou).
-
-Próximo ciclo: **migração de callers para `auth.get_repository()` e remoção dos shims funcionais**. Spec em `docs/sdlc/02-design/2026-05-30-auth-singleton-migration.md`. Objetivo é fazer o singleton ser efetivamente exercitado pelos callers (hoje ele é código pouco usado — shims sempre criam instância descartável) para que Postgres com pool de conexões funcione naturalmente.
-
-Alternativas rejeitadas:
-- Injeção explícita do repo nos construtores (mais Pythonic, custo de refatoração maior — adiado).
-- Manter shims após migração (mantém duplicação de entrypoints).
-
-Decisões fechadas na conversa:
-1. Deletar `tests/test_auth.py` (duplica `tests/test_auth_repository.py`).
-2. Em `webhook.py`, usar `lambda *a: auth.get_repository().redeem_invite(*a)` (lazy) em vez de bound method (que ficaria bound a instância antiga após `_reset_repository`).
-3. Remover o alias `init_db` — `main.py` chamará `auth.get_repository().init_schema()` direto.
+(sem trabalho ativo)
 
 ## In Progress
 
-Plano de execução gerado em `docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md` (10 tasks, TDD-style com commits incrementais). Próximo passo: executar via `superpowers:subagent-driven-development` ou `superpowers:executing-plans`.
+Nada.
 
 ## Open Questions / Hypotheses
 
-- Nenhuma aberta na spec. Antes de implementar, confirmar paridade caso a caso entre `test_auth.py` e `test_auth_repository.py` — se algum cenário só existe em `test_auth.py`, migrar para `test_auth_repository.py` antes de deletar.
+Nenhuma.
 
 ## Known Broken
 
-Nada. *Intentional*: shim `_repo(None)` ainda cria instância descartável por chamada (mantido após sessão anterior por incompatibilidade com `sys.modules.pop` no `mock_agno`). Essa decisão é justamente o que a próxima migração elimina.
+Nada conhecido.
 
 ## How to Resume
 
-```bash
-xdg-open docs/sdlc/03-execution/2026-05-30-auth-singleton-migration.md
-```
-
-Executar o plano task a task — recomendado via `superpowers:subagent-driven-development` (fresh subagent por task + review entre tasks) ou `superpowers:executing-plans` (batch inline com checkpoints).
+`git status`, `git log -5` para contexto recente.
 
 ## Next Steps
 
-1. Executar Tasks 1–10 do plano em ordem.
-2. Atualizar Status do spec para `Implemented` (Task 10).
-3. Limpar este HANDOFF.md (Task 10).
+Selecionar item do Backlog conforme prioridade.
 
 ## Backlog (carry-over)
 
@@ -53,7 +36,7 @@ Executar o plano task a task — recomendado via `superpowers:subagent-driven-de
 - **Authorization granular (RBAC)** — admin, operator, viewer
 - **Testcontainers** — avaliar substituir setup manual k3d/Gitea no E2E
 - **Falha clara em configuração ausente** — validar env obrigatórias no startup
-- **PostgresAuthRepository** — implementar quando migração for priorizada (Protocol já pronto)
+- **PostgresAuthRepository** — implementar quando migração for priorizada (Protocol já pronto, singleton já exercitado pelos callers)
 - **`waspctl good-citizen`** (`docs/sdlc/02-design/2026-05-30-good-citizen-test.md`) precisa de plano de execução
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.

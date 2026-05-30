@@ -1,6 +1,6 @@
 # Migrar callers para `auth.get_repository()` e remover shims funcionais
 
-**Status:** Draft  
+**Status:** Implemented  
 **Data:** 2026-05-30  
 **Motivação:** o refactor de `wasp/auth.py` (ver `2026-05-30-auth-repository.md`) deixou `get_repository()` como código pouco exercitado — todos os callers ainda passam pelos shims funcionais que sempre instanciam `SqliteAuthRepository` por chamada. Migrar callers para `get_repository()` e remover os shims prepara o singleton para `PostgresAuthRepository` (onde criar conexões por chamada é caro) e simplifica a superfície da API pública.
 

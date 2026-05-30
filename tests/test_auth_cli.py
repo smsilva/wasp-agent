@@ -41,7 +41,9 @@ def test_revoke_not_found_returns_one(capsys):
 
 
 def test_revoke_after_linking_returns_zero(capsys):
-    token = auth.get_repository().create_invite(display_name="Carol", created_by="admin")
+    token = auth.get_repository().create_invite(
+        display_name="Carol", created_by="admin"
+    )
     auth.get_repository().redeem_invite(token, "tg", "333")
 
     rc = auth_cli.main(["revoke", "--channel", "tg", "--channel-id", "333"])

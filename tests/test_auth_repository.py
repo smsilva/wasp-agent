@@ -195,9 +195,12 @@ def test_init_schema_no_args_uses_env_var(tmp_path, monkeypatch):
     SqliteAuthRepository().init_schema()
     con = sqlite3.connect(target)
     try:
-        names = {row[0] for row in con.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()}
+        names = {
+            row[0]
+            for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
     finally:
         con.close()
     assert "auth_users" in names
