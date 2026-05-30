@@ -237,7 +237,7 @@ async def agent_client(gitea_container, recording_notifier, monkeypatch):
         wasp.watcher, "_select_notifier", lambda *a, **kw: recording_notifier
     )
     monkeypatch.setattr(
-        wasp.auth, "is_authorized", lambda channel, channel_id: "e2e-user"
+        wasp.auth.get_repository(), "is_authorized", lambda channel, channel_id: "e2e-user"
     )
     monkeypatch.setattr(
         wasp.gitops_committer,
