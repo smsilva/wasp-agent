@@ -139,6 +139,7 @@ def mock_agno(monkeypatch, request):
     # Grab the live module object before evicting it so the reset call below
     # does not trigger a fresh import (which would cascade through wasp/__init__).
     _channels_teardown = sys.modules.get("wasp.clients.channels")
+    _auth_teardown = sys.modules.get("wasp.auth")
 
     for mod in (
         "main",
@@ -183,6 +184,5 @@ def mock_agno(monkeypatch, request):
 
     if _channels_teardown is not None:
         _channels_teardown.reset()
-    _auth_teardown = sys.modules.get("wasp.auth")
     if _auth_teardown is not None:
         _auth_teardown._reset_repository()

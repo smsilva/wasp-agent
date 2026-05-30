@@ -28,7 +28,6 @@ Próximo passo: rodar `make e2e-with-debug` antes do merge para `main` (CLAUDE.m
 
 ## Open Questions / Hypotheses
 
-- Shim `_repo(None)` instancia `SqliteAuthRepository()` nova por chamada em vez de usar o singleton de `get_repository()`. Desvio do spec §6 feito pelo agente para não quebrar `test_init_db_without_args_uses_env_var` e testes de `auth_cli` que trocam `WASP_AGENT_DB_FILE` por teste. Custo é desprezível (`init_schema` idempotente), mas o singleton fica subutilizado pelos shims. Decidir se mantém ou força singleton estrito com fixture de reset.
 - `WASP_AGENT_DB_BACKEND` documentado no spec mas ainda não adicionado a `docs/runbooks/auth-admin.md`.
 
 ## Known Broken
@@ -45,10 +44,12 @@ Esperado: arquivos modificados + pacote `wasp/auth/` com 5 arquivos.
 
 ## Next Steps
 
-1. Rodar `make e2e-with-debug` para validar integração real.
-2. Decidir sobre o desvio do `_repo(None)` (singleton estrito vs. instância descartável).
-3. Adicionar `WASP_AGENT_DB_BACKEND` em `docs/runbooks/auth-admin.md`.
-4. Atualizar Status do spec `2026-05-30-auth-repository.md` para `Implemented` após merge.
+1. Adicionar `WASP_AGENT_DB_BACKEND` em `docs/runbooks/auth-admin.md`.
+2. Atualizar Status do spec `2026-05-30-auth-repository.md` para `Implemented` após merge.
+
+### Decisão fechada nesta sessão
+
+Desvio `_repo(None)` cria instância descartável em vez de usar singleton — **mantido**. Tentativa de mudar para singleton estrito (opção B) colide com `sys.modules.pop("wasp.auth")` no `mock_agno`: testes como `test_auth_guard.py` resolvem `monkeypatch.setattr("wasp.auth.is_authorized", ...)` pelo módulo, e remover o pop quebra esses testes. Custo da decisão: uma chamada `init_schema` idempotente extra por shim invocation. `get_repository()` permanece disponível para callers que migrarão deliberadamente quando Postgres entrar.
 
 ## Backlog (carry-over)
 
