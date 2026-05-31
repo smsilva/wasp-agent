@@ -2,8 +2,10 @@
 
 **Date:** 2026-05-31  
 **Status:** Approved  
-**Scope:** `wasp/resources/protocol.py` (novo), `wasp/resources/registry.py` (novo), `wasp/resources/platform/provider.py` (novo), `pyproject.toml`, `wasp/agent.py`  
+**Scope:** `wasp/resources/protocol.py` (novo), `wasp/resources/registry.py` (novo), `wasp/resources/platform/provider.py` (novo), `wasp/agent.py`  
 **Brief:** `docs/sdlc/01-exploration/wasp-agent-extensibility-brief.md`
+
+**Revisão 2026-05-31:** o discovery deixou de usar `importlib.metadata.entry_points`. O wasp-agent roda como árvore de fontes (sem `[build-system]` no `pyproject.toml`); não é um pacote instalado, então não há metadata e `entry_points()` retorna sempre `[]`. Decidiu-se **não** torná-lo um pacote instalável. O mecanismo passou a ser uma **lista de registro in-tree** (`PROVIDERS` em `registry.py`), resolvida via `importlib.import_module`, que funciona na árvore de fontes em todo lugar (local/test/e2e/Docker). Trade-off: um plugin externo (polirepo) futuro precisaria de outro mecanismo de registro — aceitável, está fora de escopo no v1.
 
 ## Problem
 
@@ -18,7 +20,7 @@ Confirmamos a hipótese da seção 4 do brief com um ajuste de escopo: **(1) e (
 - **(1) ResourceProvider** define o contrato interno — como o core enxerga um recurso, independente da origem.
 - **(3) Loaders de CRD** (filesystem/git/cluster) ficam para v2+. A abstração `Loader` **não** é criada agora; `ResourceRegistry.discover()` fala direto com o mecanismo de plugin discovery do Python. Extrair `Loader` quando o 2º loader existir (YAGNI até lá).
 
-Escopo escolhido: **opção A (mínima)** — contrato + registry + discovery via plugin + Platform migrado. Packaging: **in-tree / monorepo** — o mecanismo (entry points) é o mesmo que um plugin externo usaria, então a migração para polirepo no futuro não exige refactor.
+Escopo escolhido: **opção A (mínima)** — contrato + registry + discovery in-tree + Platform migrado. Registro: **lista in-tree** (`PROVIDERS` em `registry.py`), não entry points de packaging. O projeto não é um pacote instalável (sem `[build-system]`), então `importlib.metadata.entry_points` não enxergaria nada; a lista in-tree resolvida via `importlib.import_module` funciona direto na árvore de fontes.
 
 ## Contract
 
@@ -46,14 +48,19 @@ Decisões de forma:
 
 ```python
 # wasp/resources/registry.py
+PROVIDERS = [
+    "wasp.resources.platform.provider:PlatformProvider",
+]
+
+
 class ResourceRegistry:
     def __init__(self, providers: list[ResourceProvider]):
         self._providers = providers
 
     @classmethod
     def discover(cls) -> "ResourceRegistry":
-        # importlib.metadata.entry_points(group="wasp_agent.resources")
-        # cada entry point resolve para uma classe ResourceProvider, instanciada aqui
+        # resolve cada path "modulo:Classe" da lista PROVIDERS via importlib.import_module
+        # instancia cada classe ResourceProvider aqui
         # loga em INFO: "discovered N resource providers: [platform, ...]"
         ...
 
@@ -62,7 +69,9 @@ class ResourceRegistry:
         ...
 ```
 
-Nome `discover()` escolhido deliberadamente para descrever a **intenção** (descobrir providers instalados) sem vazar o **mecanismo** (entry points — jargão de packaging que colide com "ponto de entrada do programa").
+Registro = adicionar um path `"modulo:Classe"` à lista `PROVIDERS`. É o análogo in-tree do que seria uma linha de entry point no `pyproject.toml`, mas sem exigir que o projeto vire pacote instalável. Adicionar um recurso = nova classe provider + uma linha em `PROVIDERS`, sem tocar `agent.py`/`provision.py`.
+
+Nome `discover()` escolhido deliberadamente para descrever a **intenção** (descobrir os providers registrados) sem vazar o **mecanismo**.
 
 ## Platform como provider
 
@@ -82,14 +91,16 @@ class PlatformProvider:
         return [provision_platform_instance, list_platform_instances]
 ```
 
-Registro in-tree no `pyproject.toml` — o próprio wasp-agent declara seu provider, exatamente o mecanismo que um plugin externo usaria depois:
+Registro in-tree na lista `PROVIDERS` de `registry.py` — o próprio wasp-agent declara seu provider por path:
 
-```toml
-[project.entry-points."wasp_agent.resources"]
-platform = "wasp.resources.platform.provider:PlatformProvider"
+```python
+# wasp/resources/registry.py
+PROVIDERS = [
+    "wasp.resources.platform.provider:PlatformProvider",
+]
 ```
 
-**Import circular:** `provider.py` importa de `provision.py`, que importa de `wasp.resources.platform`. Para evitar ciclo, `provider.py` é **módulo folha — não reexportado** em `wasp/resources/platform/__init__.py`. O entry point aponta direto para ele; o registry só o toca via discovery.
+**Import circular:** `provider.py` importa de `provision.py`, que importa de `wasp.resources.platform`. Para evitar ciclo, `provider.py` é **módulo folha — não reexportado** em `wasp/resources/platform/__init__.py`. A lista `PROVIDERS` referencia o provider por **string** (resolvida tarde, no `discover()`), então não há import no topo de `registry.py`; o registry só o toca via discovery.
 
 ## agent.py
 
@@ -109,8 +120,8 @@ Esta é a fatia do walk-skeleton: o `agent.py` deixa de listar tools à mão e p
 
 ## Error handling
 
-- **Nenhum provider descoberto** → `Agent` sem tools. Só ocorreria com instalação quebrada (o `platform` é declarado in-tree). O log INFO de contagem torna isso visível no startup.
-- **Entry point que falha ao carregar** (módulo com erro de import) → deixar **propagar** (fail-fast no startup, alinhado com `GitOpsCommitter.probe()`). Provider quebrado é erro de deploy, não algo a engolir.
+- **Nenhum provider descoberto** → `Agent` sem tools. Só ocorreria com `PROVIDERS` vazia (o `platform` é declarado in-tree). O log INFO de contagem torna isso visível no startup.
+- **Path de provider que falha ao resolver** (módulo com erro de import ou classe inexistente) → deixar **propagar** (fail-fast no startup, alinhado com `GitOpsCommitter.probe()`). Provider quebrado é erro de deploy, não algo a engolir.
 - **Conflito de nomes** → fora de escopo no v1 (provider único). `name` fica como gancho.
 
 ## Deployment / runtime
@@ -124,14 +135,13 @@ Isso é uma **decisão consciente, não limitação**: corresponde ao trade-off 
 ```
 wasp/resources/
   protocol.py          ← novo: ResourceProvider Protocol
-  registry.py          ← novo: ResourceRegistry.discover() + all_tools()
+  registry.py          ← novo: PROVIDERS + ResourceRegistry.discover() + all_tools()
   base.py              ← intacto
   platform/
     provider.py        ← novo: PlatformProvider (folha, não reexportado)
     manifest.py        ← intacto
     provisioner.py     ← intacto
     inventory.py       ← intacto
-pyproject.toml         ← + [project.entry-points."wasp_agent.resources"]
 wasp/agent.py          ← tools=ResourceRegistry.discover().all_tools()
 ```
 
@@ -141,12 +151,12 @@ wasp/agent.py          ← tools=ResourceRegistry.discover().all_tools()
 
 100% de cobertura mantida (`pytest --cov`).
 
-- `tests/test_registry.py` (novo) — `discover()` mockando `importlib.metadata.entry_points`; `all_tools()` agregando múltiplos providers fake; casos: lista vazia, provider com N tools.
+- `tests/test_registry.py` (novo) — `discover()` mockando `registry.PROVIDERS`/`registry._load`; `_load()` resolvendo um path real; `all_tools()` agregando múltiplos providers fake; casos: lista vazia, provider com N tools.
 - `tests/test_platform_provider.py` (novo, pequeno) — `PlatformProvider.name == "platform"` e `tools()` retorna as duas funções esperadas.
 - `tests/test_provision.py` — intacto (as `@tool` não mudaram).
 - Teste de montagem do agente — ajustado para a nova montagem via registry.
 - `tests/conftest.py` — novos módulos (`wasp.resources.protocol`, `wasp.resources.registry`, `wasp.resources.platform.provider`) adicionados à lista de `sys.modules.pop`.
-- **e2e** (`make e2e-with-debug`) — exercita `discover()` → tools no agente real. É a validação que confirma o entry point corretamente registrado no `pyproject.toml`; os mocks não pegam isso. Não pular.
+- **e2e** (`make e2e-with-debug`) — exercita `discover()` → tools no agente real, resolvendo a `PROVIDERS` real via `importlib.import_module`. Confirma o caminho de discovery end-to-end; os mocks não pegam isso. Não pular.
 
 ## Roadmap
 
@@ -156,9 +166,9 @@ wasp/agent.py          ← tools=ResourceRegistry.discover().all_tools()
 
 ## Out of scope (non-decisions)
 
-- Abstração `Loader` separada — não criada no v1; `discover()` fala direto com entry points. Extrair quando o 2º loader chegar.
+- Abstração `Loader` separada — não criada no v1; `discover()` resolve direto a lista `PROVIDERS`. Extrair quando o 2º loader chegar.
 - Resolução de conflito de nomes — v2.
 - Hot-reload / descoberta sem restart — v2+.
-- Plugin externo (polirepo) — mecanismo já suporta; nenhum pacote externo criado no v1.
+- Plugin externo (polirepo) — fora de escopo. A lista in-tree `PROVIDERS` só registra providers da própria árvore; um plugin externo exigiria outro mecanismo (entry points, que por sua vez exigiriam tornar o projeto pacote instalável). Reavaliar se/quando o caso polirepo surgir.
 - Generalização de `watcher.py` / `GitOpsCommitter` para múltiplos CRDs — já fora de escopo no refactor anterior; permanece.
 - Migração futura para MCP (abordagem 4 do brief) — sustentada pelo contrato: um `MCPProvider` que satisfaz o mesmo Protocol (`tools()` faz proxy de chamadas MCP) entra sem refactor.

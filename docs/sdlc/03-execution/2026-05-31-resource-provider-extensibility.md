@@ -4,7 +4,9 @@
 
 **Goal:** Permitir adicionar novos Custom Resources ao wasp-agent sem editar `agent.py`/`provision.py`, via um contrato `ResourceProvider` (Protocol) descoberto por `ResourceRegistry.discover()` sobre plugin discovery do Python.
 
-**Architecture:** Cada recurso expõe um `ResourceProvider` (atributo `name` + método `tools()`) registrado in-tree em `[project.entry-points."wasp_agent.resources"]` do `pyproject.toml`. No boot, `ResourceRegistry.discover()` varre os entry points, instancia os providers, e `all_tools()` agrega as `@tool` de todos. `agent.py` monta `tools=ResourceRegistry.discover().all_tools()` em vez da lista fixa atual.
+**Architecture:** Cada recurso expõe um `ResourceProvider` (atributo `name` + método `tools()`) registrado in-tree na lista `PROVIDERS` de `wasp/resources/registry.py` (paths `"modulo:Classe"`). No boot, `ResourceRegistry.discover()` resolve cada path via `importlib.import_module`, instancia os providers, e `all_tools()` agrega as `@tool` de todos. `agent.py` monta `tools=ResourceRegistry.discover().all_tools()` em vez da lista fixa atual.
+
+> **Revisão 2026-05-31:** o plano original usava `importlib.metadata.entry_points` + entry point no `pyproject.toml`. Descartado: o wasp-agent não é pacote instalável (sem `[build-system]`), então `entry_points()` retorna `[]`. Trocado por registro in-tree (`PROVIDERS` + `importlib.import_module`). Tasks 1, 3, 4 inalteradas; Task 2 (registry + testes) e Task 5 (registro) reescritas; Task 6/7 inalteradas exceto a remoção do passo de `uv sync`.
 
 **Tech Stack:** Python 3.14, `importlib.metadata`, Pydantic, Agno, pytest (mocks via `mock_agno` fixture), ruff, uv.
 
@@ -17,9 +19,8 @@
 | File | Responsibility |
 |---|---|
 | `wasp/resources/protocol.py` (novo) | `ResourceProvider` Protocol — `name: str` + `tools() -> list[Callable]` |
-| `wasp/resources/registry.py` (novo) | `ResourceRegistry` — `discover()` (plugin discovery) + `all_tools()` (agregação) |
+| `wasp/resources/registry.py` (novo) | `PROVIDERS` (lista in-tree) + `_load()` + `ResourceRegistry` — `discover()` + `all_tools()` (agregação) |
 | `wasp/resources/platform/provider.py` (novo, folha não reexportada) | `PlatformProvider` — wrapper fino sobre as `@tool` existentes |
-| `pyproject.toml` (modificado) | `[project.entry-points."wasp_agent.resources"]` aponta `platform` → `PlatformProvider` |
 | `wasp/agent.py` (modificado) | `tools=ResourceRegistry.discover().all_tools()` |
 | `tests/test_registry.py` (novo) | Cobre `discover()` e `all_tools()` |
 | `tests/test_platform_provider.py` (novo) | Cobre `PlatformProvider.name` e `tools()` |
@@ -106,7 +107,7 @@ git commit -m "feat(resources): add ResourceProvider protocol"
 - Create: `wasp/resources/registry.py`
 - Test: `tests/test_registry.py` (adiciona casos)
 
-`discover()` usa `importlib.metadata.entry_points(group="wasp_agent.resources")`. Cada entry point resolve (`.load()`) para a **classe** provider, que é instanciada. Loga em INFO a contagem e os nomes.
+`discover()` resolve cada path da lista `PROVIDERS` (`"modulo:Classe"`) via `importlib.import_module` (helper `_load`), instancia a **classe** provider. Loga em INFO a contagem e os nomes.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -150,8 +151,7 @@ def test_all_tools_empty_when_no_providers(mock_agno):
     assert registry.all_tools() == []
 
 
-def test_discover_loads_providers_from_entry_points(mock_agno, monkeypatch):
-    from importlib.metadata import EntryPoint
+def test_discover_loads_providers_from_registry(mock_agno, monkeypatch):
     from wasp.resources import registry as registry_mod
     from wasp.resources.registry import ResourceRegistry
 
@@ -164,33 +164,33 @@ def test_discover_loads_providers_from_entry_points(mock_agno, monkeypatch):
         def tools(self):
             return [tool_x]
 
-    fake_ep = EntryPoint(
-        name="discovered",
-        value="irrelevant:DiscoveredProvider",
-        group="wasp_agent.resources",
-    )
-    monkeypatch.setattr(fake_ep, "load", lambda: DiscoveredProvider, raising=False)
-    monkeypatch.setattr(
-        registry_mod, "entry_points", lambda group: [fake_ep]
-    )
+    monkeypatch.setattr(registry_mod, "PROVIDERS", ["fake.module:DiscoveredProvider"])
+    monkeypatch.setattr(registry_mod, "_load", lambda path: DiscoveredProvider)
 
     registry = ResourceRegistry.discover()
 
     assert registry.all_tools() == [tool_x]
 
 
-def test_discover_empty_when_no_entry_points(mock_agno, monkeypatch):
+def test_discover_empty_when_no_providers_registered(mock_agno, monkeypatch):
     from wasp.resources import registry as registry_mod
     from wasp.resources.registry import ResourceRegistry
 
-    monkeypatch.setattr(registry_mod, "entry_points", lambda group: [])
+    monkeypatch.setattr(registry_mod, "PROVIDERS", [])
 
     registry = ResourceRegistry.discover()
 
     assert registry.all_tools() == []
+
+
+def test_load_resolves_dotted_path(mock_agno):
+    from wasp.resources.platform.provider import PlatformProvider
+    from wasp.resources.registry import _load
+
+    assert _load("wasp.resources.platform.provider:PlatformProvider") is PlatformProvider
 ```
 
-Nota: `EntryPoint` é um `NamedTuple`; `monkeypatch.setattr(fake_ep, "load", ...)` substitui o método na instância. `entry_points` é importado no módulo `registry` (não chamado via `importlib.metadata.entry_points`) para que o `monkeypatch.setattr(registry_mod, "entry_points", ...)` funcione.
+Nota: `test_discover_loads_providers_from_registry` mocka tanto `PROVIDERS` quanto `_load` (a `DiscoveredProvider` é local, não importável por path). `test_load_resolves_dotted_path` cobre o `_load` real resolvendo um path da árvore — garante a cobertura do helper sem depender da `PROVIDERS` default.
 
 - [ ] **Step 2: Run test to verify it fails**
 
@@ -202,15 +202,23 @@ Expected: FAIL com `ModuleNotFoundError: No module named 'wasp.resources.registr
 Criar `wasp/resources/registry.py`:
 
 ```python
+import importlib
 import logging
 from collections.abc import Callable
-from importlib.metadata import entry_points
 
 from wasp.resources.protocol import ResourceProvider
 
 log = logging.getLogger(__name__)
 
-ENTRY_POINT_GROUP = "wasp_agent.resources"
+PROVIDERS = [
+    "wasp.resources.platform.provider:PlatformProvider",
+]
+
+
+def _load(path: str) -> type[ResourceProvider]:
+    module_name, attr = path.split(":")
+    module = importlib.import_module(module_name)
+    return getattr(module, attr)
 
 
 class ResourceRegistry:
@@ -219,7 +227,7 @@ class ResourceRegistry:
 
     @classmethod
     def discover(cls) -> "ResourceRegistry":
-        providers = [ep.load()() for ep in entry_points(group=ENTRY_POINT_GROUP)]
+        providers = [_load(path)() for path in PROVIDERS]
         log.info(
             "discovered %d resource providers: %s",
             len(providers),
@@ -231,10 +239,12 @@ class ResourceRegistry:
         return [tool for provider in self._providers for tool in provider.tools()]
 ```
 
+Nota: a `PROVIDERS` já aponta para o `PlatformProvider` (criado na Task 4). Como `discover()` só resolve a lista quando chamado, e a Task 2 mocka `PROVIDERS`/`_load`, isso não cria dependência de ordem entre as tasks.
+
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest tests/test_registry.py -v`
-Expected: PASS (6 passed — 2 da Task 1 + 4 novos)
+Expected: PASS (7 passed — 2 da Task 1 + 5 novos)
 
 - [ ] **Step 5: Commit**
 
@@ -267,7 +277,7 @@ Em cada uma das duas tuplas de `sys.modules.pop`, logo após a linha `"wasp.reso
 - [ ] **Step 2: Run the suite to verify nothing broke**
 
 Run: `uv run pytest tests/test_registry.py -v`
-Expected: PASS (6 passed) — módulos ainda não usados, mas a lista não quebra nada.
+Expected: PASS (7 passed) — módulos ainda não usados, mas a lista não quebra nada.
 
 - [ ] **Step 3: Commit**
 
@@ -352,43 +362,22 @@ git commit -m "feat(resources): add PlatformProvider wrapping platform tools"
 
 ---
 
-## Task 5: Registrar o entry point no pyproject.toml
+## Task 5: Registrar o PlatformProvider na lista PROVIDERS
 
 **Files:**
-- Modify: `pyproject.toml`
+- nenhum (já feito na Task 2)
 
-Sem `[build-system]`/instalação editável, `importlib.metadata.entry_points` não enxerga o entry point em runtime. O projeto roda via `uv`; após adicionar o entry point é preciso reinstalar o pacote (`uv sync` / `uv pip install -e .`) para o metadata ser regravado. A validação real acontece no e2e (Task 7), que importa o `main.py` real.
+O registro in-tree é a linha `"wasp.resources.platform.provider:PlatformProvider"` na lista `PROVIDERS` de `wasp/resources/registry.py`, que já foi escrita na Task 2. Como `discover()` resolve a lista via `importlib.import_module` na árvore de fontes, não há passo de packaging/`uv sync`: assim que o `provider.py` existe (Task 4), o registro funciona em runtime. Esta task é só a verificação de que o caminho real resolve.
 
-- [ ] **Step 1: Adicionar a seção de entry points**
-
-Em `pyproject.toml`, após o bloco `[project]` (antes de `[dependency-groups]`), adicionar:
-
-```toml
-[project.entry-points."wasp_agent.resources"]
-platform = "wasp.resources.platform.provider:PlatformProvider"
-```
-
-- [ ] **Step 2: Reinstalar para registrar o metadata**
-
-Run: `uv sync`
-Expected: instala/atualiza o pacote `wasp-agent` em modo editável sem erro.
-
-- [ ] **Step 3: Verificar que o entry point é descoberto**
+- [ ] **Step 1: Verificar que o discovery real resolve o provider**
 
 Run:
 ```bash
-uv run python -c "from importlib.metadata import entry_points; print([(e.name, e.value) for e in entry_points(group='wasp_agent.resources')])"
+uv run python -c "from wasp.resources.registry import ResourceRegistry; tools = ResourceRegistry.discover().all_tools(); print(len(tools), [getattr(t, 'name', t) for t in tools])"
 ```
-Expected: `[('platform', 'wasp.resources.platform.provider:PlatformProvider')]`
+Expected: `2 ['provision_platform_instance', 'list_platform_instances']`
 
-- [ ] **Step 4: Commit**
-
-```bash
-git add pyproject.toml uv.lock
-git commit -m "feat(resources): register platform provider entry point"
-```
-
-(Se `uv.lock` não mudou, comitar só `pyproject.toml`.)
+(Sem commit: nenhum arquivo muda nesta task. O registro já foi commitado junto com `registry.py` na Task 2.)
 
 ---
 
@@ -400,7 +389,7 @@ git commit -m "feat(resources): register platform provider entry point"
 
 O teste `test_build_agent_tools` já valida que `list_platform_instances` e `provision_platform_instance` estão em `tools`. Ele deve continuar verde após a migração — é a rede de segurança contra regressão.
 
-Problema de discovery sob mock: `ResourceRegistry.discover()` chama `entry_points(group=...)`. Sob `mock_agno`, o pacote está instalado (Task 5 rodou `uv sync`), então o entry point real `platform` É descoberto e `PlatformProvider().tools()` retorna as duas funções `@tool` reais. Logo `test_build_agent_tools` passa sem mock adicional do registry.
+Discovery sob mock: `ResourceRegistry.discover()` resolve a `PROVIDERS` real via `importlib.import_module`. Sob `mock_agno`, o módulo `wasp.resources.platform.provider` importa normalmente e `PlatformProvider().tools()` retorna as duas funções `@tool` reais. Logo `test_build_agent_tools` passa sem mock adicional do registry — e sem depender de packaging.
 
 - [ ] **Step 1: Verificar o teste de regressão passa ANTES da mudança**
 
@@ -472,7 +461,7 @@ Expected: todos passam, cobertura 100% (`fail_under = 100`).
 - [ ] **Step 4: End-to-end**
 
 Run: `make e2e-with-debug`
-Expected: fluxo completo verde. Confirma que `ResourceRegistry.discover()` encontra o `PlatformProvider` via entry point instalado e o agente expõe as tools no caminho real.
+Expected: fluxo completo verde. Confirma que `ResourceRegistry.discover()` resolve o `PlatformProvider` via `PROVIDERS` no caminho real (importação na árvore de fontes) e o agente expõe as tools.
 
 - [ ] **Step 5: Atualizar CLAUDE.md (seção `wasp/resources/`)**
 
@@ -480,10 +469,11 @@ Em `CLAUDE.md`, na seção "Packages — `wasp/resources/`", adicionar nota sobr
 
 ```markdown
 Novo CRD agora também registra um `ResourceProvider` em `wasp/resources/<kind>/provider.py`
-(módulo folha, não reexportado no `__init__.py` para evitar ciclo) e adiciona uma linha em
-`[project.entry-points."wasp_agent.resources"]` no `pyproject.toml`. `agent.py` monta as tools
+(módulo folha, não reexportado no `__init__.py` para evitar ciclo) e adiciona uma linha à lista
+`PROVIDERS` em `wasp/resources/registry.py` (path `"modulo:Classe"`). `agent.py` monta as tools
 via `ResourceRegistry.discover().all_tools()` — não editar `agent.py` para um novo recurso.
-Após adicionar o entry point, rodar `uv sync` para registrar o metadata.
+Discovery é in-tree via `importlib.import_module` (o projeto não é pacote instalável; entry points
+de `importlib.metadata` não funcionariam sem `[build-system]`).
 ```
 
 - [ ] **Step 6: Commit**
@@ -502,9 +492,9 @@ git commit -m "docs: document ResourceProvider extensibility pattern"
 - `ResourceRegistry.discover()` + `all_tools()` → Task 2. ✅
 - Log INFO da contagem → Task 2 (Step 3). ✅
 - `PlatformProvider` wrapper fino, módulo folha não reexportado → Task 4. ✅
-- Entry point in-tree no `pyproject.toml` → Task 5. ✅
+- Registro in-tree na lista `PROVIDERS` → Task 5 (escrita na Task 2). ✅
 - `agent.py` monta via registry (walk-skeleton) → Task 6. ✅
-- Error handling — entry point quebrado propaga (fail-fast): comportamento default de `ep.load()`, não requer código extra; lista vazia coberta em `test_discover_empty_when_no_entry_points`. ✅
+- Error handling — path quebrado propaga (fail-fast): comportamento default de `importlib.import_module`/`getattr` em `_load`, não requer código extra; lista vazia coberta em `test_discover_empty_when_no_providers_registered`. ✅
 - Testes `test_registry.py` + `test_platform_provider.py` + conftest → Tasks 2,3,4. ✅
 - e2e exercita discovery real → Task 7. ✅
 - CLAUDE.md atualizado → Task 7 (Step 5). ✅
@@ -512,6 +502,6 @@ git commit -m "docs: document ResourceProvider extensibility pattern"
 
 **Placeholder scan:** nenhum TBD/TODO; todo passo de código tem o código completo.
 
-**Type consistency:** `ResourceProvider` (`name: str`, `tools() -> list[Callable]`), `ResourceRegistry(providers)`, `.discover()`, `.all_tools()`, `ENTRY_POINT_GROUP = "wasp_agent.resources"`, `PlatformProvider` (`name = "platform"`, `tools()`) — consistentes entre todas as tasks e com o `pyproject.toml`.
+**Type consistency:** `ResourceProvider` (`name: str`, `tools() -> list[Callable]`), `ResourceRegistry(providers)`, `.discover()`, `.all_tools()`, `_load(path) -> type[ResourceProvider]`, `PROVIDERS: list[str]`, `PlatformProvider` (`name = "platform"`, `tools()`) — consistentes entre todas as tasks.
 
 **Não-decisões (fora de escopo, conforme spec):** abstração `Loader`, resolução de conflito de nomes, hot-reload, plugin externo (polirepo), `CrdFilesystemLoader`/`CrdClusterLoader` — nenhuma task os implementa, por design.

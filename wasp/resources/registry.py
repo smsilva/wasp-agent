@@ -1,12 +1,20 @@
+import importlib
 import logging
 from collections.abc import Callable
-from importlib.metadata import entry_points
 
 from wasp.resources.protocol import ResourceProvider
 
 log = logging.getLogger(__name__)
 
-ENTRY_POINT_GROUP = "wasp_agent.resources"
+PROVIDERS = [
+    "wasp.resources.platform.provider:PlatformProvider",
+]
+
+
+def _load(path: str) -> type[ResourceProvider]:
+    module_name, attr = path.split(":")
+    module = importlib.import_module(module_name)
+    return getattr(module, attr)
 
 
 class ResourceRegistry:
@@ -15,7 +23,7 @@ class ResourceRegistry:
 
     @classmethod
     def discover(cls) -> "ResourceRegistry":
-        providers = [ep.load()() for ep in entry_points(group=ENTRY_POINT_GROUP)]
+        providers = [_load(path)() for path in PROVIDERS]
         log.info(
             "discovered %d resource providers: %s",
             len(providers),

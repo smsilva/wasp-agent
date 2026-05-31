@@ -57,7 +57,7 @@ def test_all_tools_empty_when_no_providers(mock_agno):
     assert registry.all_tools() == []
 
 
-def test_discover_loads_providers_from_entry_points(mock_agno, monkeypatch):
+def test_discover_loads_providers_from_registry(mock_agno, monkeypatch):
     from wasp.resources import registry as registry_mod
     from wasp.resources.registry import ResourceRegistry
 
@@ -70,25 +70,27 @@ def test_discover_loads_providers_from_entry_points(mock_agno, monkeypatch):
         def tools(self):
             return [tool_x]
 
-    class FakeEntryPoint:
-        name = "discovered"
-
-        def load(self):
-            return DiscoveredProvider
-
-    monkeypatch.setattr(registry_mod, "entry_points", lambda group: [FakeEntryPoint()])
+    monkeypatch.setattr(registry_mod, "PROVIDERS", ["fake.module:DiscoveredProvider"])
+    monkeypatch.setattr(registry_mod, "_load", lambda path: DiscoveredProvider)
 
     registry = ResourceRegistry.discover()
 
     assert registry.all_tools() == [tool_x]
 
 
-def test_discover_empty_when_no_entry_points(mock_agno, monkeypatch):
+def test_discover_empty_when_no_providers_registered(mock_agno, monkeypatch):
     from wasp.resources import registry as registry_mod
     from wasp.resources.registry import ResourceRegistry
 
-    monkeypatch.setattr(registry_mod, "entry_points", lambda group: [])
+    monkeypatch.setattr(registry_mod, "PROVIDERS", [])
 
     registry = ResourceRegistry.discover()
 
     assert registry.all_tools() == []
+
+
+def test_load_resolves_dotted_path(mock_agno):
+    from wasp.resources.platform.provider import PlatformProvider
+    from wasp.resources.registry import _load
+
+    assert _load("wasp.resources.platform.provider:PlatformProvider") is PlatformProvider
