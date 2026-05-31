@@ -96,6 +96,8 @@ wasp/resources/
 
 New CRD (e.g. Cluster): create `wasp/resources/cluster/{manifest,provisioner,inventory}.py`, add `@tool` wrappers in `wasp/provision.py`.
 
+Resource discovery is via `ResourceProvider` (ver `docs/sdlc/02-design/2026-05-31-resource-provider-extensibility.md`). Cada CRD expõe um `wasp/resources/<kind>/provider.py` (módulo folha, NÃO reexportado no `__init__.py` para evitar ciclo de import) com `name: str` + `tools() -> list[Callable]`. Registrar adicionando uma linha à lista `PROVIDERS` em `wasp/resources/registry.py` (path `"modulo:Classe"`). `agent.py` monta as tools via `ResourceRegistry.discover().all_tools()` — NÃO editar `agent.py` para um novo recurso. Discovery é in-tree via `importlib.import_module`: o projeto não é pacote instalável (sem `[build-system]`), então entry points de `importlib.metadata` não funcionariam.
+
 ### Makefile
 
 When a target needs more than one command, extract to `scripts/<name>` and call it from the target.
