@@ -92,22 +92,26 @@ def test_from_env_raises_when_pat_missing(monkeypatch):
         GitOpsCommitter.from_env()
 
 
-def test_from_env_uses_defaults(monkeypatch):
+def test_from_env_raises_when_gitops_repo_missing(monkeypatch):
     from wasp.gitops_committer import GitOpsCommitter
 
-    mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.delenv("GITOPS_REPO", raising=False)
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
+
+    with pytest.raises(ValueError, match="GITOPS_REPO not set"):
+        GitOpsCommitter.from_env()
+
+
+def test_from_env_raises_when_github_base_url_missing(monkeypatch):
+    from wasp.gitops_committer import GitOpsCommitter
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
     monkeypatch.delenv("GITHUB_BASE_URL", raising=False)
-    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
-    GitOpsCommitter.from_env()
-
-    mock_client_cls.assert_called_once_with(
-        pat="fake-pat",
-        repo="smsilva/wasp-gitops",
-        base_url="https://api.github.com",
-    )
+    with pytest.raises(ValueError, match="GITHUB_BASE_URL not set"):
+        GitOpsCommitter.from_env()
 
 
 def test_from_env_uses_env_vars(monkeypatch):

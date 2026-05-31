@@ -2,13 +2,13 @@
 
 ## Why
 
-Adicionar Postgres como serviço de infra local no docker-compose. Backend já estava funcional (`PostgresAuthRepository` + agno sessions via `DATABASE_URL`); faltava o compose, os make targets, e o runbook. Decisões: banco único (`wasp_agent`) para auth e sessions; compose de infra-only (app roda fora via `make run`); credenciais via `.env`; `docker compose down postgres` (escopo mínimo) não `docker compose down` (derrubaria Jaeger também).
+Tornar `GITOPS_REPO` e `GITHUB_BASE_URL` variáveis obrigatórias em `GitOpsCommitter.from_env()`, eliminando os defaults hardcoded (`smsilva/wasp-gitops` e `https://api.github.com`). Motivação: defaults com dados pessoais do autor eram um risco silencioso — qualquer deploy sem `.env` configurado apontaria para o repo errado. Padrão escolhido: `ValueError` explícito (igual a `GH_PAT`), fail-fast no startup via `probe()`.
 
 ## In Progress
 
-Implementação concluída e validada: `docker-compose.yml`, `.env.example`, `Makefile` (postgres-up/postgres-down), `docs/runbooks/local-infra.md`. Próximo: decidir se faz merge para `main` ou abre PR.
+Implementação concluída: `gitops_committer.py` atualizado, `.env.example` com as vars descomentadas, testes em `test_gitops_committer.py` e `test_provision.py` atualizados (326 passed, 1 skipped). Próximo: decidir merge para `main` ou abrir PR.
 
-Branch atual: `dev`. Aguardando escolha do usuário (merge local / PR / manter / descartar).
+Branch atual: `dev`. Aguardando escolha do usuário.
 
 ## Open Questions / Hypotheses
 
@@ -23,18 +23,12 @@ Branch atual: `dev`. Aguardando escolha do usuário (merge local / PR / manter /
 
 ```bash
 git status && git log -10 --oneline
-```
-
-Validar infra local:
-```bash
-make postgres-up
-docker compose ps   # aguardar healthy
-make postgres-down
+uv run pytest -x -q
 ```
 
 ## Next Steps
 
-1. **Merge ou PR** — branch `dev` tem o compose pronto; escolha pendente do usuário.
+1. **Merge ou PR** — branch `dev` com as mudanças prontas; escolha pendente do usuário.
 2. **Dockerfile hardening** — draft em `docs/sdlc/02-design/2026-05-30-dockerfile-hardening.md` (usuário não-root, `.dockerignore`, alpine/distroless). Implementar após merge.
 3. **Renomeação do prefixo `WASP_AGENT_*`** — quando o nome novo for decidido.
 4. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
@@ -50,7 +44,6 @@ make postgres-down
 - **Operações além de criar** — update, delete, status individual de tenant
 - **Authorization granular (RBAC)** — admin, operator, viewer
 - **Testcontainers no E2E** — avaliar substituir setup manual k3d/Gitea
-- **Falha clara em configuração ausente** — validar env obrigatórias no startup
 - **`waspctl good-citizen`** (`docs/sdlc/02-design/2026-05-30-good-citizen-test.md`) precisa de plano de execução
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL` (sessions e auth já funcionais).
 

@@ -58,6 +58,8 @@ def test_provision_commits(monkeypatch):
     mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     result = provision_platform_instance(
@@ -68,7 +70,7 @@ def test_provision_commits(monkeypatch):
     )
 
     mock_client_cls.assert_called_once_with(
-        pat="fake-pat", repo="smsilva/wasp-gitops", base_url="https://api.github.com"
+        pat="fake-pat", repo="myorg/my-gitops", base_url="https://api.github.com"
     )
     call_kwargs = mock_client.create_file.call_args.kwargs
     assert call_kwargs["path"] == "infrastructure/tenants/wp2.yaml"
@@ -88,6 +90,8 @@ def test_provision_spawns_watcher(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
@@ -122,6 +126,8 @@ def test_provision_watcher_target_runs_asyncio(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
@@ -159,6 +165,8 @@ def test_provision_skips_watcher_without_chat_id(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -193,6 +201,8 @@ def test_provision_creates_span(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
 
@@ -216,6 +226,8 @@ def test_provision_records_provisioning_started(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
 
@@ -242,6 +254,7 @@ def test_provision_uses_custom_github_base_url(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
     monkeypatch.setenv("GITHUB_BASE_URL", "http://localhost:3000/api/v3")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -249,7 +262,7 @@ def test_provision_uses_custom_github_base_url(monkeypatch):
 
     mock_client_cls.assert_called_once_with(
         pat="fake-pat",
-        repo="smsilva/wasp-gitops",
+        repo="myorg/my-gitops",
         base_url="http://localhost:3000/api/v3",
     )
 
@@ -262,6 +275,7 @@ def test_provision_uses_gitops_repo_env_var(monkeypatch):
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
     monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
     provision_platform_instance(name="wp2")
@@ -278,6 +292,8 @@ def test_provision_spawns_watcher_with_console_notifier(monkeypatch):
     mock_client_cls = MagicMock()
 
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -313,6 +329,8 @@ def test_provision_returns_already_provisioning_when_file_exists(monkeypatch):
     )
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
         _auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc"
@@ -366,6 +384,8 @@ def test_provision_skips_auth_for_local_channel(monkeypatch):
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -396,6 +416,8 @@ def test_provision_proceeds_when_tg_authorized(monkeypatch):
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -464,6 +486,8 @@ def test_provision_sets_user_id_span_attribute_when_authorized(monkeypatch):
 
     mock_client_cls = MagicMock()
     monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -618,6 +642,8 @@ def test_provision_defaults_requested_by_to_user_id(monkeypatch):
     mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr(
@@ -647,6 +673,8 @@ def test_provision_defaults_requested_by_to_local_operator(monkeypatch):
     mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
 
@@ -673,6 +701,8 @@ def test_provision_defaults_requested_by_to_unknown_without_context(monkeypatch)
     mock_client = mock_client_cls.return_value
 
     monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
     monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
     monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
 

@@ -30,8 +30,7 @@ def provision_platform_instance(
     run_context=None,
 ) -> dict:
     """
-    Provisions a new Platform by committing a Crossplane manifest to
-    smsilva/wasp-gitops. ArgoCD picks it up automatically.
+    Provisions a new Platform instance by committing a Kubernetes manifest to a Git repository.
 
     Returns: status (provisioning|already_provisioning|unauthorized|error) + message.
     """

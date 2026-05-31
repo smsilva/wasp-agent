@@ -124,6 +124,8 @@ convenção de `DATABASE_URL`. Ver
 `docs/sdlc/02-design/2026-05-30-postgres-readiness.md` e
 `docs/sdlc/01-exploration/2026-05-30-env-var-prefix-naming.md`.
 
+`GH_PAT`, `GITOPS_REPO`, e `GITHUB_BASE_URL` são obrigatórias — `GitOpsCommitter.from_env()` levanta `ValueError` se ausentes (sem defaults). Qualquer novo teste que mocke `PyGithubClient` deve setar as três via `monkeypatch.setenv`, pois a checagem ocorre antes de o mock ser atingido. Vars obrigatórias ficam descomentadas no `.env.example`.
+
 ### Bot tone
 
 System prompt must include explicit anti-pattern instructions:

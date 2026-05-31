@@ -26,11 +26,17 @@ class GitOpsCommitter:
         pat = os.getenv("GH_PAT")
         if not pat:
             raise ValueError("GH_PAT not set")
+        repo = os.getenv("GITOPS_REPO")
+        if not repo:
+            raise ValueError("GITOPS_REPO not set")
+        base_url = os.getenv("GITHUB_BASE_URL")
+        if not base_url:
+            raise ValueError("GITHUB_BASE_URL not set")
         return cls(
             PyGithubClient(
                 pat=pat,
-                repo=os.getenv("GITOPS_REPO", "smsilva/wasp-gitops"),
-                base_url=os.getenv("GITHUB_BASE_URL", "https://api.github.com"),
+                repo=repo,
+                base_url=base_url,
             )
         )
 
