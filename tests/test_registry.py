@@ -93,4 +93,6 @@ def test_load_resolves_dotted_path(mock_agno):
     from wasp.resources.platform.provider import PlatformProvider
     from wasp.resources.registry import _load
 
-    assert _load("wasp.resources.platform.provider:PlatformProvider") is PlatformProvider
+    assert (
+        _load("wasp.resources.platform.provider:PlatformProvider") is PlatformProvider
+    )
