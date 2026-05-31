@@ -18,3 +18,77 @@ def test_resource_provider_rejects_non_conforming(mock_agno):
         pass
 
     assert not isinstance(NotAProvider(), ResourceProvider)
+
+
+def test_all_tools_aggregates_providers(mock_agno):
+    from wasp.resources.registry import ResourceRegistry
+
+    def tool_a():
+        return "a"
+
+    def tool_b():
+        return "b"
+
+    def tool_c():
+        return "c"
+
+    class ProviderOne:
+        name = "one"
+
+        def tools(self):
+            return [tool_a, tool_b]
+
+    class ProviderTwo:
+        name = "two"
+
+        def tools(self):
+            return [tool_c]
+
+    registry = ResourceRegistry([ProviderOne(), ProviderTwo()])
+
+    assert registry.all_tools() == [tool_a, tool_b, tool_c]
+
+
+def test_all_tools_empty_when_no_providers(mock_agno):
+    from wasp.resources.registry import ResourceRegistry
+
+    registry = ResourceRegistry([])
+
+    assert registry.all_tools() == []
+
+
+def test_discover_loads_providers_from_entry_points(mock_agno, monkeypatch):
+    from wasp.resources import registry as registry_mod
+    from wasp.resources.registry import ResourceRegistry
+
+    def tool_x():
+        return "x"
+
+    class DiscoveredProvider:
+        name = "discovered"
+
+        def tools(self):
+            return [tool_x]
+
+    class FakeEntryPoint:
+        name = "discovered"
+
+        def load(self):
+            return DiscoveredProvider
+
+    monkeypatch.setattr(registry_mod, "entry_points", lambda group: [FakeEntryPoint()])
+
+    registry = ResourceRegistry.discover()
+
+    assert registry.all_tools() == [tool_x]
+
+
+def test_discover_empty_when_no_entry_points(mock_agno, monkeypatch):
+    from wasp.resources import registry as registry_mod
+    from wasp.resources.registry import ResourceRegistry
+
+    monkeypatch.setattr(registry_mod, "entry_points", lambda group: [])
+
+    registry = ResourceRegistry.discover()
+
+    assert registry.all_tools() == []
