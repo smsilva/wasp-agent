@@ -91,6 +91,9 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.platform.manifest",
         "wasp.resources.platform.inventory",
         "wasp.resources.platform.provisioner",
+        "wasp.resources.protocol",
+        "wasp.resources.registry",
+        "wasp.resources.platform.provider",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
@@ -183,6 +186,9 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.platform.manifest",
         "wasp.resources.platform.inventory",
         "wasp.resources.platform.provisioner",
+        "wasp.resources.protocol",
+        "wasp.resources.registry",
+        "wasp.resources.platform.provider",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
