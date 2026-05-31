@@ -1,7 +1,7 @@
 from agno.agent import Agent
 
-from wasp import list_platform_instances, provision_platform_instance
 from wasp.models import build_model
+from wasp.resources.registry import ResourceRegistry
 from wasp.sessions import build_session_db
 
 INSTRUCTIONS = [
@@ -36,5 +36,5 @@ def build_agent() -> Agent:
         db=build_session_db(),
         add_history_to_context=True,
         instructions=INSTRUCTIONS,
-        tools=[provision_platform_instance, list_platform_instances],
+        tools=ResourceRegistry.discover().all_tools(),
     )
