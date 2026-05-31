@@ -1,7 +1,7 @@
 # Resource Provider Extensibility (v1)
 
 **Date:** 2026-05-31  
-**Status:** Approved  
+**Status:** Implemented  
 **Scope:** `wasp/resources/protocol.py` (novo), `wasp/resources/registry.py` (novo), `wasp/resources/platform/provider.py` (novo), `wasp/agent.py`  
 **Brief:** `docs/sdlc/01-exploration/wasp-agent-extensibility-brief.md`
 
