@@ -6,13 +6,7 @@
 
 ## In Progress
 
-Nada em andamento. A extensibilidade v1 foi concluída (Tasks 1-7, e2e verde).
-
-**Para fechar o ciclo:** branch `dev` ainda não mergeada em `main`. Ao mergear, arquivar a spec/plano (`docs/sdlc/0{2,3}-*/2026-05-31-resource-provider-extensibility.md`) — design+execução arquivam quando a implementação chega em `main`.
-
-**Decisão-chave (2026-05-31):** o discovery NÃO usa `importlib.metadata.entry_points`. O projeto não é pacote instalável (sem `[build-system]`), então entry points retornariam `[]`. Mecanismo: lista in-tree `PROVIDERS` resolvida via `importlib.import_module`, que funciona na árvore de fontes em todo lugar (local/test/e2e/Docker). Spec/plano revisados refletem isso. Decisão consciente registrada na spec: adicionar recurso = nova imagem + `kubectl rollout restart` (discovery no boot); descoberta dinâmica sem restart é motivação dos loaders de CRD em v2+.
-
-Branch atual: `dev`.
+Nada em andamento.
 
 ## Open Questions / Hypotheses
 
@@ -21,9 +15,9 @@ Branch atual: `dev`.
 
 ## Next Steps
 
-1. **Dockerfile hardening** — draft em `docs/sdlc/02-design/2026-05-30-dockerfile-hardening.md` (usuário não-root, `.dockerignore`, alpine/distroless).
-2. **Renomeação do prefixo `WASP_AGENT_*`** — quando o nome novo for decidido.
-3. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
+1. **Renomeação do prefixo `WASP_AGENT_*`** — quando o nome novo for decidido.
+2. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
+3. **`readOnlyRootFilesystem`** — habilitar no Helm chart condicionado a `DATABASE_BACKEND=postgres`; ver avaliação em `docs/sdlc/02-design/archived/2026-05-30-dockerfile-hardening.md`.
 
 ## Backlog (carry-over)
 
