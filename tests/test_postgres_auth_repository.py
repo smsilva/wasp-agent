@@ -164,7 +164,7 @@ def test_bootstrap_fails_when_db_not_empty(repo):
 
 
 def test_create_invite_default_ttl_is_one_hour(repo, pg_url, monkeypatch):
-    monkeypatch.delenv("WASP_AGENT_INVITE_TTL_HOURS", raising=False)
+    monkeypatch.delenv("AGENT_INVITE_TTL_HOURS", raising=False)
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
     with psycopg.connect(pg_url) as con:
@@ -178,7 +178,7 @@ def test_create_invite_default_ttl_is_one_hour(repo, pg_url, monkeypatch):
 
 
 def test_create_invite_uses_env_ttl(repo, pg_url, monkeypatch):
-    monkeypatch.setenv("WASP_AGENT_INVITE_TTL_HOURS", "5")
+    monkeypatch.setenv("AGENT_INVITE_TTL_HOURS", "5")
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
     with psycopg.connect(pg_url) as con:

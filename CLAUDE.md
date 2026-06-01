@@ -122,13 +122,12 @@ Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umas
 
 ### Env vars
 
-Agent configuration uses prefix `WASP_AGENT_` (e.g., `WASP_AGENT_NOTIFIER`).
+Agent configuration uses prefix `AGENT_` (e.g., `AGENT_NOTIFIER`).
 
 Exceção: variáveis de database usam o prefixo universal `DATABASE_*`
 (`DATABASE_BACKEND`, `DATABASE_FILE`, `DATABASE_URL`) — alinhado com a
 convenção de `DATABASE_URL`. Ver
-`docs/sdlc/02-design/2026-05-30-postgres-readiness.md` e
-`docs/sdlc/01-exploration/2026-05-30-env-var-prefix-naming.md`.
+`docs/sdlc/02-design/2026-05-30-postgres-readiness.md`.
 
 `GH_PAT`, `GITOPS_REPO`, e `GITHUB_BASE_URL` são obrigatórias — `GitOpsCommitter.from_env()` levanta `ValueError` se ausentes (sem defaults). Qualquer novo teste que mocke `PyGithubClient` deve setar as três via `monkeypatch.setenv`, pois a checagem ocorre antes de o mock ser atingido. Vars obrigatórias ficam descomentadas no `.env.example`.
 
@@ -145,7 +144,7 @@ System prompt must include explicit anti-pattern instructions:
 
 `wasp/clients/__init__.py` defines the `Notifier` Protocol. `watch_platform` is channel-agnostic — receives a `Notifier` instance. Never put channel-specific logic in `watcher.py`.
 
-`_select_notifier(channel)` routes by channel of origin (parsed from `session_id` prefix via `extract_channel`), not global env. `WASP_AGENT_NOTIFIER` overrides when set.
+`_select_notifier(channel)` routes by channel of origin (parsed from `session_id` prefix via `extract_channel`), not global env. `AGENT_NOTIFIER` overrides when set.
 
 ### ContextVar not inherited by threads
 

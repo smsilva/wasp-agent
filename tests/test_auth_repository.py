@@ -173,7 +173,7 @@ def test_create_user_persists_display_name_in_sqlite(repo):
 
 
 def test_create_invite_default_ttl_is_one_hour(repo, monkeypatch):
-    monkeypatch.delenv("WASP_AGENT_INVITE_TTL_HOURS", raising=False)
+    monkeypatch.delenv("AGENT_INVITE_TTL_HOURS", raising=False)
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
     con = sqlite3.connect(repo._db_file)
@@ -209,7 +209,7 @@ def test_init_schema_no_args_uses_env_var(tmp_path, monkeypatch):
 
 
 def test_create_invite_uses_env_ttl(repo, monkeypatch):
-    monkeypatch.setenv("WASP_AGENT_INVITE_TTL_HOURS", "5")
+    monkeypatch.setenv("AGENT_INVITE_TTL_HOURS", "5")
     admin = repo.create_user("Admin")
     token = repo.create_invite("Bob", created_by=admin)
     con = sqlite3.connect(repo._db_file)

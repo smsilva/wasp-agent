@@ -6,13 +6,14 @@
 
 **Dockerfile hardening — concluído.** Base trocada para `python:3.14-alpine`; usuário não-root `appuser`; `.dockerignore` criado. `readOnlyRootFilesystem` avaliado: viável apenas com `DATABASE_BACKEND=postgres` (SQLite escreve `agent.db` em `/app`).
 
+**Renomeação de prefixo env vars — concluída.** `WASP_AGENT_*` → `AGENT_*` em toda a codebase. Motivação: o agente roda em container isolado com ConfigMap próprio, tornando `AGENT_` sem ambiguidade. Variáveis renomeadas: `AGENT_NOTIFIER`, `AGENT_INVITE_TTL_HOURS`, `AGENT_URL`, `AGENT_ID`. Docs históricos/archived mantidos com nomes antigos intencionalmente.
+
 ## In Progress
 
 Nada em andamento.
 
 ## Open Questions / Hypotheses
 
-- Prefixo geral `WASP_AGENT_*` — decisão pendente (`docs/sdlc/01-exploration/2026-05-30-env-var-prefix-naming.md`). Opções: `WASP_*`, `WAGENT_*`, manter, ou outro.
 - `_now()` duplicado entre `wasp/auth/_connection.py` (sqlite) e `postgres_repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.
 
 ## How to Resume
@@ -21,13 +22,12 @@ Nada em andamento.
 make format && make test
 ```
 
-Próxima ação: decidir prefixo `WASP_AGENT_*` e executar renomeação, ou escolher item do backlog.
+Próxima ação: escolher item do backlog.
 
 ## Next Steps
 
-1. **Renomeação do prefixo `WASP_AGENT_*`** — quando o nome novo for decidido; ver `docs/sdlc/01-exploration/2026-05-30-env-var-prefix-naming.md`.
-2. **`readOnlyRootFilesystem`** — habilitar no Helm chart condicionado a `DATABASE_BACKEND=postgres`; ver avaliação em `docs/sdlc/02-design/archived/2026-05-30-dockerfile-hardening.md`.
-3. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
+1. **`readOnlyRootFilesystem`** — habilitar no Helm chart condicionado a `DATABASE_BACKEND=postgres`; ver avaliação em `docs/sdlc/02-design/archived/2026-05-30-dockerfile-hardening.md`.
+2. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
 
 ## Backlog (carry-over)
 

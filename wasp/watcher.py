@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 
 def _select_notifier(channel: str | None = None) -> Notifier | None:
-    kind = os.getenv("WASP_AGENT_NOTIFIER")
+    kind = os.getenv("AGENT_NOTIFIER")
     if kind == "console" or (kind is None and channel == "local"):
         return ConsoleNotifier()
     target = kind or channel

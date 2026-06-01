@@ -429,7 +429,7 @@ def test_select_notifier_console_when_env_explicit(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.local import ConsoleNotifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -441,7 +441,7 @@ def test_select_notifier_telegram_when_env_explicit(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.telegram import TelegramNotifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "tg")
+    monkeypatch.setenv("AGENT_NOTIFIER", "tg")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -452,7 +452,7 @@ def test_select_notifier_default_telegram_when_token(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.telegram import TelegramNotifier
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier()
@@ -463,7 +463,7 @@ def test_select_notifier_default_console_without_token(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.local import ConsoleNotifier
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     notifier = _select_notifier()
@@ -474,7 +474,7 @@ def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
     import wasp.clients.telegram  # noqa: F401
     from wasp.watcher import _select_notifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "tg")
+    monkeypatch.setenv("AGENT_NOTIFIER", "tg")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     assert _select_notifier() is None
@@ -483,7 +483,7 @@ def test_select_notifier_returns_none_when_telegram_without_token(monkeypatch):
 def test_select_notifier_returns_none_for_unknown_kind(monkeypatch):
     from wasp.watcher import _select_notifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "unknown_kind")
+    monkeypatch.setenv("AGENT_NOTIFIER", "unknown_kind")
     assert _select_notifier() is None
 
 
@@ -493,7 +493,7 @@ def test_select_notifier_local_channel_picks_console_even_with_telegram_token(
     from wasp.watcher import _select_notifier
     from wasp.clients.local import ConsoleNotifier
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="local")
@@ -504,7 +504,7 @@ def test_select_notifier_tg_channel_picks_telegram(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.telegram import TelegramNotifier
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="tg")
@@ -515,7 +515,7 @@ def test_select_notifier_env_overrides_channel(monkeypatch):
     from wasp.watcher import _select_notifier
     from wasp.clients.local import ConsoleNotifier
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("AGENT_NOTIFIER", "console")
     monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
 
     notifier = _select_notifier(channel="tg")
@@ -540,7 +540,7 @@ def test_spawner_no_notifier_returns_false(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.watcher import PlatformWatcherSpawner
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "telegram")
+    monkeypatch.setenv("AGENT_NOTIFIER", "telegram")
     monkeypatch.delenv("TELEGRAM_TOKEN", raising=False)
 
     thread_cls = MagicMock()
@@ -557,7 +557,7 @@ def test_spawner_spawns_thread(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.watcher import PlatformWatcherSpawner
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("AGENT_NOTIFIER", "console")
     thread = MagicMock()
     thread_cls = MagicMock(return_value=thread)
     with patch("wasp.watcher.threading.Thread", thread_cls):
@@ -574,7 +574,7 @@ def test_spawner_target_runs_asyncio(monkeypatch):
     from unittest.mock import MagicMock, patch
     from wasp.watcher import PlatformWatcherSpawner
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "console")
+    monkeypatch.setenv("AGENT_NOTIFIER", "console")
 
     thread = MagicMock()
     thread_cls = MagicMock(return_value=thread)
@@ -606,14 +606,14 @@ def test_select_notifier_dc_channel_uses_registered_channel(monkeypatch):
     fake_channel.notifier = MagicMock(return_value=fake_notifier)
     channels.register(fake_channel)
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     assert _select_notifier(channel="dc") is fake_notifier
 
 
 def test_select_notifier_dc_channel_returns_none_when_unregistered(monkeypatch):
     from wasp.watcher import _select_notifier
 
-    monkeypatch.delenv("WASP_AGENT_NOTIFIER", raising=False)
+    monkeypatch.delenv("AGENT_NOTIFIER", raising=False)
     assert _select_notifier(channel="dc") is None
 
 
@@ -628,7 +628,7 @@ def test_select_notifier_env_kind_resolves_via_registry(monkeypatch):
     fake_channel.notifier = MagicMock(return_value=fake_notifier)
     channels.register(fake_channel)
 
-    monkeypatch.setenv("WASP_AGENT_NOTIFIER", "dc")
+    monkeypatch.setenv("AGENT_NOTIFIER", "dc")
     assert _select_notifier() is fake_notifier
 
 

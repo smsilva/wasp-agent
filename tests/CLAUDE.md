@@ -28,6 +28,6 @@ In `tests/e2e/conftest.py`, patch `_select_notifier` directly:
 monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recording_notifier)
 ```
 
-Patching only `TelegramNotifier` doesn't work: `WASP_AGENT_NOTIFIER=console` in `.env` is loaded at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`.
+Patching only `TelegramNotifier` doesn't work: `AGENT_NOTIFIER=console` in `.env` is loaded at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`.
 
 Also monkeypatch `wasp.auth.get_repository().is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404. Patcheie a instância do singleton, não o `SqliteAuthRepository` diretamente.

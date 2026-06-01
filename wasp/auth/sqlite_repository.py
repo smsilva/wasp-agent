@@ -69,7 +69,7 @@ class SqliteAuthRepository:
         channel: str | None = None,
         channel_id: str | None = None,
     ) -> str:
-        ttl_hours = int(os.getenv("WASP_AGENT_INVITE_TTL_HOURS", "1"))
+        ttl_hours = int(os.getenv("AGENT_INVITE_TTL_HOURS", "1"))
         user_id = uuid.uuid4().hex
         token = secrets.token_urlsafe(32)
         now = datetime.now(timezone.utc)

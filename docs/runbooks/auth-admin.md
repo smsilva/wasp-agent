@@ -34,7 +34,7 @@ Token: <urlsafe>
 Link: https://t.me/<Bot>?start=<token>
 ```
 
-O operador repassa o link via canal seguro (DM, e-mail). O link é válido por 1h (configurável via `WASP_AGENT_INVITE_TTL_HOURS`) e só pode ser consumido uma vez.
+O operador repassa o link via canal seguro (DM, e-mail). O link é válido por 1h (configurável via `AGENT_INVITE_TTL_HOURS`) e só pode ser consumido uma vez.
 
 `TELEGRAM_BOT_USERNAME` precisa estar setado no `.env` para o link ser montado corretamente.
 
@@ -114,7 +114,7 @@ O acesso a dados de auth é abstraído via `AuthRepository` (Protocol em `wasp/a
 |---------|---------|---------|--------|
 | `DATABASE_BACKEND` | `sqlite` | `sqlite` \| `postgres` | `sqlite` usa `SqliteAuthRepository` apontando para `DATABASE_FILE` (default `agent.db`). `postgres` para auth ainda não implementado (levanta `NotImplementedError`); para sessões agno é funcional via `DATABASE_URL`. Outros valores levantam `ValueError`. |
 | `DATABASE_FILE` | `agent.db` | path | Arquivo SQLite. Ignorado se `DATABASE_BACKEND` não for `sqlite`. |
-| `WASP_AGENT_INVITE_TTL_HOURS` | `1` | int | TTL do invite gerado por `make admin-invite`. |
+| `AGENT_INVITE_TTL_HOURS` | `1` | int | TTL do invite gerado por `make admin-invite`. |
 
 Implementações adicionais (ex: Postgres gerenciado) seguem o Protocol e são registradas em `wasp/auth/__init__.py::get_repository()`.
 

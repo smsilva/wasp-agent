@@ -2,8 +2,8 @@
 set -e
 
 readonly SESSION_FILE=".wasp-cli/session"
-readonly WASP_AGENT_URL="${WASP_AGENT_URL:-http://localhost:7777}"
-readonly WASP_AGENT_ID="${WASP_AGENT_ID:-wasp-agent}"
+readonly AGENT_URL="${AGENT_URL:-http://localhost:7777}"
+readonly AGENT_ID="${AGENT_ID:-wasp-agent}"
 
 usage() {
   cat <<'EOF'
@@ -16,8 +16,8 @@ Usage:
   local-chat --help             this help
 
 Env:
-  WASP_AGENT_URL   default http://localhost:7777
-  WASP_AGENT_ID    default wasp-agent
+  AGENT_URL   default http://localhost:7777
+  AGENT_ID    default wasp-agent
 
 Session_id persisted in .wasp-cli/session (cwd-local).
 EOF
@@ -26,7 +26,7 @@ EOF
 new_session() {
   local chat_id session_id
   chat_id="$(uuidgen | tr -d '-' | cut -c1-8)"
-  session_id="local:${WASP_AGENT_ID}:${chat_id}"
+  session_id="local:${AGENT_ID}:${chat_id}"
   mkdir -p "$(dirname "${SESSION_FILE}")"
   echo "${session_id}" > "${SESSION_FILE}"
   echo "${session_id}"
@@ -43,7 +43,7 @@ send_message() {
   local message="${1?}" session_id
   session_id="$(ensure_session)"
   curl --silent --show-error --fail \
-    "${WASP_AGENT_URL}/agents/${WASP_AGENT_ID}/runs" \
+    "${AGENT_URL}/agents/${AGENT_ID}/runs" \
     --form "message=${message}" \
     --form "session_id=${session_id}" \
     --form "stream=false" \

@@ -60,7 +60,7 @@ Bem-vindo, Você. Você está autorizado a usar o wasp-agent.
 
 Se aparecer `Link inválido ou expirado.`, verificar:
 
-- TTL expirou (default 1h, ajustável via `WASP_AGENT_INVITE_TTL_HOURS`)
+- TTL expirou (default 1h, ajustável via `AGENT_INVITE_TTL_HOURS`)
 - Token já consumido — gerar novo invite
 - `TELEGRAM_BOT_USERNAME` no `.env` aponta para o bot certo
 

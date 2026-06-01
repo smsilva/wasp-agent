@@ -1,6 +1,6 @@
 # Repensar prefixo de env vars do projeto
 
-**Status:** Idea
+**Status:** Implemented
 **Data:** 2026-05-30
 **Motivação:** o prefixo atual `WASP_AGENT_` é redundante (o projeto se chama wasp-agent; o sufixo `_AGENT_` não distingue nada). Surgiu durante o brainstorming da preparação para PostgreSQL, onde precisaríamos congelar nomes como `WASP_AGENT_DB_BACKEND`, `WASP_AGENT_DB_FILE`, `WASP_AGENT_DB_URL`.
 
@@ -31,9 +31,9 @@ Documentadas em:
 - Manter `WASP_AGENT_*` — zero churn, mas perpetua redundância.
 - Outro padrão. (AGENT_*, WASP_AUTH_*, etc — mas cuidado para não criar confusão futura se o projeto crescer e precisar de mais categorias de env vars.)
 
-## 3. Decisão pendente
+## 3. Decisão
 
-A renomeação não é urgente nem bloqueante. Ficará para um spec dedicado quando houver decisão sobre o nome novo. Até lá, novos env vars adicionados ao projeto continuam usando `WASP_AGENT_` para coerência.
+Prefixo `AGENT_` — 2026-06-01. O agente roda em container isolado com ConfigMap próprio, eliminando a ambiguidade de múltiplos agents. Variáveis renomeadas: `WASP_AGENT_NOTIFIER` → `AGENT_NOTIFIER`, `WASP_AGENT_INVITE_TTL_HOURS` → `AGENT_INVITE_TTL_HOURS`, `WASP_AGENT_URL` → `AGENT_URL`, `WASP_AGENT_ID` → `AGENT_ID`.
 
 
 ## 4. Quando retomar
