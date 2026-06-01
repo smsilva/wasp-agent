@@ -104,6 +104,10 @@ When a target needs more than one command, extract to `scripts/<name>` and call 
 
 `docker compose down [SERVICE]` scopes the teardown to a specific service — use `docker compose down postgres` (not `docker compose down`) in service-specific targets to avoid stopping unrelated services (e.g. Jaeger).
 
+### Dockerfile
+
+Base image: `python:3.14-alpine`. Non-root user: `adduser -D appuser` (alpine syntax; `--disabled-password` é Debian). `readOnlyRootFilesystem: true` só é viável com `DATABASE_BACKEND=postgres`; SQLite escreve `agent.db` em `/app` e exige volume.
+
 ### Infra local
 
 Postgres e Jaeger rodam via docker-compose. Ver `docs/runbooks/local-infra.md`. `make postgres-up` / `make postgres-down` gerenciam só o serviço postgres; volume `postgres_data` sobrevive ao down (use `docker compose down postgres -v` para destruir).
