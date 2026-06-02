@@ -11,6 +11,7 @@ from wasp.logging import chat_id_var
 from wasp.clients import Notifier, channels
 from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
+from wasp.resources.cluster import CLUSTER_GROUP, CLUSTER_PLURAL, CLUSTER_VERSION
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
 
 log = logging.getLogger(__name__)
@@ -176,6 +177,114 @@ class PlatformWatcherSpawner:
 
         def _run_watcher():
             asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
+
+        threading.Thread(target=_run_watcher, daemon=True).start()
+        return True
+
+
+async def watch_cluster(
+    name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
+) -> None:
+    chat_id_var.set(chat_id)
+    log.info("Cluster watcher started for %s", name, extra={"cluster": name})
+    try:
+        await _watch_cluster_inner(name, chat_id, notifier, parent_span_ctx)
+    except Exception:
+        log.exception("Cluster watcher failed for %s", name, extra={"cluster": name})
+
+
+async def _watch_cluster_inner(
+    name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
+) -> None:
+    links = []
+    if parent_span_ctx and parent_span_ctx.is_valid:
+        links = [Link(parent_span_ctx)]
+
+    with telemetry.tracer.start_as_current_span(
+        "agent.watcher.lifecycle", links=links
+    ) as span:
+        span.set_attribute("cluster.name", name)
+        api = load_kube_config_auto()
+        deadline = time.monotonic() + WATCH_TIMEOUT_SECONDS
+        t0 = time.perf_counter()
+        poll_count = 0
+
+        while time.monotonic() < deadline:
+            try:
+                cluster = api.get_cluster_custom_object(
+                    group=CLUSTER_GROUP,
+                    version=CLUSTER_VERSION,
+                    plural=CLUSTER_PLURAL,
+                    name=name,
+                )
+            except ApiException as e:
+                if e.status == 404:
+                    poll_count += 1
+                    telemetry.watcher_polls_counter.add(1, {"result": "not_found"})
+                    log.debug(
+                        "Cluster %s not in cluster yet, sleeping %ss",
+                        name,
+                        POLL_INTERVAL_SECONDS,
+                    )
+                    await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                    continue
+                raise
+
+            poll_count += 1
+            condition = _find_condition(cluster, "Ready")
+            if condition and condition.get("status") == "True":
+                telemetry.watcher_polls_counter.add(1, {"result": "ready"})
+                elapsed = time.perf_counter() - t0
+                telemetry.watcher_duration.record(elapsed, {"outcome": "ready"})
+                span.set_attribute("outcome", "ready")
+                span.set_attribute("poll_count", poll_count)
+                span.set_attribute("duration_seconds", elapsed)
+                log.info(
+                    "Cluster %s is Ready — notifying", name, extra={"cluster": name}
+                )
+                await notifier.send(chat_id, cluster_ready_message(name, cluster))
+                return
+
+            telemetry.watcher_polls_counter.add(1, {"result": "pending"})
+            log.debug(
+                "Cluster %s not ready yet, sleeping %ss", name, POLL_INTERVAL_SECONDS
+            )
+            await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+        elapsed = time.perf_counter() - t0
+        telemetry.watcher_duration.record(elapsed, {"outcome": "timeout"})
+        span.set_attribute("outcome", "timeout")
+        span.set_attribute("poll_count", poll_count)
+        span.set_attribute("duration_seconds", elapsed)
+        log.warning("Cluster watcher timeout for %s", name, extra={"cluster": name})
+        await notifier.send(
+            chat_id,
+            f"Provisionamento do cluster '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
+        )
+
+
+def cluster_ready_message(name: str, cluster: dict) -> str:
+    version = cluster.get("spec", {}).get("kubernetesVersion", "")
+    return f"Cluster '{name}' está pronto (Kubernetes {version})."
+
+
+class ClusterWatcherSpawner:
+    def spawn(
+        self,
+        name: str,
+        chat_id: str | None,
+        channel: str | None,
+        parent_span_ctx,
+    ) -> bool:
+        if not chat_id:
+            return False
+        chat_id_var.set(chat_id)
+        notifier = _select_notifier(channel)
+        if notifier is None:
+            return False
+
+        def _run_watcher():
+            asyncio.run(watch_cluster(name, chat_id, notifier, parent_span_ctx))
 
         threading.Thread(target=_run_watcher, daemon=True).start()
         return True
