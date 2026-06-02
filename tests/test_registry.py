@@ -96,3 +96,12 @@ def test_load_resolves_dotted_path(mock_agno):
     assert (
         _load("wasp.resources.platform.provider:PlatformProvider") is PlatformProvider
     )
+
+
+def test_registry_discovers_cluster_provider(mock_agno):
+    from wasp.resources.registry import ResourceRegistry
+
+    registry = ResourceRegistry.discover()
+
+    names = [p.name for p in registry._providers]
+    assert "cluster" in names

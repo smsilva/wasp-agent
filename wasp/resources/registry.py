@@ -8,6 +8,7 @@ log = logging.getLogger(__name__)
 
 PROVIDERS = [
     "wasp.resources.platform.provider:PlatformProvider",
+    "wasp.resources.cluster.provider:ClusterProvider",
 ]
 
 
