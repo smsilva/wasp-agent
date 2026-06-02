@@ -11,7 +11,6 @@ from wasp.logging import chat_id_var
 from wasp.clients import Notifier, channels
 from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
-from wasp.resources.cluster import CLUSTER_GROUP, CLUSTER_PLURAL, CLUSTER_VERSION
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
 
 log = logging.getLogger(__name__)
@@ -196,6 +195,12 @@ async def watch_cluster(
 async def _watch_cluster_inner(
     name: str, chat_id: str, notifier: Notifier, parent_span_ctx=None
 ) -> None:
+    from wasp.resources.cluster.manifest import (  # lazy: breaks circular import
+        CLUSTER_GROUP,
+        CLUSTER_PLURAL,
+        CLUSTER_VERSION,
+    )
+
     links = []
     if parent_span_ctx and parent_span_ctx.is_valid:
         links = [Link(parent_span_ctx)]

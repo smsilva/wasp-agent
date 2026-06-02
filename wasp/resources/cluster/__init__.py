@@ -13,3 +13,6 @@ from wasp.resources.cluster.manifest import (
 from wasp.resources.cluster.manifest import (
     ClusterManifest as ClusterManifest,
 )
+from wasp.resources.cluster.provisioner import (
+    ClusterProvisioner as ClusterProvisioner,
+)

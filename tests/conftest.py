@@ -94,6 +94,11 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.protocol",
         "wasp.resources.registry",
         "wasp.resources.platform.provider",
+        "wasp.resources.cluster",
+        "wasp.resources.cluster.manifest",
+        "wasp.resources.cluster.inventory",
+        "wasp.resources.cluster.provisioner",
+        "wasp.resources.cluster.provider",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
@@ -189,6 +194,11 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.protocol",
         "wasp.resources.registry",
         "wasp.resources.platform.provider",
+        "wasp.resources.cluster",
+        "wasp.resources.cluster.manifest",
+        "wasp.resources.cluster.inventory",
+        "wasp.resources.cluster.provisioner",
+        "wasp.resources.cluster.provider",
         "wasp.startup",
     ):
         sys.modules.pop(mod, None)
