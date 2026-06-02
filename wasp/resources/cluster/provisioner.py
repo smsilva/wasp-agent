@@ -98,9 +98,7 @@ class ClusterProvisioner:
                 ),
             }
         except Exception:
-            log.exception(
-                "provision_cluster_instance failed", extra={"cluster": name}
-            )
+            log.exception("provision_cluster_instance failed", extra={"cluster": name})
             telemetry.provisioning_counter.add(1, {"outcome": "error"})
             return {
                 "status": "error",
