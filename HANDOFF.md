@@ -6,9 +6,11 @@
 
 **Dockerfile hardening — concluído.** Base trocada para `python:3.14-alpine`; usuário não-root `appuser`; `.dockerignore` criado. `readOnlyRootFilesystem` avaliado: viável apenas com `DATABASE_BACKEND=postgres` (SQLite escreve `agent.db` em `/app`).
 
-**`get_platform_status` tool — concluída.** Nova tool `get_platform_status(name)` em `provision.py` para consultar status de uma Platform específica sem watcher. Retorna `{"status", "name", "message"}` com mensagem user-friendly ("A Platform acme está Ready desde 30/05."). `KubernetesResourceReader` ganhou `get_by_name` (usa `get_cluster_custom_object`, retorna `None` em 404 via `getattr(e, "status", None) == 404`). `PlatformInventory.get` segue o mesmo padrão de auth guard do `list`. 352 testes, 100% coverage.
+**`get_platform_status` tool — concluída.** Nova tool `get_platform_status(name)` em `provision.py` para consultar status de uma Platform específica sem watcher. Retorna `{"status", "name", "message"}` com mensagem user-friendly. `KubernetesResourceReader` ganhou `get_by_name` (usa `get_cluster_custom_object`, retorna `None` em 404). `PlatformInventory.get` segue o mesmo padrão de auth guard do `list`.
 
-**Renomeação de prefixo env vars — concluída.** `WASP_AGENT_*` → `AGENT_*` em toda a codebase. Motivação: o agente roda em container isolado com ConfigMap próprio, tornando `AGENT_` sem ambiguidade. Variáveis renomeadas: `AGENT_NOTIFIER`, `AGENT_INVITE_TTL_HOURS`, `AGENT_URL`, `AGENT_ID`. Docs históricos/archived mantidos com nomes antigos intencionalmente.
+**Renomeação de prefixo env vars — concluída.** `WASP_AGENT_*` → `AGENT_*` em toda a codebase.
+
+**CRD `Cluster` — concluído.** `wasp/resources/cluster/{manifest,provisioner,inventory,provider}.py` implementados. `ClusterWatcherSpawner` em `wasp/watcher.py`. `@tool` wrappers em `wasp/provision.py`. `ClusterProvider` registrado em `PROVIDERS` (`wasp/resources/registry.py`). Testes com 100% de cobertura incluindo `watch_cluster` (exception, 404 retry, timeout, span ctx, thread).
 
 ## In Progress
 
@@ -18,6 +20,10 @@ Nada em andamento.
 
 - `_now()` duplicado entre `wasp/auth/_connection.py` (sqlite) e `postgres_repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.
 - OTLP 401 pós-`make test` é ruído cosmético: thread background do exporter dispara depois que pytest encerra, tenta logar mas stdout já fechou. Não afeta exit code. Pré-existente, depende de `OTEL_EXPORTER_OTLP_ENDPOINT` estar setado no shell.
+
+## Known Broken
+
+Nenhum.
 
 ## How to Resume
 
@@ -37,7 +43,6 @@ Próxima ação: escolher item do backlog.
 - **Discord slash commands** (`docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md`)
 - **Handler de convite via DM no Discord** — ver `wasp/clients/telegram/webhook.py` como referência
 - **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`)
-- **Próximo CRD: `Cluster`** — padrão `wasp/resources/cluster/{manifest,provisioner,inventory,provider}.py` + linha em `PROVIDERS` (`wasp/resources/registry.py`); não editar `agent.py`
 - **Mover `extract_channel`/`extract_chat_id` para módulo folha** quando terceiro CRD chegar
 - **Operações além de criar** — update, delete, status individual de tenant
 - **Authorization granular (RBAC)** — admin, operator, viewer
