@@ -805,3 +805,161 @@ def test_provision_defaults_requested_by_to_unknown_without_context(monkeypatch)
 
     msg = mock_client.create_file.call_args.kwargs["message"]
     assert "Requested by: unknown" in msg
+
+
+def test_provision_cluster_commits(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import provision_cluster_instance
+
+    mock_client_cls = MagicMock()
+    mock_client = mock_client_cls.return_value
+
+    monkeypatch.setenv("GH_PAT", "fake-pat")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
+
+    result = provision_cluster_instance(name="edge", requested_by="alice")
+
+    call_kwargs = mock_client.create_file.call_args.kwargs
+    assert call_kwargs["path"] == "infrastructure/clusters/edge.yaml"
+    assert call_kwargs["branch"] == "dev"
+    assert "feat(clusters): provision edge" in call_kwargs["message"]
+    assert result["status"] == "provisioning"
+    assert "edge" in result["message"]
+
+
+def test_provision_cluster_creates_span(monkeypatch):
+    from unittest.mock import MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    mock_client_cls = MagicMock()
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr("wasp.watcher.threading.Thread", MagicMock())
+
+    from wasp.provision import provision_cluster_instance
+
+    provision_cluster_instance(name="edge")
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "provision_cluster_instance" for s in spans)
+
+
+def test_list_cluster_instances_returns_clusters(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import list_cluster_instances
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.return_value = {
+        "items": [
+            {
+                "metadata": {"name": "edge"},
+                "status": {"conditions": [{"type": "Ready", "status": "True"}]},
+            },
+        ]
+    }
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = list_cluster_instances(run_context=FakeCtx())
+
+    assert result == {
+        "status": "ok",
+        "clusters": [{"name": "edge", "status": "Ready"}],
+    }
+
+
+def test_list_cluster_instances_creates_span(monkeypatch):
+    from unittest.mock import MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    mock_api = MagicMock()
+    mock_api.list_cluster_custom_object.return_value = {"items": []}
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    from wasp.provision import list_cluster_instances
+
+    list_cluster_instances()
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "list_cluster_instances" for s in spans)
+
+
+def test_get_cluster_status_returns_status_and_message(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import get_cluster_status
+
+    mock_api = MagicMock()
+    mock_api.get_cluster_custom_object.return_value = {
+        "metadata": {"name": "edge"},
+        "status": {
+            "conditions": [
+                {
+                    "type": "Ready",
+                    "status": "True",
+                    "lastTransitionTime": "2026-05-30T10:00:00Z",
+                }
+            ]
+        },
+    }
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = get_cluster_status(name="edge", run_context=FakeCtx())
+
+    assert result["status"] == "Ready"
+    assert result["name"] == "edge"
+    assert result["message"] == "O Cluster edge está Ready desde 30/05."
+
+
+def test_get_cluster_status_creates_span(monkeypatch):
+    from unittest.mock import MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    mock_api = MagicMock()
+    mock_api.get_cluster_custom_object.return_value = {
+        "metadata": {"name": "edge"},
+        "status": {"conditions": []},
+    }
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    from wasp.provision import get_cluster_status
+
+    get_cluster_status(name="edge")
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "get_cluster_status" for s in spans)
