@@ -18,3 +18,15 @@ class KubernetesResourceReader:
             group=group, version=version, plural=plural
         )
         return result.get("items", [])
+
+    def get_by_name(
+        self, group: str, version: str, plural: str, name: str
+    ) -> dict | None:
+        try:
+            return self._api.get_cluster_custom_object(
+                group=group, version=version, plural=plural, name=name
+            )
+        except Exception as e:
+            if getattr(e, "status", None) == 404:
+                return None
+            raise

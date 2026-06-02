@@ -10,6 +10,17 @@ from wasp.resources.platform import (
 
 
 @tool
+@telemetry.instrument("get_platform_status")
+def get_platform_status(name: str, run_context=None) -> dict:
+    """
+    Returns the current status of a specific Platform instance.
+    Returns: {"status": "Ready"|"Pending"|"Unknown"|"not_found", "name": str, "message": str}.
+    Read-only — safe to call without confirmation.
+    """
+    return PlatformInventory.from_env().get(name=name, run_context=run_context)
+
+
+@tool
 @telemetry.instrument("list_platform_instances")
 def list_platform_instances(run_context=None) -> dict:
     """

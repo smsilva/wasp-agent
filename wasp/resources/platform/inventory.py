@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from opentelemetry import trace
 
@@ -19,6 +20,33 @@ def _status_from_conditions(platform: dict) -> str:
         if c.get("type") == "Ready":
             return "Ready" if c.get("status") == "True" else "Pending"
     return "Unknown"
+
+
+def _ready_condition(platform: dict) -> dict | None:
+    for c in platform.get("status", {}).get("conditions", []):
+        if c.get("type") == "Ready":
+            return c
+    return None
+
+
+def _format_transition_date(condition: dict | None) -> str | None:
+    if condition is None:
+        return None
+    ts = condition.get("lastTransitionTime")
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return dt.strftime("%d/%m")
+    except ValueError:
+        return None
+
+
+def _status_message(name: str, status: str, condition: dict | None) -> str:
+    date = _format_transition_date(condition)
+    if date:
+        return f"A Platform {name} está {status} desde {date}."
+    return f"A Platform {name} está {status}."
 
 
 class PlatformInventory:
@@ -60,4 +88,37 @@ class PlatformInventory:
             return {
                 "status": "error",
                 "message": "List failed. Please try again later.",
+            }
+
+    def get(self, name: str, run_context) -> dict:
+        span = trace.get_current_span()
+        channel = extract_channel(run_context)
+        chat_id = extract_chat_id(run_context)
+
+        user_id, err = self._guard.check(channel, chat_id, span)
+        if err is not None:
+            return err
+
+        try:
+            item = self._reader.get_by_name(
+                PLATFORM_GROUP, PLATFORM_VERSION, PLATFORM_PLURAL, name
+            )
+            if item is None:
+                return {
+                    "status": "not_found",
+                    "name": name,
+                    "message": f"Nenhuma Platform encontrada com o nome {name}.",
+                }
+            status = _status_from_conditions(item)
+            condition = _ready_condition(item)
+            return {
+                "status": status,
+                "name": name,
+                "message": _status_message(name, status, condition),
+            }
+        except Exception:
+            log.exception("get_platform_status failed")
+            return {
+                "status": "error",
+                "message": "Status check failed. Please try again later.",
             }

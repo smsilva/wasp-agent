@@ -693,6 +693,101 @@ def test_provision_defaults_requested_by_to_local_operator(monkeypatch):
     assert "Requested by: local-operator" in msg
 
 
+def test_get_platform_status_returns_status_and_message(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import get_platform_status
+
+    mock_api = MagicMock()
+    mock_api.get_cluster_custom_object.return_value = {
+        "metadata": {"name": "acme"},
+        "status": {
+            "conditions": [
+                {
+                    "type": "Ready",
+                    "status": "True",
+                    "lastTransitionTime": "2026-05-30T10:00:00Z",
+                }
+            ]
+        },
+    }
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = get_platform_status(name="acme", run_context=FakeCtx())
+
+    assert result["status"] == "Ready"
+    assert result["name"] == "acme"
+    assert result["message"] == "A Platform acme está Ready desde 30/05."
+
+
+def test_get_platform_status_returns_not_found(monkeypatch):
+    from unittest.mock import MagicMock
+    from wasp.provision import get_platform_status
+
+    class FakeApiException(Exception):
+        def __init__(self, status):
+            self.status = status
+
+    mock_api = MagicMock()
+    mock_api.get_cluster_custom_object.side_effect = FakeApiException(status=404)
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = get_platform_status(name="ghost", run_context=FakeCtx())
+
+    assert result["status"] == "not_found"
+    assert "ghost" in result["message"]
+
+
+def test_get_platform_status_returns_unauthorized(monkeypatch):
+    from wasp.provision import get_platform_status
+    from wasp import auth as _auth
+
+    monkeypatch.setattr(_auth.get_repository(), "is_authorized", lambda c, i: None)
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:999"
+
+    result = get_platform_status(name="acme", run_context=FakeCtx())
+
+    assert result == {"status": "unauthorized", "message": "Acesso negado."}
+
+
+def test_get_platform_status_creates_span(monkeypatch):
+    from unittest.mock import MagicMock
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+    import wasp.telemetry as telemetry
+
+    exporter = InMemorySpanExporter()
+    telemetry.configure(span_exporter=exporter)
+
+    mock_api = MagicMock()
+    mock_api.get_cluster_custom_object.return_value = {
+        "metadata": {"name": "acme"},
+        "status": {"conditions": []},
+    }
+    monkeypatch.setattr(
+        "wasp.clients.k8s.reader.load_kube_config_auto", lambda: mock_api
+    )
+
+    from wasp.provision import get_platform_status
+
+    get_platform_status(name="acme")
+
+    spans = exporter.get_finished_spans()
+    assert any(s.name == "get_platform_status" for s in spans)
+
+
 def test_provision_defaults_requested_by_to_unknown_without_context(monkeypatch):
     from unittest.mock import MagicMock
     from wasp.provision import provision_platform_instance

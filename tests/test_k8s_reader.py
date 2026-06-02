@@ -97,3 +97,56 @@ def test_load_kube_config_auto_fallback_local(monkeypatch):
 
     incluster.assert_called_once()
     local.assert_called_once()
+
+
+def test_get_by_name_returns_item():
+    from wasp.clients.k8s import KubernetesResourceReader
+
+    api = MagicMock()
+    api.get_cluster_custom_object.return_value = {
+        "metadata": {"name": "acme"},
+        "status": {"conditions": []},
+    }
+
+    result = KubernetesResourceReader(api=api).get_by_name(
+        group="wasp.silvios.me", version="v1alpha1", plural="platforms", name="acme"
+    )
+
+    assert result == {"metadata": {"name": "acme"}, "status": {"conditions": []}}
+    api.get_cluster_custom_object.assert_called_once_with(
+        group="wasp.silvios.me", version="v1alpha1", plural="platforms", name="acme"
+    )
+
+
+def test_get_by_name_reraises_non_404_exceptions():
+    from wasp.clients.k8s import KubernetesResourceReader
+    import pytest
+
+    class FakeApiException(Exception):
+        def __init__(self, status):
+            self.status = status
+
+    api = MagicMock()
+    api.get_cluster_custom_object.side_effect = FakeApiException(status=500)
+
+    with pytest.raises(FakeApiException):
+        KubernetesResourceReader(api=api).get_by_name(
+            group="wasp.silvios.me", version="v1alpha1", plural="platforms", name="acme"
+        )
+
+
+def test_get_by_name_returns_none_when_not_found():
+    from wasp.clients.k8s import KubernetesResourceReader
+
+    class FakeApiException(Exception):
+        def __init__(self, status):
+            self.status = status
+
+    api = MagicMock()
+    api.get_cluster_custom_object.side_effect = FakeApiException(status=404)
+
+    result = KubernetesResourceReader(api=api).get_by_name(
+        group="wasp.silvios.me", version="v1alpha1", plural="platforms", name="missing"
+    )
+
+    assert result is None

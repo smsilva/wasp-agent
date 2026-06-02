@@ -112,3 +112,111 @@ def test_inventory_list_returns_error_on_exception():
 
     assert result["status"] == "error"
     assert result["message"] == "List failed. Please try again later."
+
+
+def test_inventory_get_returns_message_when_ready():
+    from wasp.resources.platform.inventory import PlatformInventory
+
+    reader = MagicMock()
+    reader.get_by_name.return_value = {
+        "metadata": {"name": "acme"},
+        "status": {
+            "conditions": [
+                {
+                    "type": "Ready",
+                    "status": "True",
+                    "lastTransitionTime": "2026-05-30T10:00:00Z",
+                }
+            ]
+        },
+    }
+    guard = MagicMock()
+    guard.check.return_value = ("local-operator", None)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = PlatformInventory(guard=guard, reader=reader).get("acme", FakeCtx())
+
+    assert result["status"] == "Ready"
+    assert result["name"] == "acme"
+    assert result["message"] == "A Platform acme está Ready desde 30/05."
+
+
+def test_inventory_get_returns_message_when_not_found():
+    from wasp.resources.platform.inventory import PlatformInventory
+
+    reader = MagicMock()
+    reader.get_by_name.return_value = None
+    guard = MagicMock()
+    guard.check.return_value = ("local-operator", None)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = PlatformInventory(guard=guard, reader=reader).get("ghost", FakeCtx())
+
+    assert result["status"] == "not_found"
+    assert result["name"] == "ghost"
+    assert "ghost" in result["message"]
+
+
+def test_inventory_get_returns_unauthorized_when_guard_denies():
+    from wasp.resources.platform.inventory import PlatformInventory
+
+    reader = MagicMock()
+    guard = MagicMock()
+    guard.check.return_value = (
+        None,
+        {"status": "unauthorized", "message": "Acesso negado."},
+    )
+
+    class FakeCtx:
+        session_id = "tg:wasp-agent:999"
+
+    result = PlatformInventory(guard=guard, reader=reader).get("acme", FakeCtx())
+
+    assert result == {"status": "unauthorized", "message": "Acesso negado."}
+    reader.get_by_name.assert_not_called()
+
+
+def test_inventory_get_returns_error_on_exception():
+    from wasp.resources.platform.inventory import PlatformInventory
+
+    reader = MagicMock()
+    reader.get_by_name.side_effect = RuntimeError("boom")
+    guard = MagicMock()
+    guard.check.return_value = ("local-operator", None)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = PlatformInventory(guard=guard, reader=reader).get("acme", FakeCtx())
+
+    assert result["status"] == "error"
+
+
+def test_format_transition_date_returns_none_for_invalid_timestamp():
+    from wasp.resources.platform.inventory import _format_transition_date
+
+    assert _format_transition_date({"lastTransitionTime": "not-a-date"}) is None
+
+
+def test_inventory_get_message_without_transition_time():
+    from wasp.resources.platform.inventory import PlatformInventory
+
+    reader = MagicMock()
+    reader.get_by_name.return_value = {
+        "metadata": {"name": "acme"},
+        "status": {"conditions": [{"type": "Ready", "status": "False"}]},
+    }
+    guard = MagicMock()
+    guard.check.return_value = ("local-operator", None)
+
+    class FakeCtx:
+        session_id = "local:wasp-agent:abc"
+
+    result = PlatformInventory(guard=guard, reader=reader).get("acme", FakeCtx())
+
+    assert result["status"] == "Pending"
+    assert "acme" in result["message"]

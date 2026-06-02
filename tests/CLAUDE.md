@@ -20,6 +20,8 @@ When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest
 
 `mock_agno` mocks `kubernetes.config` as `MagicMock`. `kubernetes.config.ConfigException` is a MagicMock instance, not a `BaseException` subclass — `raise` and `except` both fail with `TypeError`. To test code that catches it, install a real subclass first: `class FakeConfigException(Exception): pass; monkeypatch.setattr(module.config, "ConfigException", FakeConfigException)`. See `tests/test_k8s_reader.py::test_load_kube_config_auto_fallback_local`.
 
+`kubernetes.client.exceptions` is NOT in `KUBE_MODULES` and cannot be imported during tests (`ModuleNotFoundError`). For production code that needs to detect a 404 from `kubernetes.client`, use `getattr(e, "status", None) == 404` with a bare `except Exception` — avoids the import. In tests, raise a `class FakeApiException(Exception): def __init__(self, status): self.status = status` instead of `ApiException`.
+
 ## E2E fixture — patch `_select_notifier`, not `TelegramNotifier`
 
 In `tests/e2e/conftest.py`, patch `_select_notifier` directly:
