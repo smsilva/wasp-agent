@@ -183,6 +183,7 @@ Para pedidos como "checklist de production readiness", "está pronto pra produç
 
 ## External references
 
+- SDLC — índice de ideias, design e planos de execução ativos: `docs/sdlc/CLAUDE.md`
 - agno: `docs/references/agno.md`
 - Production readiness / scaffolding checklist: `docs/references/production-readiness-checklist.md`
 - Platform provisioning: `docs/architecture/platform-provisioning.md`
