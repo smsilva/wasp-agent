@@ -26,6 +26,7 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 | [2026-05-26-secret-rotation.md](01-exploration/2026-05-26-secret-rotation.md) | Secret Rotation |
 | [2026-05-26-supply-chain-security.md](01-exploration/2026-05-26-supply-chain-security.md) | Supply Chain Security — VEX, SLSA, COSIGN |
 | [2026-05-27-discord-slash-commands.md](01-exploration/2026-05-27-discord-slash-commands.md) | Discord Slash Commands |
+| [2026-06-03-mensageria-watcher.md](01-exploration/2026-06-03-mensageria-watcher.md) | Mensageria para watches de CRD |
 | [2026-05-30-env-var-prefix-naming.md](01-exploration/2026-05-30-env-var-prefix-naming.md) | Repensar prefixo de env vars do projeto |
 | [clients-package-pattern.md](01-exploration/clients-package-pattern.md) | Exploração: Padrão `wasp/clients/` para o restante do código |
 | [knowledge-reuse.md](01-exploration/knowledge-reuse.md) | Exploração: Reutilização de conhecimento arquitetural entre projetos |
@@ -46,6 +47,7 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 
 | Arquivo | Título |
 |---|---|
+| [2026-05-16-platform-watcher-restart-resilience.md](03-execution/2026-05-16-platform-watcher-restart-resilience.md) | Watcher Restart Resilience Implementation Plan |
 | [2026-05-30-auth-singleton-migration.md](03-execution/2026-05-30-auth-singleton-migration.md) | Auth Singleton Migration Implementation Plan |
 | [2026-05-30-dockerfile-compose.md](03-execution/2026-05-30-dockerfile-compose.md) | docker-compose Postgres Implementation Plan |
 | [2026-05-30-postgres-readiness.md](03-execution/2026-05-30-postgres-readiness.md) | Postgres Readiness Implementation Plan |

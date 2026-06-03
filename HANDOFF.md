@@ -2,24 +2,31 @@
 
 ## Why
 
-**Extensibilidade de recursos (v1) — concluída.** Novos CRDs não exigem editar `agent.py`/`provision.py`: cada recurso expõe um `ResourceProvider` (Protocol) registrado em `PROVIDERS` de `wasp/resources/registry.py`; `agent.py` monta `tools=ResourceRegistry.discover().all_tools()`. Discovery in-tree via `importlib.import_module` — não usa `importlib.metadata.entry_points` (projeto não é pacote instalável). Loaders de CRD v2+ adiados.
+**Watcher restart resilience — design + plano concluídos, implementação pendente.**
 
-**Dockerfile hardening — concluído.** Base trocada para `python:3.14-alpine`; usuário não-root `appuser`; `.dockerignore` criado. `readOnlyRootFilesystem` avaliado: viável apenas com `DATABASE_BACKEND=postgres` (SQLite escreve `agent.db` em `/app`).
+Watches de CRD (Platform, Cluster) são hoje in-memory: se o agente reiniciar antes de o CRD ficar Ready, a notificação é perdida. A solução persistir o estado de cada watch em banco de dados e replay no startup.
 
-**`get_platform_status` tool — concluída.** Nova tool `get_platform_status(name)` em `provision.py` para consultar status de uma Platform específica sem watcher. Retorna `{"status", "name", "message"}` com mensagem user-friendly. `KubernetesResourceReader` ganhou `get_by_name` (usa `get_cluster_custom_object`, retorna `None` em 404). `PlatformInventory.get` segue o mesmo padrão de auth guard do `list`.
+Decisões de design:
+- **Engine único SQLAlchemy** (`wasp/db/`) compartilhado por auth e watches — `DATABASE_BACKEND` controla SQLite vs Postgres.
+- **auth migra para SQLAlchemy Core** — `sqlite_repository.py` + `postgres_repository.py` → `repository.py` unificado. Locking por dialeto (`isolation_level="IMMEDIATE"` para SQLite, `FOR UPDATE`/`LOCK TABLE` para Postgres).
+- **`wasp/watches/`** novo pacote com `WatchRepository` (register/complete/fail/timeout/list_pending) e `restore_pending_watches()`.
+- `restore_pending_watches()` chamada em `main.py` **após** `create_app()` — canais (Discord, Telegram) precisam estar registrados antes.
+- `complete()` **antes** de `notifier.send()` — at-most-once: se o processo cair entre os dois, o watch sai da fila e não renotifica.
 
-**Renomeação de prefixo env vars — concluída.** `WASP_AGENT_*` → `AGENT_*` em toda a codebase.
-
-**CRD `Cluster` — concluído.** `wasp/resources/cluster/{manifest,provisioner,inventory,provider}.py` implementados. `ClusterWatcherSpawner` em `wasp/watcher.py`. `@tool` wrappers em `wasp/provision.py`. `ClusterProvider` registrado em `PROVIDERS` (`wasp/resources/registry.py`). Testes com 100% de cobertura incluindo `watch_cluster` (exception, 404 retry, timeout, span ctx, thread).
+Alternativas rejeitadas: watches sempre SQLite (inconsistência quando backend é Postgres), engines separados por módulo (dois engines para mesmo DB), SQLAlchemy ORM (overhead desnecessário para SQL simples).
 
 ## In Progress
 
-Nada em andamento.
+Design e plano de execução escritos. Implementação **não iniciada**.
+
+Último passo: escrita de `docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md` (11 tasks com código completo).
+
+Próximo passo: executar Task 1 do plano (`wasp/db/__init__.py`).
 
 ## Open Questions / Hypotheses
 
-- `_now()` duplicado entre `wasp/auth/_connection.py` (sqlite) e `postgres_repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.
 - OTLP 401 pós-`make test` é ruído cosmético: thread background do exporter dispara depois que pytest encerra, tenta logar mas stdout já fechou. Não afeta exit code. Pré-existente, depende de `OTEL_EXPORTER_OTLP_ENDPOINT` estar setado no shell.
+- `_now()` existirá duplicado em `wasp/auth/repository.py` e `wasp/watches/repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.
 
 ## Known Broken
 
@@ -28,26 +35,31 @@ Nenhum.
 ## How to Resume
 
 ```bash
-make format && make test
+cat docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md
 ```
 
-Próxima ação: escolher item do backlog.
+Depois executar com subagent-driven development (opção escolhida pelo usuário):
+
+```
+/superpowers:subagent-driven-development docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md
+```
 
 ## Next Steps
 
-1. **`readOnlyRootFilesystem`** — habilitar no Helm chart condicionado a `DATABASE_BACKEND=postgres`; ver avaliação em `docs/sdlc/02-design/archived/2026-05-30-dockerfile-hardening.md`.
-2. **Refinar `PostgresAuthRepository`** (opcional) — migrar timestamps para `TIMESTAMPTZ` e `user_id` para `UUID` se houver motivação.
+1. **Executar plano** — `docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md`, Task 1 a Task 11, via subagent-driven development.
+2. Após implementação: mover `docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md` para `archived/` e atualizar `docs/sdlc/CLAUDE.md`.
 
 ## Backlog (carry-over)
 
 - **Discord slash commands** (`docs/sdlc/01-exploration/2026-05-27-discord-slash-commands.md`)
 - **Handler de convite via DM no Discord** — ver `wasp/clients/telegram/webhook.py` como referência
-- **Restart resilience do watcher** (`docs/sdlc/02-design/2026-05-16-platform-watcher-restart-resilience.md`)
 - **Mover `extract_channel`/`extract_chat_id` para módulo folha** quando terceiro CRD chegar
 - **Operações além de criar** — update, delete, status individual de tenant
 - **Authorization granular (RBAC)** — admin, operator, viewer
 - **Testcontainers no E2E** — avaliar substituir setup manual k3d/Gitea
 - **`waspctl good-citizen`** (`docs/sdlc/02-design/2026-05-30-good-citizen-test.md`) precisa de plano de execução
-- **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL` (sessions e auth já funcionais)
+- **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
+- **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
+- **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.

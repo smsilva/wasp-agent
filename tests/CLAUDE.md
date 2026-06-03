@@ -8,9 +8,11 @@ Tests marked `postgres` (`test_postgres_auth_repository.py`, `test_postgres_skel
 
 `tests/conftest.py` mocks `agno.models` as `MagicMock`. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell, `configure()` calls `AgnoInstrumentor` which imports `agno.models.base.Model` and fails against the mock — the fixture delenvs it; don't remove that line.
 
-The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures. Para pacotes (ex: `wasp/auth/`), incluir o pacote E todos os submódulos (`wasp.auth`, `wasp.auth.protocol`, `wasp.auth.sqlite_repository`, etc.).
+The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures. Para pacotes (ex: `wasp/auth/`), incluir o pacote E todos os submódulos (`wasp.auth`, `wasp.auth.protocol`, `wasp.auth.repository`, etc.).
 
-Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`) precisam de `_reset_repository()` no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados. Capturar a referência do módulo **antes** do `sys.modules.pop` (`_auth_teardown = sys.modules.get("wasp.auth")`); fazer o `get` depois retorna `None` e o reset é silenciosamente pulado.
+Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`, `wasp/watches/__init__.py`) precisam de reset explícito no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados. Capturar a referência do módulo **antes** do `sys.modules.pop`; fazer o `get` depois retorna `None` e o reset é silenciosamente pulado.
+
+`wasp.db` tem singleton `get_engine()` / `_reset_engine()` — chamar `_reset_engine()` junto com `_reset_repository()` do auth no setup e teardown do `mock_agno`, caso contrário testes que mudam `DATABASE_FILE`/`DATABASE_BACKEND` via `monkeypatch.setenv` vazam o engine entre testes.
 
 Testes que precisam mockar auth devem fazer `monkeypatch.setattr(auth.get_repository(), "is_authorized", ...)` — patchando a instância singleton em vez do nome no módulo. O `mock_agno` chama `_reset_repository()` no setup e teardown, garantindo que cada teste começa com singleton limpo e que o patch atinge a instância usada pelo caller.
 

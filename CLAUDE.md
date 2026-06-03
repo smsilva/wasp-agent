@@ -98,6 +98,25 @@ New CRD (e.g. Cluster): create `wasp/resources/cluster/{manifest,provisioner,inv
 
 Resource discovery is via `ResourceProvider` (ver `docs/sdlc/02-design/2026-05-31-resource-provider-extensibility.md`). Cada CRD expõe um `wasp/resources/<kind>/provider.py` (módulo folha, NÃO reexportado no `__init__.py` para evitar ciclo de import) com `name: str` + `tools() -> list[Callable]`. Registrar adicionando uma linha à lista `PROVIDERS` em `wasp/resources/registry.py` (path `"modulo:Classe"`). `agent.py` monta as tools via `ResourceRegistry.discover().all_tools()` — NÃO editar `agent.py` para um novo recurso. Discovery é in-tree via `importlib.import_module`: o projeto não é pacote instalável (sem `[build-system]`), então entry points de `importlib.metadata` não funcionariam.
 
+### Packages — `wasp/db/`
+
+Engine SQLAlchemy compartilhado por todo o sistema (auth + watches). `DATABASE_BACKEND` controla SQLite (`NullPool`, `check_same_thread=False`) vs Postgres (pool padrão). Singleton via `get_engine()` / `_reset_engine()`. Todos os módulos de acesso a dados importam daqui — não criar engines independentes por módulo.
+
+### Packages — `wasp/watches/`
+
+Persistência de watches de CRD (Platform, Cluster, etc.) para sobreviver a restarts do agente.
+
+```
+wasp/watches/
+  __init__.py      ← get_repository() singleton + _reset_repository() + restore_pending_watches()
+  _schema.py       ← Table resource_watches + init_schema(engine)
+  repository.py    ← WatchRepository: register, complete, fail, timeout, list_pending
+```
+
+`restore_pending_watches()` usa lazy imports de `wasp.watcher` (dentro da função) para evitar circular import em nível de módulo. Chamada em `main.py` após `create_app()` — canais precisam estar registrados antes.
+
+`WatchRepository.complete()` deve ser chamado **antes** de `notifier.send()` — garante at-most-once: se o processo cair após gravar mas antes de enviar, o watch sai da fila e não é reenviado no próximo restart.
+
 ### Makefile
 
 When a target needs more than one command, extract to `scripts/<name>` and call it from the target.
@@ -150,13 +169,12 @@ System prompt must include explicit anti-pattern instructions:
 
 `chat_id_var` is a `ContextVar` in `wasp/logging.py`. `threading.Thread` does **not** inherit ContextVar — each thread starts with empty context. `watch_platform` explicitly calls `chat_id_var.set(chat_id)` at the start. Any future code running in a new thread that needs `chat_id` must do the same.
 
-### SQLite atomic check-then-write (`wasp/auth/sqlite_repository.py`)
+### Auth repository (`wasp/auth/repository.py`)
 
-Check-then-write operations call `con.execute("BEGIN IMMEDIATE")` before the first SELECT to acquire the write lock immediately. The subsequent `with con:` commits (success) or rolls back (exception). Early `return None` before `with con:` triggers a rollback of an empty transaction — no side effects.
+Unified SQLAlchemy Core implementation (replaces `sqlite_repository.py` + `postgres_repository.py`). Timestamps como TEXT ISO, `user_id` como TEXT hex — paridade entre backends. A maioria dos métodos usa `engine.begin()` (auto-commit no exit). Os dois métodos com check-then-write usam locking específico de dialeto detectado via `engine.dialect.name`:
 
-### Postgres auth (`wasp/auth/postgres_repository.py`)
-
-Mirrors the sqlite repo behaviorally — keeps timestamps as TEXT ISO and `user_id` as TEXT hex (parity, not native `TIMESTAMPTZ`/`UUID`) so the SQL differs only by `?`→`%s`. Postgres equivalents of `BEGIN IMMEDIATE`: `SELECT ... FOR UPDATE` on the invite row in `redeem_invite`, `LOCK TABLE auth_users IN ACCESS EXCLUSIVE MODE` in `bootstrap_admin`. psycopg3 `with psycopg.connect() as con:` runs one transaction and closes on exit; an early `return None` inside it commits/closes cleanly.
+- SQLite: `engine.connect().execution_options(isolation_level="IMMEDIATE")` — emite `BEGIN IMMEDIATE` antes do primeiro SELECT.
+- Postgres: `engine.connect()` + `SELECT ... FOR UPDATE` em `redeem_invite`; `LOCK TABLE auth_users IN ACCESS EXCLUSIVE MODE` em `bootstrap_admin`.
 
 ### Repository pattern via Protocol (data access)
 
