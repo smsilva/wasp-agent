@@ -648,3 +648,70 @@ def test_extract_chat_id_returns_user_id_for_discord_session():
         session_id = "dc:wasp-agent:123456789"
 
     assert extract_chat_id(FakeCtx()) == "123456789"
+
+
+def test_platform_spawner_registers_watch_before_threading(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    mock_repo = MagicMock()
+    mock_thread_cls = MagicMock()
+
+    with (
+        patch("wasp.watcher.threading.Thread", mock_thread_cls),
+        patch("wasp.watcher._select_notifier", return_value=MagicMock()),
+        patch("wasp.watcher.get_watch_repository", return_value=mock_repo),
+    ):
+        spawner = PlatformWatcherSpawner()
+        result = spawner.spawn(
+            name="p1",
+            chat_id="12345",
+            channel="tg",
+            parent_span_ctx=None,
+            session_id="tg:agent:12345",
+        )
+
+    assert result is True
+    mock_repo.register.assert_called_once_with("Platform", "p1", "tg:agent:12345")
+    mock_thread_cls.assert_called_once()
+
+
+def test_cluster_spawner_registers_watch_before_threading(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import ClusterWatcherSpawner
+
+    mock_repo = MagicMock()
+    mock_thread_cls = MagicMock()
+
+    with (
+        patch("wasp.watcher.threading.Thread", mock_thread_cls),
+        patch("wasp.watcher._select_notifier", return_value=MagicMock()),
+        patch("wasp.watcher.get_watch_repository", return_value=mock_repo),
+    ):
+        spawner = ClusterWatcherSpawner()
+        result = spawner.spawn(
+            name="c1",
+            chat_id="42",
+            channel="dc",
+            parent_span_ctx=None,
+            session_id="dc:agent:42",
+        )
+
+    assert result is True
+    mock_repo.register.assert_called_once_with("Cluster", "c1", "dc:agent:42")
+
+
+def test_spawner_skips_register_when_no_session_id(monkeypatch):
+    from unittest.mock import MagicMock, patch
+    from wasp.watcher import PlatformWatcherSpawner
+
+    mock_repo = MagicMock()
+
+    with (
+        patch("wasp.watcher.threading.Thread", MagicMock()),
+        patch("wasp.watcher._select_notifier", return_value=MagicMock()),
+        patch("wasp.watcher.get_watch_repository", return_value=mock_repo),
+    ):
+        PlatformWatcherSpawner().spawn("p1", "123", "tg", None, session_id=None)
+
+    mock_repo.register.assert_not_called()

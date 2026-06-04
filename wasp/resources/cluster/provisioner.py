@@ -85,6 +85,7 @@ class ClusterProvisioner:
                 chat_id=chat_id,
                 channel=channel,
                 parent_span_ctx=span.get_span_context(),
+                session_id=getattr(run_context, "session_id", None),
             )
             if spawned:
                 span.set_attribute("watcher.spawned", True)

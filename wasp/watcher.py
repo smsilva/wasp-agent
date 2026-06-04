@@ -12,6 +12,7 @@ from wasp.clients import Notifier, channels
 from wasp.clients.k8s import load_kube_config_auto
 from wasp.clients.local import ConsoleNotifier
 from wasp.resources.platform import PLATFORM_GROUP, PLATFORM_PLURAL, PLATFORM_VERSION
+from wasp.watches import get_repository as get_watch_repository
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +77,7 @@ async def watch_platform(
         await _watch_platform_inner(name, chat_id, notifier, parent_span_ctx)
     except Exception:
         log.exception("Watcher failed for %s", name, extra={"platform": name})
+        get_watch_repository().fail("Platform", name)
 
 
 async def _watch_platform_inner(
@@ -127,6 +129,7 @@ async def _watch_platform_inner(
                 log.info(
                     "Platform %s is Ready — notifying", name, extra={"platform": name}
                 )
+                get_watch_repository().complete("Platform", name)
                 await notifier.send(chat_id, ready_message(name, platform))
                 return
 
@@ -142,6 +145,7 @@ async def _watch_platform_inner(
         span.set_attribute("poll_count", poll_count)
         span.set_attribute("duration_seconds", elapsed)
         log.warning("Watcher timeout for %s", name, extra={"platform": name})
+        get_watch_repository().timeout("Platform", name)
         await notifier.send(
             chat_id,
             f"Provisionamento de '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
@@ -166,6 +170,7 @@ class PlatformWatcherSpawner:
         chat_id: str | None,
         channel: str | None,
         parent_span_ctx,
+        session_id: str | None = None,
     ) -> bool:
         if not chat_id:
             return False
@@ -173,6 +178,8 @@ class PlatformWatcherSpawner:
         notifier = _select_notifier(channel)
         if notifier is None:
             return False
+        if session_id:
+            get_watch_repository().register("Platform", name, session_id)
 
         def _run_watcher():
             asyncio.run(watch_platform(name, chat_id, notifier, parent_span_ctx))
@@ -190,6 +197,7 @@ async def watch_cluster(
         await _watch_cluster_inner(name, chat_id, notifier, parent_span_ctx)
     except Exception:
         log.exception("Cluster watcher failed for %s", name, extra={"cluster": name})
+        get_watch_repository().fail("Cluster", name)
 
 
 async def _watch_cluster_inner(
@@ -247,6 +255,7 @@ async def _watch_cluster_inner(
                 log.info(
                     "Cluster %s is Ready — notifying", name, extra={"cluster": name}
                 )
+                get_watch_repository().complete("Cluster", name)
                 await notifier.send(chat_id, cluster_ready_message(name, cluster))
                 return
 
@@ -262,6 +271,7 @@ async def _watch_cluster_inner(
         span.set_attribute("poll_count", poll_count)
         span.set_attribute("duration_seconds", elapsed)
         log.warning("Cluster watcher timeout for %s", name, extra={"cluster": name})
+        get_watch_repository().timeout("Cluster", name)
         await notifier.send(
             chat_id,
             f"Provisionamento do cluster '{name}' ainda em andamento após 10 minutos. Verifique mais tarde.",
@@ -280,6 +290,7 @@ class ClusterWatcherSpawner:
         chat_id: str | None,
         channel: str | None,
         parent_span_ctx,
+        session_id: str | None = None,
     ) -> bool:
         if not chat_id:
             return False
@@ -287,6 +298,8 @@ class ClusterWatcherSpawner:
         notifier = _select_notifier(channel)
         if notifier is None:
             return False
+        if session_id:
+            get_watch_repository().register("Cluster", name, session_id)
 
         def _run_watcher():
             asyncio.run(watch_cluster(name, chat_id, notifier, parent_span_ctx))
