@@ -20,6 +20,17 @@ Testes que precisam mockar auth devem fazer `monkeypatch.setattr(auth.get_reposi
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time.
 
+## Poll-loop tests: avoid runaway loops that OOM-kill the session
+
+`watch_platform`/`watch_cluster` poll with `while time.monotonic() < deadline` and `await asyncio.sleep(...)`. A test that mocks `asyncio.sleep` (instant) and patches `time.monotonic` to force the timeout exit can spin at 100% CPU **forever** if the deadline never trips — allocating telemetry/log objects each iteration until the OOM-killer kills the whole session (it can take down tmux). There is no `pytest-timeout` rescue for the suite without the guard below.
+
+Two rules to keep these tests safe:
+
+1. Use an **infinite** monotonic iterator: `times = chain([0, 0], repeat(w.WATCH_TIMEOUT_SECONDS + 1))`. A finite `iter([...])` (or one with a `StopIteration` fallback) gets exhausted by the event loop's own `time.monotonic()` calls, which corrupts the deadline (`deadline = 601 + 600`) so `601 < 1201` loops forever. See `test_watcher.py::test_watch_platform_timeout` for the reference pattern.
+2. Prefer `async def` test + `await w.watch_*(...)` over a sync test calling `asyncio.run(...)`. `asyncio.run` creates a fresh loop whose setup reads `time.monotonic()` and pre-consumes the iterator before the production code runs.
+
+`pytest-timeout` (`timeout = 60`, signal method) is configured in `pyproject.toml` as the wall-clock backstop: a runaway loop now fails one test instead of hanging the suite. Keep it.
+
 ## Mocked exception classes can't be raised or caught
 
 `mock_agno` mocks `kubernetes.config` as `MagicMock`. `kubernetes.config.ConfigException` is a MagicMock instance, not a `BaseException` subclass — `raise` and `except` both fail with `TypeError`. To test code that catches it, install a real subclass first: `class FakeConfigException(Exception): pass; monkeypatch.setattr(module.config, "ConfigException", FakeConfigException)`. See `tests/test_k8s_reader.py::test_load_kube_config_auto_fallback_local`.
