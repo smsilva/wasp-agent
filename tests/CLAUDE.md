@@ -54,3 +54,5 @@ monkeypatch.setattr(wasp.provision, "_select_notifier", lambda *a, **kw: recordi
 Patching only `TelegramNotifier` doesn't work: `AGENT_NOTIFIER=console` in `.env` is loaded at import, so `_select_notifier` returns `ConsoleNotifier` before reaching `TelegramNotifier`.
 
 Also monkeypatch `wasp.auth.get_repository().is_authorized` to return a fake `user_id` — without it the auth guard silently returns `{"status": "unauthorized"}` and the test fails downstream at Gitea's `get_file()` with 404. Patcheie a instância do singleton (`wasp.auth.get_repository()`), não a classe `AuthRepository` diretamente.
+
+Asserções sobre a resposta do agente no e2e chamam o LLM real, que varia o idioma (prompt em PT pode gerar resposta em EN). Use substrings language-agnostic: `assert "confirm" in content.lower()` cobre "Confirm" (EN) e "Confirma" (PT) — `"confirma"` quebra com resposta em inglês.

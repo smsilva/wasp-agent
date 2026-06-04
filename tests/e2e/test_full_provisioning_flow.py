@@ -33,7 +33,8 @@ async def test_provision_and_notify(
     )
     assert r1.status_code == 200, r1.text
     content1 = sse_content(r1)
-    assert "confirma" in content1.lower(), (
+    # "confirm" cobre EN ("Confirm...") e PT ("Confirma..."); o modelo varia o idioma
+    assert "confirm" in content1.lower(), (
         f"Expected confirmation, got: {content1!r}\nFull SSE response:\n{r1.text}"
     )
 
