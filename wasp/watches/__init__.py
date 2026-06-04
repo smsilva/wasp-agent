@@ -23,7 +23,11 @@ def _reset_repository() -> None:
 
 
 def restore_pending_watches() -> None:
-    from wasp.watcher import _select_notifier, watch_cluster, watch_platform  # lazy — avoids circular import
+    from wasp.watcher import (
+        _select_notifier,
+        watch_cluster,
+        watch_platform,
+    )  # lazy — avoids circular import
 
     for watch in get_repository().list_pending():
         kind = watch["kind"]
@@ -58,7 +62,7 @@ def restore_pending_watches() -> None:
         elif kind == "Cluster":
             coro = watch_cluster(name, chat_id, notifier)
         else:
-            log.warning("restore: unknown kind %r — skipping %s/%s", kind, name, name)
+            log.warning("restore: unknown kind %r — skipping %s/%s", kind, kind, name)
             continue
 
         log.info("Restoring watch for %s/%s", kind, name)
