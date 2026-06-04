@@ -650,20 +650,23 @@ def test_extract_chat_id_returns_user_id_for_discord_session():
     assert extract_chat_id(FakeCtx()) == "123456789"
 
 
-def test_platform_spawner_registers_watch_before_threading(monkeypatch):
+def test_platform_spawner_registers_watch_before_threading():
     from unittest.mock import MagicMock, patch
     from wasp.watcher import PlatformWatcherSpawner
 
+    call_order = []
     mock_repo = MagicMock()
-    mock_thread_cls = MagicMock()
+    mock_repo.register.side_effect = lambda *a, **kw: call_order.append("register")
+    mock_thread_cls = MagicMock(
+        side_effect=lambda *a, **kw: call_order.append("thread") or MagicMock()
+    )
 
     with (
         patch("wasp.watcher.threading.Thread", mock_thread_cls),
         patch("wasp.watcher._select_notifier", return_value=MagicMock()),
         patch("wasp.watcher.get_watch_repository", return_value=mock_repo),
     ):
-        spawner = PlatformWatcherSpawner()
-        result = spawner.spawn(
+        result = PlatformWatcherSpawner().spawn(
             name="p1",
             chat_id="12345",
             channel="tg",
@@ -672,24 +675,27 @@ def test_platform_spawner_registers_watch_before_threading(monkeypatch):
         )
 
     assert result is True
+    assert call_order == ["register", "thread"]
     mock_repo.register.assert_called_once_with("Platform", "p1", "tg:agent:12345")
-    mock_thread_cls.assert_called_once()
 
 
-def test_cluster_spawner_registers_watch_before_threading(monkeypatch):
+def test_cluster_spawner_registers_watch_before_threading():
     from unittest.mock import MagicMock, patch
     from wasp.watcher import ClusterWatcherSpawner
 
+    call_order = []
     mock_repo = MagicMock()
-    mock_thread_cls = MagicMock()
+    mock_repo.register.side_effect = lambda *a, **kw: call_order.append("register")
+    mock_thread_cls = MagicMock(
+        side_effect=lambda *a, **kw: call_order.append("thread") or MagicMock()
+    )
 
     with (
         patch("wasp.watcher.threading.Thread", mock_thread_cls),
         patch("wasp.watcher._select_notifier", return_value=MagicMock()),
         patch("wasp.watcher.get_watch_repository", return_value=mock_repo),
     ):
-        spawner = ClusterWatcherSpawner()
-        result = spawner.spawn(
+        result = ClusterWatcherSpawner().spawn(
             name="c1",
             chat_id="42",
             channel="dc",
@@ -698,10 +704,11 @@ def test_cluster_spawner_registers_watch_before_threading(monkeypatch):
         )
 
     assert result is True
+    assert call_order == ["register", "thread"]
     mock_repo.register.assert_called_once_with("Cluster", "c1", "dc:agent:42")
 
 
-def test_spawner_skips_register_when_no_session_id(monkeypatch):
+def test_spawner_skips_register_when_no_session_id():
     from unittest.mock import MagicMock, patch
     from wasp.watcher import PlatformWatcherSpawner
 
