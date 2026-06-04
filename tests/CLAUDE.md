@@ -10,6 +10,8 @@ URL driver depends on the client: raw `psycopg.connect()` accepts `pg.get_connec
 
 `tests/conftest.py` mocks `agno.models` as `MagicMock`. If `OTEL_EXPORTER_OTLP_ENDPOINT` is set in the shell, `configure()` calls `AgnoInstrumentor` which imports `agno.models.base.Model` and fails against the mock — the fixture delenvs it; don't remove that line.
 
+`configure()` também roda no **import** de `wasp.telemetry`, que dispara na *coleta* do pytest (via `from wasp import ...` no topo de `test_auth_cli.py`) — antes de qualquer fixture. Se a shell exporta `OTEL_EXPORTER_OTLP_ENDPOINT`, cria um `PeriodicExportingMetricReader` real cuja thread exporta no shutdown e loga em stream fechada (`I/O operation on closed file`). O topo do `conftest.py` faz `os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)` em escopo de sessão para cobrir isso; o `delenv` por-teste do `mock_agno` sozinho não basta. Não remover nenhum dos dois.
+
 The `sys.modules.pop` loop must include every `wasp.*` module. When adding a new module in `wasp/`, add it to the fixture list or state leaks between tests causing intermittent failures. Para pacotes (ex: `wasp/auth/`), incluir o pacote E todos os submódulos (`wasp.auth`, `wasp.auth.protocol`, `wasp.auth.repository`, etc.).
 
 Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`, `wasp/watches/__init__.py`) precisam de reset explícito no setup/teardown da fixture `mock_agno` — `sys.modules.pop` não invalida bindings já importados. Capturar a referência do módulo **antes** do `sys.modules.pop`; fazer o `get` depois retorna `None` e o reset é silenciosamente pulado.
@@ -19,6 +21,10 @@ Pacotes com singleton (`get_repository()` em `wasp/auth/__init__.py`, `wasp/watc
 Testes que precisam mockar auth devem fazer `monkeypatch.setattr(auth.get_repository(), "is_authorized", ...)` — patchando a instância singleton em vez do nome no módulo. O `mock_agno` chama `_reset_repository()` no setup e teardown, garantindo que cada teste começa com singleton limpo e que o patch atinge a instância usada pelo caller.
 
 When testing `telemetry.metrics_endpoint`, patch `wasp.telemetry.generate_latest` — not `prometheus_client.generate_latest`. The name is bound at import time.
+
+## Never-awaited coroutines fail the suite (`filterwarnings`)
+
+`pyproject.toml` sets `filterwarnings = ["error::RuntimeWarning"]` — uma corotina criada e não aguardada (ex: `AsyncMock` chamado mas não awaited, ou corotina criada antes do seu runner) **falha** a suíte em vez de virar ruído no final. O GC reporta o warning em momento arbitrário, então a atribuição ao teste é não-confiável: bisseccione por arquivo (`for f in tests/test_*.py; do ...`) e depois inspecione, não confie no nome do teste no summary. Padrão recorrente: passar `algum_async_mock()` como argumento a um mock que substitui o awaiter real (`asyncio.run`, `run_coroutine_threadsafe`) — a corotina nunca é aguardada. Mocke também a função async, ou use `MagicMock` para o que produz a corotina.
 
 ## Poll-loop tests: avoid runaway loops that OOM-kill the session
 

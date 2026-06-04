@@ -58,18 +58,18 @@ def restore_pending_watches() -> None:
             continue
 
         if kind == "Platform":
-            coro = watch_platform(name, chat_id, notifier)
+            coro_fn = watch_platform
         elif kind == "Cluster":
-            coro = watch_cluster(name, chat_id, notifier)
+            coro_fn = watch_cluster
         else:
             log.warning("restore: unknown kind %r — skipping %s/%s", kind, kind, name)
             continue
 
         log.info("Restoring watch for %s/%s", kind, name)
 
-        def _run(c=coro):
+        def _run(fn=coro_fn, n=name, c=chat_id, nf=notifier):
             import asyncio
 
-            asyncio.run(c)
+            asyncio.run(fn(n, c, nf))
 
         threading.Thread(target=_run, daemon=True).start()

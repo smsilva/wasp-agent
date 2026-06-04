@@ -1,6 +1,17 @@
+import os
 import sys
 from unittest.mock import MagicMock
 import pytest
+
+# wasp/telemetry.py runs configure() at import time, which fires during pytest
+# collection (e.g. test_auth_cli.py's top-level `from wasp import ...`) — before
+# any fixture. If the dev shell exports OTEL_EXPORTER_OTLP_ENDPOINT, configure()
+# spawns a real PeriodicExportingMetricReader whose background thread exports at
+# shutdown and logs to an already-closed stream ("I/O operation on closed
+# file"). Strip it session-wide before collection. The per-test delenv in
+# mock_agno stays; tests exercising the endpoint set it via monkeypatch and mock
+# the exporter.
+os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
 
 
 def pytest_collection_modifyitems(config, items):

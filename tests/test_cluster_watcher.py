@@ -184,13 +184,15 @@ def test_cluster_watcher_spawner_thread_runs_asyncio(monkeypatch):
         def start(self):
             pass
 
+    mock_watch = MagicMock()
     monkeypatch.setattr(watcher.threading, "Thread", FakeThread)
     monkeypatch.setattr(watcher, "_select_notifier", lambda channel: MagicMock())
     monkeypatch.setattr(watcher.asyncio, "run", MagicMock())
+    monkeypatch.setattr(watcher, "watch_cluster", mock_watch)
 
     ClusterWatcherSpawner().spawn(
         name="edge", chat_id="chat-1", channel="local", parent_span_ctx=None
     )
 
     captured["target"]()
-    watcher.asyncio.run.assert_called_once()
+    watcher.asyncio.run.assert_called_once_with(mock_watch.return_value)

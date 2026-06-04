@@ -182,7 +182,10 @@ async def test_discord_notifier_send_crossloop_uses_run_coroutine_threadsafe():
     import asyncio
     import unittest.mock as mock
 
-    channel = AsyncMock()
+    # channel.send must stay a MagicMock (not AsyncMock): in the cross-loop
+    # branch its coroutine is handed to run_coroutine_threadsafe (mocked here),
+    # so an AsyncMock would leave a dangling, never-awaited coroutine.
+    channel = MagicMock()
     notifier = DiscordNotifier()
     notifier.register("42", channel)
 

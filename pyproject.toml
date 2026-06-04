@@ -44,6 +44,11 @@ asyncio_mode = "auto"
 # must fail the test, not hang the suite. SIGALRM (default method) interrupts
 # even a tight CPU loop on the main thread.
 timeout = 60
+# Never-awaited coroutines (e.g. an AsyncMock called but not awaited, or a
+# coroutine created eagerly before its runner) must fail the suite, not print
+# noise at the end. GC reports these at an arbitrary point, so attribution can
+# be off — bisect by file/test if one surfaces.
+filterwarnings = ["error::RuntimeWarning"]
 markers = [
     "e2e: end-to-end tests requiring k3d and Gitea",
     "postgres: tests requiring a real Postgres via testcontainers (Docker)",

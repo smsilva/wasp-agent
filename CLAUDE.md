@@ -115,6 +115,8 @@ wasp/watches/
 
 `restore_pending_watches()` usa lazy imports de `wasp.watcher` (dentro da função) para evitar circular import em nível de módulo. Chamada em `main.py` após `create_app()` — canais precisam estar registrados antes.
 
+A corotina do watch é construída **dentro** do target da thread (`asyncio.run(fn(name, chat_id, notifier))`), nunca antecipadamente (`coro = watch_platform(...)` antes do `Thread(...).start()`). Criação antecipada vaza uma corotina nunca aguardada se a thread não rodar (testes com `Thread` mockada) ou falhar ao iniciar. Mesmo padrão em `watcher.py::spawn`.
+
 `WatchRepository.complete()` deve ser chamado **antes** de `notifier.send()` — garante at-most-once: se o processo cair após gravar mas antes de enviar, o watch sai da fila e não é reenviado no próximo restart.
 
 ### Makefile
