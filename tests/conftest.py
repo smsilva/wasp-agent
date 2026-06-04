@@ -99,6 +99,9 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.cluster.provider",
         "wasp.startup",
         "wasp.db",
+        "wasp.watches",
+        "wasp.watches._schema",
+        "wasp.watches.repository",
     ):
         sys.modules.pop(mod, None)
 
@@ -144,6 +147,10 @@ def mock_agno(monkeypatch, request):
     _auth_setup = sys.modules.get("wasp.auth")
     if _auth_setup is not None:
         _auth_setup._reset_repository()
+    # Watches repository singleton survives sys.modules.pop for the same reason.
+    _watches_setup = sys.modules.get("wasp.watches")
+    if _watches_setup is not None:
+        _watches_setup._reset_repository()
     # SQLAlchemy engine singleton survives sys.modules.pop for the same reason.
     _db_setup = sys.modules.get("wasp.db")
     if _db_setup is not None:
@@ -154,6 +161,7 @@ def mock_agno(monkeypatch, request):
     # does not trigger a fresh import (which would cascade through wasp/__init__).
     _channels_teardown = sys.modules.get("wasp.clients.channels")
     _auth_teardown = sys.modules.get("wasp.auth")
+    _watches_teardown = sys.modules.get("wasp.watches")
     _db_teardown = sys.modules.get("wasp.db")
 
     for mod in (
@@ -203,6 +211,9 @@ def mock_agno(monkeypatch, request):
         "wasp.resources.cluster.provider",
         "wasp.startup",
         "wasp.db",
+        "wasp.watches",
+        "wasp.watches._schema",
+        "wasp.watches.repository",
     ):
         sys.modules.pop(mod, None)
 
@@ -210,5 +221,7 @@ def mock_agno(monkeypatch, request):
         _channels_teardown.reset()
     if _auth_teardown is not None:
         _auth_teardown._reset_repository()
+    if _watches_teardown is not None:
+        _watches_teardown._reset_repository()
     if _db_teardown is not None:
         _db_teardown._reset_engine()
