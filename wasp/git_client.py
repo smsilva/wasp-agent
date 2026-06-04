@@ -2,7 +2,7 @@ import base64
 from typing import Protocol
 
 import httpx
-from github import Github
+from github import Auth, Github
 from github.GithubException import GithubException
 
 
@@ -18,7 +18,7 @@ class GitClient(Protocol):
 
 class PyGithubClient:
     def __init__(self, pat: str, repo: str, base_url: str = "https://api.github.com"):
-        self._repo = Github(login_or_token=pat, base_url=base_url).get_repo(repo)
+        self._repo = Github(auth=Auth.Token(pat), base_url=base_url).get_repo(repo)
 
     def create_file(self, path: str, message: str, content: str, branch: str) -> None:
         try:

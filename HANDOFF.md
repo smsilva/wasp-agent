@@ -32,8 +32,6 @@ Nenhum. Validado nesta sessão:
 - `make e2e-with-debug`: **1 passed in 36.72s** (fluxo completo: confirmação → commit no Gitea → watcher → `Platform Ready — notifying` → cleanup k3d).
 - `ruff check .` e `ruff format` limpos.
 
-*Intencional / benigno:* `DeprecationWarning` em `wasp/git_client.py:21` (PyGithub `login_or_token` deprecado) — não bloqueia; ver Backlog.
-
 ## How to Resume
 
 ```bash
@@ -44,11 +42,10 @@ Confirmar `418 passed, 1 skipped` sem mensagens após.
 
 ## Next Steps
 
-- Limpar o `DeprecationWarning` do PyGithub: trocar `Github(login_or_token=pat, base_url=...)` por `Github(auth=github.Auth.Token(pat), base_url=...)` em `wasp/git_client.py:21`.
+Nenhum item priorizado. Ver Backlog.
 
 ## Backlog (carry-over)
 
-- **PyGithub `login_or_token` deprecado** em `wasp/git_client.py:21` — migrar para `auth=github.Auth.Token(...)`. Surge como `DeprecationWarning` no e2e.
 - **`WatchRepository.register` silenciosamente no-op em re-provisioning após estado terminal.** `UniqueConstraint("kind","name")` em `resource_watches` faz `INSERT` lançar `IntegrityError` (capturado) quando há linha pré-existente em status `ready`/`failed`/`timeout`. O novo watch thread inicia mas o DB não reflete `pending` — restart subsequente não recupera. Hoje, blindado pelo guard de manifest no GitOps (`committer.commit()` retorna early se o YAML já existe), mas o contrato do `register` está incorreto. Fix sugerido: `INSERT ... ON CONFLICT(kind, name) DO UPDATE SET status='pending', session_id=:session_id, created_at=:created_at` (Postgres) / `INSERT OR REPLACE` (SQLite, com cuidado quanto a notified_at).
 - **Parser duplicado de `session_id`.** `wasp/watches/__init__.py:restore_pending_watches` repete a lógica de `extract_channel`/`extract_chat_id` em `wasp/watcher.py`. Extrair `parse_session_id(raw) -> tuple[str, str] | None` em `wasp/watcher.py` quando aparecer terceiro caller (regra das três usos do CLAUDE.md).
 - **`_now()` duplicado** em `wasp/auth/repository.py` e `wasp/watches/repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.

@@ -11,12 +11,16 @@ def test_pygithub_client_init_calls_get_repo(monkeypatch):
 
     monkeypatch.setattr(git_client, "Github", mock_github_cls)
 
+    mock_token = MagicMock()
+    monkeypatch.setattr(git_client.Auth, "Token", mock_token)
+
     client = git_client.PyGithubClient(
         pat="tok", repo="owner/repo", base_url="https://api.github.com"
     )
 
+    mock_token.assert_called_once_with("tok")
     mock_github_cls.assert_called_once_with(
-        login_or_token="tok", base_url="https://api.github.com"
+        auth=mock_token.return_value, base_url="https://api.github.com"
     )
     mock_github_cls.return_value.get_repo.assert_called_once_with("owner/repo")
     assert client._repo is mock_repo
