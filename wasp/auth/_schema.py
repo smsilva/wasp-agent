@@ -1,46 +1,39 @@
-from wasp.auth._connection import _connect
+from sqlalchemy import Column, Engine, ForeignKey, Index, MetaData, Table, Text
 
-_DDL = (
-    """
-    CREATE TABLE IF NOT EXISTS auth_users (
-      user_id      TEXT PRIMARY KEY,
-      display_name TEXT NOT NULL,
-      created_at   TEXT NOT NULL
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS auth_identities (
-      channel     TEXT NOT NULL,
-      channel_id  TEXT NOT NULL,
-      user_id     TEXT NOT NULL REFERENCES auth_users(user_id),
-      linked_at   TEXT NOT NULL,
-      PRIMARY KEY (channel, channel_id)
-    )
-    """,
-    """
-    CREATE INDEX IF NOT EXISTS auth_identities_user_idx
-      ON auth_identities(user_id)
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS auth_invites (
-      token       TEXT PRIMARY KEY,
-      user_id     TEXT NOT NULL REFERENCES auth_users(user_id),
-      channel     TEXT,
-      channel_id  TEXT,
-      created_by  TEXT NOT NULL,
-      created_at  TEXT NOT NULL,
-      expires_at  TEXT NOT NULL,
-      used_at     TEXT
-    )
-    """,
+metadata = MetaData()
+
+auth_users = Table(
+    "auth_users",
+    metadata,
+    Column("user_id", Text, primary_key=True),
+    Column("display_name", Text, nullable=False),
+    Column("created_at", Text, nullable=False),
+)
+
+auth_identities = Table(
+    "auth_identities",
+    metadata,
+    Column("channel", Text, nullable=False, primary_key=True),
+    Column("channel_id", Text, nullable=False, primary_key=True),
+    Column("user_id", Text, ForeignKey("auth_users.user_id"), nullable=False),
+    Column("linked_at", Text, nullable=False),
+)
+
+Index("auth_identities_user_idx", auth_identities.c.user_id)
+
+auth_invites = Table(
+    "auth_invites",
+    metadata,
+    Column("token", Text, primary_key=True),
+    Column("user_id", Text, ForeignKey("auth_users.user_id"), nullable=False),
+    Column("channel", Text),
+    Column("channel_id", Text),
+    Column("created_by", Text, nullable=False),
+    Column("created_at", Text, nullable=False),
+    Column("expires_at", Text, nullable=False),
+    Column("used_at", Text),
 )
 
 
-def init_schema(db_file: str) -> None:
-    con = _connect(db_file)
-    try:
-        for stmt in _DDL:
-            con.execute(stmt)
-        con.commit()
-    finally:
-        con.close()
+def init_schema(engine: Engine) -> None:
+    metadata.create_all(engine)

@@ -4,6 +4,9 @@ import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
+
 from wasp.auth._connection import _connect, _now, _resolve_db_file
 from wasp.auth._schema import init_schema
 
@@ -16,7 +19,12 @@ class SqliteAuthRepository:
     def _ensure_initialized(self) -> None:
         if self._initialized:
             return
-        init_schema(self._db_file)
+        engine = create_engine(
+            f"sqlite:///{self._db_file}",
+            poolclass=NullPool,
+            connect_args={"check_same_thread": False},
+        )
+        init_schema(engine)
         self._initialized = True
 
     def _conn(self) -> sqlite3.Connection:

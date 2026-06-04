@@ -7,6 +7,22 @@ import pytest
 from wasp.auth.sqlite_repository import SqliteAuthRepository
 
 
+def test_init_schema_creates_three_tables_via_engine(tmp_path):
+    from sqlalchemy import create_engine, inspect
+    from sqlalchemy.pool import NullPool
+    engine = create_engine(
+        f"sqlite:///{tmp_path / 'schema.db'}",
+        poolclass=NullPool,
+        connect_args={"check_same_thread": False},
+    )
+    from wasp.auth._schema import init_schema
+    init_schema(engine)
+    names = inspect(engine).get_table_names()
+    assert "auth_users" in names
+    assert "auth_identities" in names
+    assert "auth_invites" in names
+
+
 @pytest.fixture
 def repo(tmp_path):
     return SqliteAuthRepository(str(tmp_path / "agent.db"))
