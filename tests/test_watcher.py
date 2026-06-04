@@ -722,3 +722,27 @@ def test_spawner_skips_register_when_no_session_id():
         PlatformWatcherSpawner().spawn("p1", "123", "tg", None, session_id=None)
 
     mock_repo.register.assert_not_called()
+
+
+async def test_watch_cluster_inner_raises_on_non_404_apiexception(monkeypatch):
+    from unittest.mock import AsyncMock, MagicMock
+    import wasp.watcher as w
+    from tests.notifiers import RecordingNotifier
+
+    class FakeApiException(Exception):
+        def __init__(self, status, reason=""):
+            self.status = status
+            self.reason = reason
+
+    monkeypatch.setattr(w, "ApiException", FakeApiException)
+
+    api = MagicMock()
+    api.get_cluster_custom_object.side_effect = FakeApiException(
+        status=500, reason="InternalServerError"
+    )
+    monkeypatch.setattr(w, "load_kube_config_auto", lambda: api)
+
+    import pytest
+
+    with pytest.raises(FakeApiException):
+        await w._watch_cluster_inner("c1", "12345", RecordingNotifier())

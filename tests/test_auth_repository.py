@@ -21,6 +21,7 @@ def engine(tmp_path):
 @pytest.fixture
 def repo(engine):
     from wasp.auth.repository import AuthRepository
+
     r = AuthRepository(engine=engine)
     r.init_schema()
     return r
@@ -34,12 +35,14 @@ def db_path(tmp_path):
 def test_init_schema_creates_three_tables_via_engine(tmp_path):
     from sqlalchemy import create_engine, inspect
     from sqlalchemy.pool import NullPool
+
     e = create_engine(
         f"sqlite:///{tmp_path / 'schema.db'}",
         poolclass=NullPool,
         connect_args={"check_same_thread": False},
     )
     from wasp.auth._schema import init_schema
+
     init_schema(e)
     names = inspect(e).get_table_names()
     assert "auth_users" in names
@@ -102,6 +105,7 @@ def test_list_identities_returns_dicts(repo):
 
 def test_create_user_persists_display_name(engine, tmp_path):
     from wasp.auth.repository import AuthRepository
+
     repo = AuthRepository(engine=engine)
     repo.init_schema()
     user_id = repo.create_user("Alice")
@@ -126,7 +130,9 @@ def test_create_invite_default_ttl_is_one_hour(repo, tmp_path, monkeypatch):
         ).fetchone()
     finally:
         con.close()
-    assert datetime.fromisoformat(row[1]) - datetime.fromisoformat(row[0]) == timedelta(hours=1)
+    assert datetime.fromisoformat(row[1]) - datetime.fromisoformat(row[0]) == timedelta(
+        hours=1
+    )
 
 
 def test_create_invite_uses_env_ttl(repo, tmp_path, monkeypatch):
@@ -140,13 +146,16 @@ def test_create_invite_uses_env_ttl(repo, tmp_path, monkeypatch):
         ).fetchone()
     finally:
         con.close()
-    assert datetime.fromisoformat(row[1]) - datetime.fromisoformat(row[0]) == timedelta(hours=5)
+    assert datetime.fromisoformat(row[1]) - datetime.fromisoformat(row[0]) == timedelta(
+        hours=5
+    )
 
 
 def test_get_repository_returns_singleton(monkeypatch, tmp_path):
     monkeypatch.setenv("DATABASE_FILE", str(tmp_path / "singleton.db"))
     from wasp import auth
     from wasp.db import _reset_engine
+
     auth._reset_repository()
     _reset_engine()
     a = auth.get_repository()
@@ -160,6 +169,7 @@ def test_get_repository_unknown_backend_raises_value_error(monkeypatch):
     monkeypatch.setenv("DATABASE_BACKEND", "mongo")
     from wasp import auth
     from wasp.db import _reset_engine
+
     auth._reset_repository()
     _reset_engine()
     with pytest.raises(ValueError, match="unsupported"):
@@ -172,8 +182,10 @@ def test_db_file_defaults_to_env_var(tmp_path, monkeypatch):
     target = str(tmp_path / "from_env.db")
     monkeypatch.setenv("DATABASE_FILE", target)
     from wasp.db import _reset_engine
+
     _reset_engine()
     from wasp.auth.repository import AuthRepository
+
     repo = AuthRepository()
     repo.init_schema()
     assert repo.has_any_user() is False
@@ -219,7 +231,9 @@ def test_redeem_invite_returns_none_when_already_consumed(repo):
 
 def test_redeem_invite_rejects_channel_mismatch(repo):
     admin = repo.create_user("Admin")
-    token = repo.create_invite("Bob", created_by=admin, channel="tg", channel_id="67890")
+    token = repo.create_invite(
+        "Bob", created_by=admin, channel="tg", channel_id="67890"
+    )
     assert repo.redeem_invite(token, "discord", "67890") is None
     assert repo.redeem_invite(token, "tg", "00000") is None
     assert repo.redeem_invite(token, "tg", "67890") is not None

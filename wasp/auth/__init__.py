@@ -9,6 +9,7 @@ def get_repository():
     global _repository
     if _repository is None:
         from wasp.auth.repository import AuthRepository as _AuthRepository
+
         r = _AuthRepository()
         r.init_schema()
         _repository = r

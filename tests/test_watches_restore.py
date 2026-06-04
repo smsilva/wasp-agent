@@ -60,6 +60,35 @@ def test_restore_spawns_thread_for_pending_platform(engine, monkeypatch):
     assert len(spawned) == 1
 
 
+def test_restore_spawns_thread_for_pending_cluster(engine, monkeypatch):
+    from wasp.watches.repository import WatchRepository
+
+    repo = WatchRepository(engine=engine)
+    repo.init_schema()
+    repo.register("Cluster", "edge", "tg:agent:12345")
+
+    spawned = []
+
+    def fake_thread(target=None, daemon=None):
+        m = MagicMock()
+        spawned.append(target)
+        return m
+
+    mock_notifier = MagicMock()
+    mock_notifier.send = AsyncMock()
+
+    with (
+        patch("wasp.watches.get_repository", return_value=repo),
+        patch("wasp.watches.threading.Thread", side_effect=fake_thread),
+        patch("wasp.watcher._select_notifier", return_value=mock_notifier),
+    ):
+        from wasp.watches import restore_pending_watches
+
+        restore_pending_watches()
+
+    assert len(spawned) == 1
+
+
 def test_restore_skips_watch_with_no_notifier(engine):
     from wasp.watches.repository import WatchRepository
 

@@ -830,6 +830,41 @@ def test_provision_cluster_commits(monkeypatch):
     assert "edge" in result["message"]
 
 
+def test_provision_cluster_spawns_watcher(monkeypatch):
+    import wasp.clients.telegram  # noqa: F401
+    from unittest.mock import MagicMock, patch
+    from wasp.provision import provision_cluster_instance
+    from wasp import auth as _auth
+
+    mock_client_cls = MagicMock()
+
+    monkeypatch.setenv("GH_PAT", "x")
+    monkeypatch.setenv("GITOPS_REPO", "myorg/my-gitops")
+    monkeypatch.setenv("GITHUB_BASE_URL", "https://api.github.com")
+    monkeypatch.setenv("TELEGRAM_TOKEN", "tg-token")
+    monkeypatch.setattr("wasp.gitops_committer.PyGithubClient", mock_client_cls)
+    monkeypatch.setattr(
+        _auth.get_repository(), "is_authorized", lambda channel, channel_id: "user-abc"
+    )
+
+    mock_thread = MagicMock()
+    mock_thread_cls = MagicMock(return_value=mock_thread)
+
+    class FakeCtx:
+        session_id = "tg:5621932873:5621932873"
+
+    with patch("wasp.watcher.threading.Thread", mock_thread_cls):
+        result = provision_cluster_instance(
+            name="cluster1",
+            kubernetes_version="1.29",
+            run_context=FakeCtx(),
+        )
+
+    mock_thread_cls.assert_called_once()
+    mock_thread.start.assert_called_once()
+    assert result["status"] == "provisioning"
+
+
 def test_provision_cluster_creates_span(monkeypatch):
     from unittest.mock import MagicMock
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
