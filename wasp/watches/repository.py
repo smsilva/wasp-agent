@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import Engine, text
-from sqlalchemy.exc import IntegrityError
 
 from wasp.db import get_engine
 
@@ -20,23 +19,23 @@ class WatchRepository:
         _init_schema(self._engine)
 
     def register(self, kind: str, name: str, session_id: str) -> None:
-        try:
-            with self._engine.begin() as conn:
-                conn.execute(
-                    text(
-                        "INSERT INTO resource_watches "
-                        "(kind, name, session_id, status, created_at) "
-                        "VALUES (:kind, :name, :session_id, 'pending', :created_at)"
-                    ),
-                    {
-                        "kind": kind,
-                        "name": name,
-                        "session_id": session_id,
-                        "created_at": _now(),
-                    },
-                )
-        except IntegrityError:
-            pass
+        with self._engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO resource_watches "
+                    "(kind, name, session_id, status, created_at) "
+                    "VALUES (:kind, :name, :session_id, 'pending', :created_at) "
+                    "ON CONFLICT(kind, name) DO UPDATE SET "
+                    "status='pending', session_id=excluded.session_id, "
+                    "created_at=excluded.created_at, notified_at=NULL"
+                ),
+                {
+                    "kind": kind,
+                    "name": name,
+                    "session_id": session_id,
+                    "created_at": _now(),
+                },
+            )
 
     def _set_status(
         self, kind: str, name: str, status: str, notified_at: str | None = None

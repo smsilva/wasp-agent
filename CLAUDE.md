@@ -119,6 +119,8 @@ A corotina do watch é construída **dentro** do target da thread (`asyncio.run(
 
 `WatchRepository.complete()` deve ser chamado **antes** de `notifier.send()` — garante at-most-once: se o processo cair após gravar mas antes de enviar, o watch sai da fila e não é reenviado no próximo restart.
 
+`WatchRepository.register()` é upsert: `INSERT ... ON CONFLICT(kind, name) DO UPDATE SET status='pending', session_id=excluded.session_id, created_at=excluded.created_at, notified_at=NULL`. Re-provisioning após estado terminal (`ready`/`failed`/`timeout`) reseta a linha para `pending` em vez de virar no-op. `ON CONFLICT ... excluded` é idêntico em SQLite 3.24+ e Postgres — NÃO precisa de branching por dialeto. Cobertura Postgres em `tests/test_postgres_watches_repository.py` (testcontainers, marker `postgres`).
+
 ### Makefile
 
 When a target needs more than one command, extract to `scripts/<name>` and call it from the target.

@@ -73,6 +73,21 @@ def test_timeout_removes_from_pending(repo):
     assert repo.list_pending() == []
 
 
+def test_register_after_terminal_state_resets_to_pending(repo):
+    repo.register("Platform", "p1", "tg:agent:1")
+    repo.complete("Platform", "p1")
+    assert repo.list_pending() == []
+
+    repo.register("Platform", "p1", "tg:agent:2")
+    pending = repo.list_pending()
+    assert len(pending) == 1
+    assert pending[0] == {
+        "kind": "Platform",
+        "name": "p1",
+        "session_id": "tg:agent:2",
+    }
+
+
 def test_multiple_kinds_are_independent(repo):
     repo.register("Platform", "p1", "tg:agent:1")
     repo.register("Cluster", "c1", "tg:agent:2")
