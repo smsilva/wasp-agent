@@ -26,6 +26,9 @@ def create_app():
 
 app, agent_os = create_app()
 
+from wasp.watches import restore_pending_watches  # noqa: E402
+
+restore_pending_watches()
 
 if __name__ == "__main__":  # pragma: no cover
     agent_os.serve(app="main:app", reload=True)

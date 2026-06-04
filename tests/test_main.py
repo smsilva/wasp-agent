@@ -95,3 +95,15 @@ def test_create_app_returns_app_and_agent_os(mock_agno, monkeypatch):
 
     assert main.app is not None
     assert main.agent_os is mock_agno["agno.os"].AgentOS.return_value
+
+
+def test_create_app_calls_restore_pending_watches(mock_agno, monkeypatch):
+    from unittest.mock import MagicMock
+    import wasp.watches as _watches
+
+    spy = MagicMock()
+    monkeypatch.setattr(_watches, "restore_pending_watches", spy)
+
+    import main  # noqa: F401
+
+    spy.assert_called_once()
