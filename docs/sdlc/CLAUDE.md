@@ -36,7 +36,6 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 
 | Arquivo | Título |
 |---|---|
-| [2026-05-16-platform-watcher-restart-resilience.md](02-design/2026-05-16-platform-watcher-restart-resilience.md) | Platform watcher — restart resilience |
 | [2026-05-30-auth-repository.md](02-design/2026-05-30-auth-repository.md) | Reorganização de `wasp/auth.py` em pacote com Repository Protocol |
 | [2026-05-30-auth-singleton-migration.md](02-design/2026-05-30-auth-singleton-migration.md) | Migrar callers para `auth.get_repository()` e remover shims funcionais |
 | [2026-05-30-dockerfile-compose.md](02-design/2026-05-30-dockerfile-compose.md) | Dockerfile / docker-compose com Postgres |
@@ -47,7 +46,6 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 
 | Arquivo | Título |
 |---|---|
-| [2026-05-16-platform-watcher-restart-resilience.md](03-execution/2026-05-16-platform-watcher-restart-resilience.md) | Watcher Restart Resilience Implementation Plan |
 | [2026-05-30-auth-singleton-migration.md](03-execution/2026-05-30-auth-singleton-migration.md) | Auth Singleton Migration Implementation Plan |
 | [2026-05-30-dockerfile-compose.md](03-execution/2026-05-30-dockerfile-compose.md) | docker-compose Postgres Implementation Plan |
 | [2026-05-30-postgres-readiness.md](03-execution/2026-05-30-postgres-readiness.md) | Postgres Readiness Implementation Plan |
