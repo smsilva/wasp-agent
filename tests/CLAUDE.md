@@ -2,7 +2,9 @@
 
 ## Postgres tests via testcontainers
 
-Tests marked `postgres` (`test_postgres_auth_repository.py`, `test_postgres_skeleton.py`) spin a real `postgres:16-alpine` via testcontainers and run inside `make test` — Docker required, not gated. Connect with psycopg3 using `pg.get_connection_url(driver=None)` (yields `postgresql://...`). The container is a session-scoped fixture (`pg_url`); per-test isolation via `TRUNCATE ... CASCADE`, not a fresh DB. They run under autouse `mock_agno` (no bypass) since importing `wasp.auth` needs agno mocked.
+Tests marked `postgres` (`test_postgres_auth_repository.py`, `test_postgres_skeleton.py`) spin a real `postgres:16-alpine` via testcontainers and run inside `make test` — Docker required, not gated. The container is a session-scoped fixture (`pg_url`); per-test isolation via `TRUNCATE ... CASCADE`, not a fresh DB. They run under autouse `mock_agno` (no bypass) since importing `wasp.auth` needs agno mocked.
+
+URL driver depends on the client: raw `psycopg.connect()` accepts `pg.get_connection_url(driver=None)` (`postgresql://...`), but SQLAlchemy `create_engine` needs the explicit driver — use `pg.get_connection_url(driver="psycopg")` (`postgresql+psycopg://...`). `driver=None` with `create_engine` defaults to the psycopg2 dialect, which isn't installed (`psycopg[binary]` is v3) → `ModuleNotFoundError: psycopg2`.
 
 ## `mock_agno` fixture and OTEL
 

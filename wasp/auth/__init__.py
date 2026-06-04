@@ -1,23 +1,17 @@
-import os
-
 from wasp.auth.protocol import AuthRepository as AuthRepository
-from wasp.auth.sqlite_repository import SqliteAuthRepository as SqliteAuthRepository
 
-__all__ = ["AuthRepository", "SqliteAuthRepository", "get_repository"]
+__all__ = ["AuthRepository", "get_repository"]
 
-_repository: AuthRepository | None = None
+_repository = None
 
 
-def get_repository() -> AuthRepository:
+def get_repository():
     global _repository
     if _repository is None:
-        backend = os.getenv("DATABASE_BACKEND", "sqlite")
-        if backend in ("sqlite", "postgres"):
-            from wasp.auth.repository import AuthRepository as _Repo
-
-            _repository = _Repo()
-        else:
-            raise ValueError(f"unsupported backend: {backend}")
+        from wasp.auth.repository import AuthRepository as _AuthRepository
+        r = _AuthRepository()
+        r.init_schema()
+        _repository = r
     return _repository
 
 
