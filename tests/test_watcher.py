@@ -725,7 +725,7 @@ def test_spawner_skips_register_when_no_session_id():
 
 
 async def test_watch_cluster_inner_raises_on_non_404_apiexception(monkeypatch):
-    from unittest.mock import AsyncMock, MagicMock
+    from unittest.mock import MagicMock
     import wasp.watcher as w
     from tests.notifiers import RecordingNotifier
 
