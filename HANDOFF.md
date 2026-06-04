@@ -23,6 +23,8 @@ Plano: `docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md
 
 **Próximo passo: Task 6** — criar `wasp/watches/_schema.py` (tabela `resource_watches` + `init_schema(engine)`). Seguir o código do plano. Depois Tasks 7-11.
 
+> ⚠️ **NÃO re-executar Tasks 1-5.** Já estão na árvore e o código real **diverge de propósito** do listado no plano: `redeem_invite` foi extraído no helper `_redeem` (complexidade), e o fixture postgres usa `get_connection_url(driver="psycopg")` (não `driver=None`). Rodar as Tasks 1-5 do plano sobrescreveria esses ajustes. Começar em Task 6.
+
 ## Open Questions / Hypotheses
 
 - `_now()` duplicado em `wasp/auth/repository.py` e (futuro) `wasp/watches/repository.py`. Intencional (1 linha); extrair só se surgir terceiro caller.
@@ -42,7 +44,7 @@ Notas de segurança herdadas desta sessão (já corrigidas, não regredir):
 sed -n '/^## Task 6/,/^## Task 9/p' docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md
 ```
 
-Executar Tasks 6-11 via subagent-driven development (opção escolhida pelo usuário):
+Executar **apenas Tasks 6-11** via subagent-driven development (opção escolhida pelo usuário) — instruir os subagentes a iniciar em Task 6, pois Tasks 1-5 já estão implementadas (ver aviso em **In Progress**):
 
 ```
 /superpowers:subagent-driven-development docs/sdlc/03-execution/2026-05-16-platform-watcher-restart-resilience.md
