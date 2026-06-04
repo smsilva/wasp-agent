@@ -122,7 +122,6 @@ def test_watch_cluster_retries_on_404(monkeypatch):
 
 
 def test_watch_cluster_sends_timeout_message(monkeypatch):
-    import time as time_mod
     from wasp import watcher
 
     mock_api = MagicMock()
@@ -134,7 +133,6 @@ def test_watch_cluster_sends_timeout_message(monkeypatch):
     monkeypatch.setattr(watcher.asyncio, "sleep", AsyncMock())
 
     deadline_calls = iter([True, False])
-    original_monotonic = time_mod.monotonic
 
     def fake_monotonic():
         try:

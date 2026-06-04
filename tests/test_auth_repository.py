@@ -1,5 +1,6 @@
 import sqlite3
-from datetime import datetime, timedelta
+import threading
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -180,3 +181,96 @@ def test_db_file_defaults_to_env_var(tmp_path, monkeypatch):
     repo.link_identity(user_id, "tg", "1")
     assert repo.is_authorized("tg", "1") == user_id
     _reset_engine()
+
+
+def test_redeem_invite_creates_identity_and_returns_user(repo):
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin)
+    result = repo.redeem_invite(token, "tg", "67890")
+    assert result is not None
+    user_id, display_name = result
+    assert display_name == "Bob"
+    assert repo.is_authorized("tg", "67890") == user_id
+
+
+def test_redeem_invite_returns_none_for_unknown_token(repo):
+    assert repo.redeem_invite("nonexistent", "tg", "1") is None
+
+
+def test_redeem_invite_returns_none_when_expired(repo, tmp_path):
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin)
+    past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    con = sqlite3.connect(str(tmp_path / "agent.db"))
+    try:
+        con.execute("UPDATE auth_invites SET expires_at=? WHERE token=?", (past, token))
+        con.commit()
+    finally:
+        con.close()
+    assert repo.redeem_invite(token, "tg", "67890") is None
+
+
+def test_redeem_invite_returns_none_when_already_consumed(repo):
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin)
+    assert repo.redeem_invite(token, "tg", "67890") is not None
+    assert repo.redeem_invite(token, "tg", "11111") is None
+
+
+def test_redeem_invite_rejects_channel_mismatch(repo):
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin, channel="tg", channel_id="67890")
+    assert repo.redeem_invite(token, "discord", "67890") is None
+    assert repo.redeem_invite(token, "tg", "00000") is None
+    assert repo.redeem_invite(token, "tg", "67890") is not None
+
+
+def test_redeem_invite_rejects_when_identity_already_linked(repo, tmp_path):
+    user1 = repo.create_user("Existing")
+    repo.link_identity(user1, "tg", "111")
+    token = repo.create_invite("New", created_by=user1)
+    assert repo.redeem_invite(token, "tg", "111") is None
+    con = sqlite3.connect(str(tmp_path / "agent.db"))
+    try:
+        used_at = con.execute(
+            "SELECT used_at FROM auth_invites WHERE token=?", (token,)
+        ).fetchone()[0]
+    finally:
+        con.close()
+    assert used_at is None
+
+
+def test_bootstrap_creates_first_user_when_db_empty(repo):
+    user_id = repo.bootstrap_admin("Silvio", "tg", "12345678")
+    assert user_id
+    assert repo.is_authorized("tg", "12345678") == user_id
+
+
+def test_bootstrap_fails_when_db_not_empty(repo):
+    repo.create_user("First")
+    with pytest.raises(RuntimeError, match="not empty"):
+        repo.bootstrap_admin("Silvio", "tg", "12345678")
+
+
+def test_redeem_invite_concurrent_unbound_token_only_succeeds_once(repo):
+    admin = repo.create_user("Admin")
+    token = repo.create_invite("Bob", created_by=admin)
+    results = []
+    errors = []
+    barrier = threading.Barrier(2)
+
+    def redeem(channel_id):
+        try:
+            barrier.wait()
+            results.append(repo.redeem_invite(token, "tg", channel_id))
+        except Exception as exc:
+            errors.append(exc)
+
+    t1 = threading.Thread(target=redeem, args=("111",))
+    t2 = threading.Thread(target=redeem, args=("222",))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    assert not errors
+    assert len([r for r in results if r is not None]) == 1

@@ -130,12 +130,147 @@ class AuthRepository:
             for r in rows
         ]
 
-    def redeem_invite(  # pragma: no cover — implemented in Task 4
+    def redeem_invite(
         self, token: str, channel: str, channel_id: str
     ) -> tuple[str, str] | None:
-        raise NotImplementedError
+        dialect = self._engine.dialect.name
+        if dialect == "sqlite":
+            select_q = (
+                "SELECT user_id, channel, channel_id, expires_at, used_at "
+                "FROM auth_invites WHERE token=:token"
+            )
+            with self._engine.connect() as conn:
+                conn.execute(text("BEGIN IMMEDIATE"))
+                row = conn.execute(text(select_q), {"token": token}).one_or_none()
+                if row is None:
+                    return None
+                user_id, bound_channel, bound_channel_id, expires_at, used_at = row
+                if used_at is not None:
+                    return None
+                if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+                    return None
+                if bound_channel is not None and bound_channel != channel:
+                    return None
+                if bound_channel_id is not None and bound_channel_id != channel_id:
+                    return None
+                already = conn.execute(
+                    text(
+                        "SELECT 1 FROM auth_identities "
+                        "WHERE channel=:channel AND channel_id=:channel_id"
+                    ),
+                    {"channel": channel, "channel_id": channel_id},
+                ).one_or_none()
+                if already is not None:
+                    return None
+                now = _now()
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                        "VALUES (:channel, :channel_id, :user_id, :linked_at)"
+                    ),
+                    {"channel": channel, "channel_id": channel_id, "user_id": user_id, "linked_at": now},
+                )
+                conn.execute(
+                    text("UPDATE auth_invites SET used_at=:now WHERE token=:token"),
+                    {"now": now, "token": token},
+                )
+                display_name = conn.execute(
+                    text("SELECT display_name FROM auth_users WHERE user_id=:user_id"),
+                    {"user_id": user_id},
+                ).scalar_one()
+                conn.execute(text("COMMIT"))
+                return (user_id, display_name)
+        else:
+            select_q = (
+                "SELECT user_id, channel, channel_id, expires_at, used_at "
+                "FROM auth_invites WHERE token=:token FOR UPDATE"
+            )
+            with self._engine.connect() as conn:
+                row = conn.execute(text(select_q), {"token": token}).one_or_none()
+                if row is None:
+                    return None
+                user_id, bound_channel, bound_channel_id, expires_at, used_at = row
+                if used_at is not None:
+                    return None
+                if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+                    return None
+                if bound_channel is not None and bound_channel != channel:
+                    return None
+                if bound_channel_id is not None and bound_channel_id != channel_id:
+                    return None
+                already = conn.execute(
+                    text(
+                        "SELECT 1 FROM auth_identities "
+                        "WHERE channel=:channel AND channel_id=:channel_id"
+                    ),
+                    {"channel": channel, "channel_id": channel_id},
+                ).one_or_none()
+                if already is not None:
+                    return None
+                now = _now()
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                        "VALUES (:channel, :channel_id, :user_id, :linked_at)"
+                    ),
+                    {"channel": channel, "channel_id": channel_id, "user_id": user_id, "linked_at": now},
+                )
+                conn.execute(
+                    text("UPDATE auth_invites SET used_at=:now WHERE token=:token"),
+                    {"now": now, "token": token},
+                )
+                display_name = conn.execute(
+                    text("SELECT display_name FROM auth_users WHERE user_id=:user_id"),
+                    {"user_id": user_id},
+                ).scalar_one()
+                conn.commit()
+                return (user_id, display_name)
 
-    def bootstrap_admin(  # pragma: no cover — implemented in Task 4
-        self, display_name: str, channel: str, channel_id: str
-    ) -> str:
-        raise NotImplementedError
+    def bootstrap_admin(self, display_name: str, channel: str, channel_id: str) -> str:
+        dialect = self._engine.dialect.name
+        if dialect == "sqlite":
+            with self._engine.connect() as conn:
+                conn.execute(text("BEGIN IMMEDIATE"))
+                if conn.execute(text("SELECT 1 FROM auth_users LIMIT 1")).one_or_none() is not None:
+                    raise RuntimeError("auth tables not empty — bootstrap refused")
+                user_id = uuid.uuid4().hex
+                now = _now()
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_users (user_id, display_name, created_at) "
+                        "VALUES (:user_id, :display_name, :created_at)"
+                    ),
+                    {"user_id": user_id, "display_name": display_name, "created_at": now},
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                        "VALUES (:channel, :channel_id, :user_id, :linked_at)"
+                    ),
+                    {"channel": channel, "channel_id": channel_id, "user_id": user_id, "linked_at": now},
+                )
+                conn.execute(text("COMMIT"))
+                return user_id
+        else:
+            with self._engine.connect() as conn:
+                conn.execute(text("LOCK TABLE auth_users IN ACCESS EXCLUSIVE MODE"))
+                if conn.execute(text("SELECT 1 FROM auth_users LIMIT 1")).one_or_none() is not None:
+                    raise RuntimeError("auth tables not empty — bootstrap refused")
+                user_id = uuid.uuid4().hex
+                now = _now()
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_users (user_id, display_name, created_at) "
+                        "VALUES (:user_id, :display_name, :created_at)"
+                    ),
+                    {"user_id": user_id, "display_name": display_name, "created_at": now},
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO auth_identities (channel, channel_id, user_id, linked_at) "
+                        "VALUES (:channel, :channel_id, :user_id, :linked_at)"
+                    ),
+                    {"channel": channel, "channel_id": channel_id, "user_id": user_id, "linked_at": now},
+                )
+                conn.commit()
+                return user_id
