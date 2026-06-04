@@ -204,8 +204,6 @@ Para pedidos como "checklist de production readiness", "está pronto pra produç
 - SDLC — índice de ideias, design e planos de execução ativos: `docs/sdlc/CLAUDE.md`
 - agno: `docs/references/agno.md`
 - Production readiness / scaffolding checklist: `docs/references/production-readiness-checklist.md`
-- Platform provisioning: `docs/architecture/platform-provisioning.md`
-- Async watcher: `docs/architecture/async-watcher.md`
 - Tests gotchas: `tests/CLAUDE.md`
 - Telegram integration: `wasp/clients/telegram/CLAUDE.md`
 - Discord integration: `wasp/clients/discord/CLAUDE.md`
