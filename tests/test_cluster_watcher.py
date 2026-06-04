@@ -121,7 +121,9 @@ def test_watch_cluster_retries_on_404(monkeypatch):
     notifier.send.assert_awaited_once()
 
 
-def test_watch_cluster_sends_timeout_message(monkeypatch):
+async def test_watch_cluster_sends_timeout_message(monkeypatch):
+    from itertools import chain, repeat
+
     from wasp import watcher
 
     mock_api = MagicMock()
@@ -132,22 +134,16 @@ def test_watch_cluster_sends_timeout_message(monkeypatch):
     monkeypatch.setattr(watcher, "load_kube_config_auto", lambda: mock_api)
     monkeypatch.setattr(watcher.asyncio, "sleep", AsyncMock())
 
-    deadline_calls = iter([True, False])
-
-    def fake_monotonic():
-        try:
-            if next(deadline_calls):
-                return 0
-            return watcher.WATCH_TIMEOUT_SECONDS + 1
-        except StopIteration:
-            return watcher.WATCH_TIMEOUT_SECONDS + 1
-
-    monkeypatch.setattr(watcher.time, "monotonic", fake_monotonic)
+    # Infinite iterator: the event loop also reads time.monotonic(). A finite
+    # iterator gets exhausted by those calls, the fallback corrupts the deadline,
+    # and the poll loop spins forever. Same pattern as test_watcher.py.
+    times = chain([0, 0], repeat(watcher.WATCH_TIMEOUT_SECONDS + 1))
+    monkeypatch.setattr(watcher.time, "monotonic", lambda: next(times))
 
     notifier = MagicMock()
     notifier.send = AsyncMock()
 
-    asyncio.run(watcher.watch_cluster("edge", "chat-1", notifier))
+    await watcher.watch_cluster("edge", "chat-1", notifier)
 
     notifier.send.assert_awaited_once()
     msg = notifier.send.await_args.args[1]

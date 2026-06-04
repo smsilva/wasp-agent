@@ -19,6 +19,9 @@ dependencies = [
     "openinference-instrumentation-agno>=0.1.32",
     "ollama>=0.6.2",
     "openai>=2.37.0",
+    "aiohttp>=3.14.0",
+    "pyjwt>=2.13.0",
+    "starlette>=1.0.1",
 ]
 
 [dependency-groups]
@@ -26,6 +29,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "pytest-asyncio>=0.23.0",
+    "pytest-timeout>=2.3.0",
     "ruff>=0.4.0",
     "radon>=6.0.1",
     "testcontainers[postgres]>=4.0",
@@ -36,6 +40,10 @@ dev = [
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+# Wall-clock guard: a single runaway loop (e.g. a poll loop with mocked sleep)
+# must fail the test, not hang the suite. SIGALRM (default method) interrupts
+# even a tight CPU loop on the main thread.
+timeout = 60
 markers = [
     "e2e: end-to-end tests requiring k3d and Gitea",
     "postgres: tests requiring a real Postgres via testcontainers (Docker)",
