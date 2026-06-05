@@ -1,6 +1,6 @@
 # Dockerfile / docker-compose com Postgres
 
-**Status:** Approved  
+**Status:** Implemented  
 **Data:** 2026-05-30  
 **Motivação:** Adicionar Postgres como serviço de infra local no compose; remover assunção implícita de SQLite como único backend; definir volumes persistentes. Checklist de production-readiness §6 (linhas 124-127).
 
