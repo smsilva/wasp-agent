@@ -36,7 +36,6 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 
 | Arquivo | Título |
 |---|---|
-| [2026-05-30-auth-repository.md](02-design/2026-05-30-auth-repository.md) | Reorganização de `wasp/auth.py` em pacote com Repository Protocol |
 | [2026-05-30-good-citizen-test.md](02-design/2026-05-30-good-citizen-test.md) | Good Citizen Test — Especificação para o `wasp-agent` |
 
 ## 03-execution
