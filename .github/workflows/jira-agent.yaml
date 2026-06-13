@@ -50,12 +50,17 @@ jobs:
         with:
           prompt: ${{ env.AGENT_PROMPT }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          # Allow git/gh so Claude can branch+commit+push, plus the file edit
-          # tools it needs to satisfy the issue. Output is unhidden so the
-          # next run is debuggable; trim later once stable.
+          # Enumerating tools is impractical — the agent uses composites
+          # (`command -v uv`, `bash -lc '...'`, `make ...`) that the prompt
+          # gate refuses. The real boundary lives at the workflow level:
+          # ephemeral GitHub-hosted runner, `permissions:` scoped to write
+          # for contents/PR/id-token only, OAuth token scoped to this repo,
+          # and the agent's output is a PR (not a merge to main). Tool
+          # gating inside Claude on top of that is friction without value.
+          # See SEC-007.
           claude_args: >-
             --model claude-opus-4-8
-            --allowed-tools "Bash(git:*),Bash(gh:*),Read,Write,Edit,Glob,Grep"
+            --dangerously-skip-permissions
           show_full_output: true
 
       - name: Ensure PR and capture URL
@@ -80,3 +85,29 @@ jobs:
         run: |
           scripts/jira-comment "${ISSUE_KEY}" "Agent opened a PR: ${PR_URL}"
           scripts/jira-transition "${ISSUE_KEY}" "In Review"
+
+      - name: Collect Claude execution log
+        if: always()
+        env:
+          ISSUE_KEY: ${{ env.ISSUE_KEY }}
+        run: |
+          log_dir="$(mktemp --directory)"
+          src="/home/runner/work/_temp/claude-execution-output.json"
+          if [[ -f "${src}" ]]; then
+            cp "${src}" "${log_dir}/claude-execution-output.json"
+          else
+            echo "claude-execution-output.json not produced" \
+              > "${log_dir}/MISSING.txt"
+          fi
+          tar --create --gzip \
+            --file "claude-execution-log-${ISSUE_KEY}.tar.gz" \
+            --directory "${log_dir}" \
+            .
+
+      - name: Upload Claude execution log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-execution-log-${{ env.ISSUE_KEY }}
+          path: claude-execution-log-${{ env.ISSUE_KEY }}.tar.gz
+          retention-days: 30
