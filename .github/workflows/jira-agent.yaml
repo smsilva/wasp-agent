@@ -50,14 +50,23 @@ jobs:
         with:
           prompt: ${{ env.AGENT_PROMPT }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: "--model claude-opus-4-8"
+          # Allow git/gh so Claude can branch+commit+push, plus the file edit
+          # tools it needs to satisfy the issue. Output is unhidden so the
+          # next run is debuggable; trim later once stable.
+          claude_args: >-
+            --model claude-opus-4-8
+            --allowed-tools "Bash(git:*),Bash(gh:*),Read,Write,Edit,Glob,Grep"
+          show_full_output: true
 
       - name: Ensure PR and capture URL
         id: pr
         env:
           GH_TOKEN: ${{ steps.claude.outputs.github_token }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          BRANCH_NAME: ${{ steps.claude.outputs.branch_name }}
+          # The action's `branch_name` output is empty in `prompt` mode; Claude
+          # is instructed in the prompt (see scripts/jira-fetch) to push a
+          # branch named `claude/<ISSUE_KEY>`, so we hard-code it here.
+          BRANCH_NAME: claude/${{ env.ISSUE_KEY }}
         run: |
           pr_url="$(scripts/ensure-pr "${BRANCH_NAME}" "${ISSUE_KEY}")"
           echo "url=${pr_url}" >> "$GITHUB_OUTPUT"

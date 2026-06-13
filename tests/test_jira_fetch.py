@@ -56,3 +56,7 @@ def test_jira_fetch_emits_prompt():
     assert "PROJ-1" in result.stdout
     assert "Extract parse_session_id helper" in result.stdout
     assert "Refactor the duplicated parser." in result.stdout
+    # The workflow relies on Claude pushing a branch named claude/<key>
+    # before `ensure-pr` runs, so the prompt must instruct it explicitly.
+    assert "git checkout -b claude/PROJ-1" in result.stdout
+    assert "git push --set-upstream origin claude/PROJ-1" in result.stdout
