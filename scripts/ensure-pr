@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+branch="${1?}"
+issue_key="${2?}"
+
+url="$(gh pr list --head "${branch}" --json url --jq '.[0].url // ""')"
+if [[ -z "${url}" ]]; then
+  url="$(gh pr create \
+    --head "${branch}" \
+    --base main \
+    --title "${issue_key}: agent implementation" \
+    --body "Automated by jira-agent. Jira: ${JIRA_BASE_URL?}/browse/${issue_key}")"
+fi
+
+echo "${url}"
