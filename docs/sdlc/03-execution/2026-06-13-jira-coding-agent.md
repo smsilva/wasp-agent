@@ -153,6 +153,12 @@ name: jira-agent
 on:
   repository_dispatch:
     types: [jira-trigger-event]
+  workflow_dispatch:
+    inputs:
+      jira_issue:
+        description: "Jira issue key (ex: PROJ-123)"
+        required: true
+        type: string
 
 jobs:
   run:
@@ -163,7 +169,7 @@ jobs:
 
       - name: Read issue key
         env:
-          ISSUE_KEY_RAW: ${{ github.event.client_payload.issue_key }}
+          ISSUE_KEY_RAW: ${{ github.event.client_payload.issue_key || inputs.jira_issue }}
         run: |
           if [[ ! "${ISSUE_KEY_RAW}" =~ ^[A-Z]+-[0-9]+$ ]]; then
             echo "Invalid issue key: ${ISSUE_KEY_RAW}" >&2

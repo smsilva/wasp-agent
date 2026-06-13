@@ -3,6 +3,17 @@
 Passo a passo para disparar o `jira-agent.yaml` a partir do Jira e receber o
 comentário de volta. Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`.
 
+## Execução manual (primeiro teste, sem Jira)
+
+O workflow também aceita `workflow_dispatch`, então dá para validar a execução antes de
+configurar o Jira. Basta os secrets `JIRA_*` (passos GitHub #2 abaixo) já estarem no repo.
+
+1. GitHub → aba **Actions** → workflow **jira-agent** → **Run workflow**.
+2. Informar a issue key em `jira_issue` (ex: `PROJ-123`, formato `^[A-Z]+-[0-9]+$`).
+3. Conferir o run e o comentário na issue do Jira.
+
+O resto deste runbook cobre o disparo automático a partir do Jira.
+
 ## Lado GitHub
 
 1. **Trigger token** — criar um PAT fine-grained com permissão `Contents: write`
