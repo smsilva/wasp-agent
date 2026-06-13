@@ -41,4 +41,6 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 
 ## 03-execution
 
-(vazio — todos os planos ativos foram arquivados)
+| Arquivo | Título |
+|---|---|
+| [2026-06-13-jira-coding-agent.md](03-execution/2026-06-13-jira-coding-agent.md) | Jira Coding Agent (walking skeleton v1) — Implementation Plan |
