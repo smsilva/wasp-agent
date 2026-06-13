@@ -13,6 +13,10 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -27,26 +31,41 @@ jobs:
           fi
           echo "ISSUE_KEY=${ISSUE_KEY_RAW}" >> "$GITHUB_ENV"
 
-      - name: Fetch issue (stub)
-        run: echo "would fetch issue details for ${ISSUE_KEY}"
-
-      - name: Create branch (stub)
-        run: echo "would create branch agent/${ISSUE_KEY}-<slug>"
-
-      - name: Implement with claude (stub)
-        run: echo "would run claude -p to implement ${ISSUE_KEY}"
-
-      - name: Commit and push (stub)
-        run: echo "would commit and push"
-
-      - name: Open PR (stub)
-        run: echo "would open PR for ${ISSUE_KEY}"
-
-      - name: Comment back on Jira
+      - name: Build prompt
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
-          scripts/jira-comment "${ISSUE_KEY}" \
-            "Agent picked this up. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          delimiter="EOF_$(openssl rand -hex 16)"
+          {
+            echo "AGENT_PROMPT<<${delimiter}"
+            scripts/jira-fetch "${ISSUE_KEY}"
+            echo "${delimiter}"
+          } >> "$GITHUB_ENV"
+
+      - name: Implement with Claude
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: ${{ env.AGENT_PROMPT }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--model claude-opus-4-8"
+
+      - name: Ensure PR and capture URL
+        id: pr
+        env:
+          GH_TOKEN: ${{ steps.claude.outputs.github_token }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+        run: |
+          pr_url="$(scripts/ensure-pr "${{ steps.claude.outputs.branch_name }}" "${ISSUE_KEY}")"
+          echo "url=${pr_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment + transition on Jira
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          scripts/jira-comment "${ISSUE_KEY}" "Agent opened a PR: ${{ steps.pr.outputs.url }}"
+          scripts/jira-transition "${ISSUE_KEY}" "In Review"
