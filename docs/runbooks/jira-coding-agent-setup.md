@@ -29,30 +29,65 @@ O resto deste runbook cobre o disparo automático a partir do Jira.
 ## Lado Jira
 
 1. **API token** — criar em https://id.atlassian.com/manage-profile/security/api-tokens
-   com a conta de serviço; usar no secret `JIRA_API_TOKEN`.
-2. **Automation rule** (Project settings → Automation → Create rule):
-   - **Trigger:** issue atribuída ao agente (ou transição para "Ready for Agent").
-   - **Action:** "Send web request":
-     - URL: `https://api.github.com/repos/<owner>/wasp-agent/dispatches`
-       (precisa do prefixo `api.github.com/repos/` — sem ele, 404)
-     - Method: `POST`
-     - Headers:
-       - `Authorization: Bearer <TRIGGER_TOKEN>`  (token do GitHub, passo GitHub #1)
-       - `Accept: application/vnd.github+json`
-     - Content-Type: `application/json`
-     - Body (Custom data):
-       ```json
-       {
-         "event_type": "jira-trigger-event",
-         "client_payload": { "issue_key": "{{issue.key}}" }
-       }
-       ```
+   com a conta de serviço; usar no secret `JIRA_API_TOKEN`. Use **"Create API token"**
+   (sem scopes) — o `scripts/jira-comment` usa basic auth clássico (`email:token`).
+   Antes de salvar no GitHub, validar o token:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" \
+     -u "$JIRA_EMAIL:$JIRA_API_TOKEN" \
+     "$JIRA_BASE_URL/rest/api/3/myself"   # espera HTTP 200
+   ```
+2. **Automation rule** (Project settings → Automation → Create rule). A UI é um
+   builder: adiciona-se um **Trigger** e depois um step **Action**.
+
+   **Trigger** — opções (escolher uma):
+   - **Manual trigger from work item** — recomendado para o primeiro teste: roda
+     sob demanda pelo menu da issue, com `{{issue.key}}` real no payload. Sem
+     disparo acidental. Defaults servem (groups: All logged in users; work type:
+     All work types; deixar "Prompt for input" desmarcado).
+   - **Work item transitioned** — para um status tipo "Ready for Agent".
+   - **Work item assigned** — fluxo de atribuição; cuidar para não disparar em toda
+     atribuição (adicionar condição pelo assignee).
+
+   **Action: Send web request**
+   - **Web request URL:** `https://api.github.com/repos/<owner>/wasp-agent/dispatches`
+     (precisa do prefixo `api.github.com/repos/` — sem ele, 404)
+   - **HTTP method:** `POST`
+   - **Headers (optional):** adicionar dois —
+     - `Authorization` = `Bearer <TRIGGER_TOKEN>` (token do GitHub, passo GitHub #1).
+       Marcar a coluna **Hidden** nessa linha para não vazar o token nos logs.
+     - `Accept` = `application/vnd.github+json`
+   - **Web request body:** trocar de `Empty` para **`Custom data`** e colar:
+     ```json
+     {
+       "event_type": "jira-trigger-event",
+       "client_payload": { "issue_key": "{{issue.key}}" }
+     }
+     ```
+   - **Não usar o botão "Validate"** do Send web request: a validação roda sem
+     contexto de issue, então `{{issue.key}}` vai vazio/literal e o step
+     "Read issue key" do workflow falha no regex. Validar disparando de uma issue real.
+
+   Salvar com **Save and enable** → **Turn on flow** (definir nome e visibilidade;
+   `Private` basta).
+
+3. **Disparar (Manual trigger):** abrir uma issue → menu **• • •** (More actions) →
+   **Automation** / nome da regra → executar.
 
 ## Validação
 
-1. Atribuir/transicionar uma issue de teste no Jira.
-2. Conferir o run em GitHub → aba **Actions** → workflow `jira-agent`.
+1. Disparar a regra de uma issue de teste (Manual trigger: menu **• • •** →
+   Automation; ou atribuir/transicionar, conforme o trigger escolhido).
+2. Conferir o run em GitHub → aba **Actions** → workflow `jira-agent`
+   (evento `repository_dispatch`).
 3. Conferir o comentário "Agent picked this up. Run: …" na issue do Jira.
+
+Validação só do lado GitHub, sem o Jira (útil para isolar o pipeline):
+```bash
+gh api repos/<owner>/wasp-agent/dispatches -X POST \
+  -f event_type=jira-trigger-event \
+  -F client_payload[issue_key]=PLTF-11
+```
 
 ## Troubleshooting
 
@@ -64,3 +99,7 @@ O resto deste runbook cobre o disparo automático a partir do Jira.
   inválidos, ou a issue key não existe.
 - **Job falha em "Read issue key" (Invalid issue key):** o workflow valida a key contra
   `^[A-Z]+-[0-9]+$`; confirme que `{{issue.key}}` está sendo enviado e tem o formato `PROJ-123`.
+  Causa comum: usar o botão **"Validate"** do Send web request (roda sem contexto de
+  issue, manda `{{issue.key}}` literal/vazio). Dispare de uma issue real.
+- **Run aparece mas no branch errado:** `repository_dispatch` sempre roda a partir do
+  branch default (`main`). Mudanças no workflow só valem após merge no default.

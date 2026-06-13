@@ -224,3 +224,5 @@ __marimo__/
 
 # e2e debug logs
 logs/
+
+.jira/
