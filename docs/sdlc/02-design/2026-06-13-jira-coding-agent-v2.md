@@ -90,6 +90,9 @@ mock HTTP server local, no padrão de `tests/test_jira_comment.py`.
   - `claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}`
   - `model: claude-opus-4-8`
   - permissões do job (`permissions:`) e flags exatas a fixar no plano (ver §6).
+  - **O prompt deve instruir:** nome do branch e título do PR **contendo a issue key**
+    (ex: `agent/PLTF-11-...` e título começando com `PLTF-11`). Isso é o que faz a app
+    GitHub for Jira linkar o PR ao dev panel da issue (ver §10).
 - `Comment + transition`: lê a URL do PR criado, chama `scripts/jira-comment` e
   `scripts/jira-transition`.
 - Mantém a validação de `issue_key` por regex (input não-confiável do `client_payload`).
@@ -145,7 +148,8 @@ caminho corrente (v1 vira nota histórica onde fizer sentido). Cobrir:
   adicionar o secret `CLAUDE_CODE_OAUTH_TOKEN` (como gerar via `claude setup-token`); manter
   os secrets Jira da v1.
 - **Jira:** automation rule (inalterada da v1); garantir que a transição "In Review" existe
-  no workflow do projeto PLTF.
+  no workflow do projeto PLTF; (opcional) confirmar a app GitHub for Jira instalada no site
+  `smsilva.atlassian.net` para o dev panel (ver §10).
 - **Validação:** os 5 pontos do §7.
 - **Troubleshooting v2:** action sem permissão de PR; transição "In Review" inexistente;
   OAuth token expirado.
@@ -158,3 +162,41 @@ caminho corrente (v1 vira nota histórica onde fizer sentido). Cobrir:
   e o `ci.yaml` roda nesse PR.
 - A issue do Jira recebe um comentário com a URL do PR e é transicionada para "In Review".
 - Nenhum secret de git de longa duração no repositório (sem PAT; só o OAuth token do Claude).
+
+---
+
+## 10. Relação com a app GitHub for Jira
+
+Avaliamos usar integrações oficiais da Atlassian para evitar os scripts Jira. Conclusão:
+elas **complementam**, não substituem.
+
+### 10.1 O que foi descartado
+- **`atlassian/gajira-*`** (gajira-comment, gajira-transition): **deprecados e sem
+  manutenção** (último release nov/2022, aviso explícito no repo). Usar action de terceiros
+  abandonada que manuseia o token do Jira contraria a disciplina de supply chain do projeto.
+  Descartado.
+
+### 10.2 O que a app GitHub for Jira cobre (e o que não cobre)
+A app oficial **GitHub for Atlassian** (by Atlassian, Cloud Fortified) sincroniza
+branches/commits/PRs do GitHub para o **dev panel** da issue, quando a issue key aparece no
+nome do branch / título do PR / mensagem de commit. É fluxo **GitHub → Jira**.
+
+Mapeando nas três necessidades do lado Jira:
+
+| Necessidade | Coberta pela app? |
+|---|---|
+| **A. Fetch** (issue → prompt) | **Não.** A app não lê campos da issue para o workflow. `scripts/jira-fetch` é necessário de qualquer forma. |
+| **B. Comentar** com URL do PR | Indireto: o PR aparece no dev panel da issue (se a key estiver no branch/PR). Não posta comentário arbitrário a partir do workflow. |
+| **C. Transicionar** "In Review" | Indireto: exigiria mover a transição para uma **Jira Automation rule** disparada por evento de PR. Smart Commits **não** funcionam (committer `claude[bot]` não mapeia para usuário Jira). |
+
+### 10.3 Decisão
+- **Manter os scripts REST** (`jira-fetch`, `jira-comment`, `jira-transition`) como fonte da
+  verdade: chamadas **síncronas, verificáveis no mesmo run, versionadas e testadas** — o que
+  um walking skeleton precisa. Mover B/C para Jira Automation troca código testado por config
+  invisível (click-ops) e assíncrona (best-effort), contra a tese do projeto (runbook
+  reproduzível).
+- **Instalar a app como complemento** (upside grátis): com a issue key no branch/PR (ver
+  §4.4), o PR aparece linkado no dev panel da issue com status vivo (aberto/merged/CI). Zero
+  código, nenhuma lógica movida para fora do repo.
+- Não adicionar Automation rule de transição-por-PR enquanto a transição estiver no código —
+  evita transição dupla / fonte da verdade ambígua.
