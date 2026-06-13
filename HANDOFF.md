@@ -2,24 +2,24 @@
 
 ## Why
 
-Jira Coding Agent — walking skeleton v1. Hipótese a validar: Jira → atribui issue ao agente → dispara GitHub Actions → comenta de volta no Jira. Prova o round-trip e a autenticação nos dois sentidos antes de qualquer implementação de código real.
+Jira Coding Agent — walking skeleton v1. Validar: Jira → dispara GitHub Actions → comenta de volta no Jira. Prova o round-trip e a autenticação nos dois sentidos antes de implementar código real.
 
-Entregue v1 (skeleton):
-- `.github/workflows/jira-agent.yaml` — trigger `repository_dispatch` (`types: [jira-trigger-event]`). Skeleton com um step por etapa do pipeline alvo; só leitura da issue key e comentário no Jira são reais, o resto loga "would …". Issue key vinda de `client_payload` é validada por regex (`^[A-Z]+-[0-9]+$`) via env var antes de uso — evita injeção de comando.
-- `scripts/jira-comment` — bash+curl+jq, posta comentário ADF em `/rest/api/3/issue/{key}/comment` (basic auth). Testado em `tests/test_jira_comment.py` via mock HTTP server.
-- `docs/runbooks/jira-coding-agent-setup.md` — passo a passo reproduzível (Jira Automation, secrets, validação, troubleshooting).
+Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent.md`. Setup: `docs/runbooks/jira-coding-agent-setup.md`.
 
-Design: `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent.md`.
+**Hipótese validada end-to-end com o Jira no loop (2026-06-13).** Setup live, não recriar:
+- Site `smsilva.atlassian.net`, projeto `PLTF`. Issue de teste: **PLTF-11** (Story; criada espelhando PLTF-2). Mantém 1 comentário do último run validado.
+- Automation rule ativa no PLTF: nome "Jira Coding Agent — manual trigger", trigger "Manual trigger from work item", action "Send web request" → `POST https://api.github.com/repos/smsilva/wasp-agent/dispatches`, body `event_type=jira-trigger-event` + `client_payload.issue_key={{issue.key}}`. Disparar via issue → menu `• • •` → Automation.
+- PAT fine-grained do GitHub chamado "jira" (escopo `smsilva/wasp-agent`, `Contents: write` + `Actions: write`) cola no header `Authorization: Bearer <PAT>` da rule.
+- Secrets no repo GitHub: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Valores também no `.env` local.
+- Config Jira em `.jira/config.md` (gitignored). Permissões read-only do Atlassian MCP + hook de validação de task file em `.claude/settings.local.json`.
 
-Hipótese **validada ponta a ponta com o Jira no loop** (2026-06-13): a Automation rule do projeto PLTF (trigger "Manual trigger from work item") dispara `repository_dispatch` → workflow roda no `main` → comenta de volta na issue. Confirmado pela PLTF-11 (run `27472803427`, success, comentário "Agent picked this up…"). Também validados `workflow_dispatch` e `repository_dispatch` via `gh api`. Secrets `JIRA_*` configurados no repo; `checkout@v5` no `main` (sem warning Node 20). Config Jira local em `.jira/config.md` (gitignored).
-
-Gotchas do setup da Automation rule (no runbook): header `Authorization` exige prefixo `Bearer ` (401 sem); PAT precisa de `Contents: write`, não basta `Actions: write` (403); não usar o botão "Validate" do Send web request (roda sem contexto → `{{issue.key}}` vazio).
+Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (claude mcp add http `https://mcp.atlassian.com/v1/mcp`) antes de usar `mcp__atlassian__*`. Deletar comentário Jira não tem tool MCP — usar REST `DELETE /rest/api/3/issue/{key}/comment/{id}` com basic auth do `.env`.
 
 ## In Progress
 
-Nenhum trabalho em andamento. v1 entregue e validado end-to-end (código + infra + Jira).
+Nada em andamento. v1 entregue e validado (código + infra + Jira).
 
-Próximo passo natural é a v2 (ver Backlog): implementação real com `claude -p`, branch, PR, transição "In Review".
+Próximo: v2 (ver Backlog) — implementação real com `claude -p`, branch, PR, transição "In Review".
 
 ## Open Questions / Hypotheses
 
