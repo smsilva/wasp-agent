@@ -11,9 +11,15 @@ Entregue v1 (skeleton):
 
 Design: `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent.md`.
 
+Hipótese **validada ponta a ponta com o Jira no loop** (2026-06-13): a Automation rule do projeto PLTF (trigger "Manual trigger from work item") dispara `repository_dispatch` → workflow roda no `main` → comenta de volta na issue. Confirmado pela PLTF-11 (run `27472803427`, success, comentário "Agent picked this up…"). Também validados `workflow_dispatch` e `repository_dispatch` via `gh api`. Secrets `JIRA_*` configurados no repo; `checkout@v5` no `main` (sem warning Node 20). Config Jira local em `.jira/config.md` (gitignored).
+
+Gotchas do setup da Automation rule (no runbook): header `Authorization` exige prefixo `Bearer ` (401 sem); PAT precisa de `Contents: write`, não basta `Actions: write` (403); não usar o botão "Validate" do Send web request (roda sem contexto → `{{issue.key}}` vazio).
+
 ## In Progress
 
-Nenhum trabalho em andamento. v1 entregue. Validação end-to-end real é manual (seguir o runbook) — depende de configurar a Automation rule no Jira + secrets no GitHub.
+Nenhum trabalho em andamento. v1 entregue e validado end-to-end (código + infra + Jira).
+
+Próximo passo natural é a v2 (ver Backlog): implementação real com `claude -p`, branch, PR, transição "In Review".
 
 ## Open Questions / Hypotheses
 
