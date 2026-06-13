@@ -45,3 +45,4 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 | Arquivo | Título |
 |---|---|
 | [2026-06-13-jira-coding-agent.md](03-execution/2026-06-13-jira-coding-agent.md) | Jira Coding Agent (walking skeleton v1) — Implementation Plan |
+| [2026-06-13-jira-coding-agent-v2.md](03-execution/2026-06-13-jira-coding-agent-v2.md) | Jira Coding Agent v2 — Implementation Plan |
