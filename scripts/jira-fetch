@@ -15,6 +15,19 @@ Implement the task described in the following Jira issue (${issue_key}).
 Follow the repository's CLAUDE.md. Make the minimal change that satisfies the
 issue. Do not modify unrelated code.
 
+When you finish editing, you MUST commit and push your work so the workflow can
+open a pull request:
+
+1. Configure git: \`git config user.email "claude[bot]@users.noreply.github.com"\`
+   and \`git config user.name "claude[bot]"\`.
+2. Create a fresh branch: \`git checkout -b claude/${issue_key}\`.
+3. Stage and commit: \`git add -A && git commit -m "${issue_key}: <summary>"\`.
+4. Push the branch: \`git push --set-upstream origin claude/${issue_key}\`.
+
+If you make no code changes (e.g. the issue is already resolved), still push an
+empty commit on \`claude/${issue_key}\` so the workflow has a branch to open a
+PR from.
+
 # ${summary}
 
 ${description}
