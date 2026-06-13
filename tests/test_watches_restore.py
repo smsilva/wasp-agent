@@ -47,17 +47,27 @@ def test_restore_spawns_thread_for_pending_platform(engine, monkeypatch):
 
     mock_notifier = MagicMock()
     mock_notifier.send = AsyncMock()
+    fake_coro = MagicMock(name="watch_platform_coro")
+    asyncio_run = MagicMock(name="asyncio.run")
 
     with (
         patch("wasp.watches.get_repository", return_value=repo),
         patch("wasp.watches.threading.Thread", side_effect=fake_thread),
         patch("wasp.watcher._select_notifier", return_value=mock_notifier),
+        # `watch_platform` is `async def`; pass `new=MagicMock(...)` to avoid
+        # patch()'s automatic AsyncMock substitution (which would wrap the
+        # return value in a coroutine instead of handing it to asyncio.run).
+        patch("wasp.watcher.watch_platform", new=MagicMock(return_value=fake_coro)),
+        patch("asyncio.run", asyncio_run),
     ):
         from wasp.watches import restore_pending_watches
 
         restore_pending_watches()
+        # Execute the captured thread target to cover the inner `_run` closure.
+        spawned[0]()
 
     assert len(spawned) == 1
+    asyncio_run.assert_called_once_with(fake_coro)
 
 
 def test_restore_spawns_thread_for_pending_cluster(engine, monkeypatch):
@@ -76,17 +86,24 @@ def test_restore_spawns_thread_for_pending_cluster(engine, monkeypatch):
 
     mock_notifier = MagicMock()
     mock_notifier.send = AsyncMock()
+    fake_coro = MagicMock(name="watch_cluster_coro")
+    asyncio_run = MagicMock(name="asyncio.run")
 
     with (
         patch("wasp.watches.get_repository", return_value=repo),
         patch("wasp.watches.threading.Thread", side_effect=fake_thread),
         patch("wasp.watcher._select_notifier", return_value=mock_notifier),
+        patch("wasp.watcher.watch_cluster", new=MagicMock(return_value=fake_coro)),
+        patch("asyncio.run", asyncio_run),
     ):
         from wasp.watches import restore_pending_watches
 
         restore_pending_watches()
+        # Execute the captured thread target to cover the inner `_run` closure.
+        spawned[0]()
 
     assert len(spawned) == 1
+    asyncio_run.assert_called_once_with(fake_coro)
 
 
 def test_restore_skips_watch_with_no_notifier(engine):
