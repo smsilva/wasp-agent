@@ -57,8 +57,9 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.claude.outputs.github_token }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          BRANCH_NAME: ${{ steps.claude.outputs.branch_name }}
         run: |
-          pr_url="$(scripts/ensure-pr "${{ steps.claude.outputs.branch_name }}" "${ISSUE_KEY}")"
+          pr_url="$(scripts/ensure-pr "${BRANCH_NAME}" "${ISSUE_KEY}")"
           echo "url=${pr_url}" >> "$GITHUB_OUTPUT"
 
       - name: Comment + transition on Jira
@@ -66,6 +67,7 @@ jobs:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          PR_URL: ${{ steps.pr.outputs.url }}
         run: |
-          scripts/jira-comment "${ISSUE_KEY}" "Agent opened a PR: ${{ steps.pr.outputs.url }}"
+          scripts/jira-comment "${ISSUE_KEY}" "Agent opened a PR: ${PR_URL}"
           scripts/jira-transition "${ISSUE_KEY}" "In Review"
