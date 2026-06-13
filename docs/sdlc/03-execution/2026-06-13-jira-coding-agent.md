@@ -162,7 +162,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Read issue key
-        run: echo "ISSUE_KEY=${{ github.event.client_payload.issue_key }}" >> "$GITHUB_ENV"
+        env:
+          ISSUE_KEY_RAW: ${{ github.event.client_payload.issue_key }}
+        run: |
+          if [[ ! "${ISSUE_KEY_RAW}" =~ ^[A-Z]+-[0-9]+$ ]]; then
+            echo "Invalid issue key: ${ISSUE_KEY_RAW}" >&2
+            exit 1
+          fi
+          echo "ISSUE_KEY=${ISSUE_KEY_RAW}" >> "$GITHUB_ENV"
 
       - name: Fetch issue (stub)
         run: echo "would fetch issue details for ${ISSUE_KEY}"
@@ -188,6 +195,11 @@ jobs:
           scripts/jira-comment "${ISSUE_KEY}" \
             "Agent picked this up. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 ```
+
+> **Segurança:** `github.event.client_payload.*` é input não-confiável (atacante controla o
+> dispatch). Nunca interpolar direto num `run:` — é injeção de comando. O valor é vinculado a
+> `ISSUE_KEY_RAW` via `env` e validado por regex (`^[A-Z]+-[0-9]+$`) antes de virar `ISSUE_KEY`.
+> `github.server_url`/`repository`/`run_id` vêm do contexto do GitHub (confiáveis).
 
 - [ ] **Step 2: Validate the YAML**
 
