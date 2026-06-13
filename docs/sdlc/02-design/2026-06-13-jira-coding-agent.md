@@ -117,8 +117,10 @@ on:
 
 Características do `repository_dispatch` a ter em mente:
 - Só dispara com o arquivo de workflow no **branch default**.
-- **Não** aparece na aba Actions como disparável manualmente (daí o `workflow_dispatch`
-  de companhia chegar só na v3).
+- **Não** aparece na aba Actions como disparável manualmente — por isso a v1 já inclui um
+  `workflow_dispatch` de companhia com input `jira_issue`, permitindo o primeiro teste de
+  execução manual (pela aba Actions) sem depender do Jira. A issue key é normalizada de
+  qualquer uma das fontes: `${{ github.event.client_payload.issue_key || inputs.jira_issue }}`.
 
 **Skeleton completo de steps.** O workflow já tem **um step por etapa do pipeline alvo**,
 mostrando a forma inteira end-to-end. Na v1, só o comentário no Jira é real; cada etapa
@@ -186,9 +188,11 @@ Cada versão adiciona uma fatia, mantendo o end-to-end sempre verde.
 - `pr-agent.yaml`: action oficial em `workflow_run` (ci.yaml `failure`, `head_branch: agent/**`)
   e `issue_comment` (`@claude`). Auto-fix no branch com **loop-guard** (label `agent-fix:N`,
   para em 3 tentativas).
-- `workflow_dispatch` de companhia com inputs `jira_issue` + `dry_run` (teste manual / dry-run
-  pela UI; o workflow normaliza a issue key de `client_payload` **ou** do input).
+- `dry_run` como input do `workflow_dispatch` (já presente na v1) — roda o agente mas não
+  faz push/PR/Jira.
 - Extração da lógica para CLI Python testado (100% coverage, conforme `CLAUDE.md`).
+
+(O `workflow_dispatch` de companhia com input `jira_issue` foi antecipado para a v1 — ver §4.2.)
 
 ---
 
