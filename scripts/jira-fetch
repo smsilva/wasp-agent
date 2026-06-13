@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -e
+
+issue_key="${1?}"
+
+response="$(curl --fail --silent --show-error \
+  --user "${JIRA_EMAIL?}:${JIRA_API_TOKEN?}" \
+  --url "${JIRA_BASE_URL?}/rest/api/3/issue/${issue_key}?expand=renderedFields&fields=summary")"
+
+summary="$(jq --raw-output '.fields.summary' <<< "${response}")"
+description="$(jq --raw-output '.renderedFields.description // ""' <<< "${response}")"
+
+cat <<PROMPT
+Implement the task described in the following Jira issue (${issue_key}).
+Follow the repository's CLAUDE.md. Make the minimal change that satisfies the
+issue. Do not modify unrelated code.
+
+# ${summary}
+
+${description}
+PROMPT
