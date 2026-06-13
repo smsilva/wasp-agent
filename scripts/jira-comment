@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -e
+
+issue_key="${1?}"
+comment_body="${2?}"
+
+payload="$(jq --null-input --arg text "${comment_body}" \
+  '{body: {type: "doc", version: 1, content: [{type: "paragraph", content: [{type: "text", text: $text}]}]}}')"
+
+curl --fail --silent --show-error \
+  --request POST \
+  --user "${JIRA_EMAIL?}:${JIRA_API_TOKEN?}" \
+  --header "Content-Type: application/json" \
+  --url "${JIRA_BASE_URL?}/rest/api/3/issue/${issue_key}/comment" \
+  --data "${payload}"
