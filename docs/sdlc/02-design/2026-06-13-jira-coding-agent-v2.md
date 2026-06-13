@@ -200,3 +200,29 @@ Mapeando nas três necessidades do lado Jira:
   código, nenhuma lógica movida para fora do repo.
 - Não adicionar Automation rule de transição-por-PR enquanto a transição estiver no código —
   evita transição dupla / fonte da verdade ambígua.
+
+---
+
+## 11. Seleção de repo
+
+O repo alvo **não é derivado da issue**: está fixo na URL da Automation rule do Jira
+(`POST https://api.github.com/repos/smsilva/wasp-agent/dispatches`). O mapeamento é
+**projeto Jira → repo**, no nível da rule. `repository_dispatch` é endereçado a um repo
+específico na própria URL — quem decide é a rule, não o ticket.
+
+Isso é coerente com a decisão #1 do spec base (o agente edita o **próprio** repo): há
+exatamente um alvo, nada a escolher. Na v2 fica assim.
+
+### Quando virar multi-repo (v3+)
+1. **Uma rule por projeto/board:** cada projeto Jira aponta para seu repo. Mapping na config
+   do Jira. Bom quando projeto↔repo é 1:1.
+2. **Smart value na URL da rule** (recomendado): um campo da issue (custom field/component/
+   label) carrega o slug do repo; a URL vira `…/repos/smsilva/{{issue.customfield_xxxxx}}/
+   dispatches`. Uma rule serve N repos.
+3. **Router repo:** uma rule dispara para um repo central que lê `client_payload.repo` e
+   re-dispara (`gh api .../dispatches`) ao repo alvo. Mais peças móveis; só vale se templating
+   de URL não bastar.
+
+Em qualquer caso multi-repo há fan-out de setup: o trigger token precisa de permissão de
+dispatch em cada repo alvo, e cada repo precisa do workflow no branch default + app "Claude"
+instalada + secrets.
