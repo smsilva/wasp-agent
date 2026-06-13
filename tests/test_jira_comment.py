@@ -8,24 +8,23 @@ from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parent.parent / "scripts" / "jira-comment"
 
-captured: dict = {}
-
-
-class _Handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        length = int(self.headers["Content-Length"])
-        captured["path"] = self.path
-        captured["auth"] = self.headers["Authorization"]
-        captured["body"] = json.loads(self.rfile.read(length))
-        self.send_response(201)
-        self.end_headers()
-        self.wfile.write(b"{}")
-
-    def log_message(self, *args):  # silence server logging
-        pass
-
 
 def test_jira_comment_posts_adf_comment():
+    captured: dict = {}
+
+    class _Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers["Content-Length"])
+            captured["path"] = self.path
+            captured["auth"] = self.headers["Authorization"]
+            captured["body"] = json.loads(self.rfile.read(length))
+            self.send_response(201)
+            self.end_headers()
+            self.wfile.write(b"{}")
+
+        def log_message(self, *args):  # silence server logging
+            pass
+
     server = HTTPServer(("127.0.0.1", 0), _Handler)
     port = server.server_address[1]
     threading.Thread(target=server.handle_request, daemon=True).start()
@@ -33,7 +32,7 @@ def test_jira_comment_posts_adf_comment():
     result = subprocess.run(
         [str(SCRIPT), "PROJ-1", "Agent picked this up. Run: http://x/123"],
         env={
-            **os.environ,  # herda PATH para achar bash/curl/jq
+            **os.environ,  # inherit PATH so bash/curl/jq are found
             "JIRA_BASE_URL": f"http://127.0.0.1:{port}",
             "JIRA_EMAIL": "bot@example.com",
             "JIRA_API_TOKEN": "secret-token",
