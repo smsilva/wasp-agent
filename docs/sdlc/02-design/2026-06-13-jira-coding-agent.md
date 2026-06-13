@@ -138,6 +138,11 @@ linha — cabe na regra de "≤3 linhas inline"):
 À medida que v2/v3 avançam, cada stub é substituído pela implementação real, sem mudar a
 estrutura do workflow.
 
+**Segurança do input:** `github.event.client_payload.*` é não-confiável. A issue key é
+vinculada a uma env var (`ISSUE_KEY_RAW`) e validada por regex (`^[A-Z]+-[0-9]+$`) antes de
+uso — nunca interpolada direto num `run:` (evita injeção de comando). `github.server_url`/
+`repository`/`run_id` vêm do contexto do GitHub e são confiáveis.
+
 ### 4.3 Convenção de scripts (inegociável)
 
 **Evitar scripts inline no YAML.** Qualquer passo com mais de 3 linhas de código vira um
