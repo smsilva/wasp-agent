@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+issue_key="${1?}"
+transition_name="${2?}"
+
+transitions="$(curl --fail --silent --show-error \
+  --user "${JIRA_EMAIL?}:${JIRA_API_TOKEN?}" \
+  --url "${JIRA_BASE_URL?}/rest/api/3/issue/${issue_key}/transitions")"
+
+transition_id="$(jq --raw-output --arg name "${transition_name}" \
+  '.transitions[] | select((.name | ascii_downcase) == ($name | ascii_downcase)) | .id' \
+  <<< "${transitions}")"
+
+if [[ -z "${transition_id}" ]]; then
+  echo "Transition not found: ${transition_name}" >&2
+  exit 1
+fi
+
+payload="$(jq --null-input --arg id "${transition_id}" '{transition: {id: $id}}')"
+
+curl --fail --silent --show-error \
+  --request POST \
+  --user "${JIRA_EMAIL?}:${JIRA_API_TOKEN?}" \
+  --header "Content-Type: application/json" \
+  --url "${JIRA_BASE_URL?}/rest/api/3/issue/${issue_key}/transitions" \
+  --data "${payload}"
