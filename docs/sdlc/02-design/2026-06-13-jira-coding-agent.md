@@ -173,7 +173,16 @@ fase):
 
 Cada versão adiciona uma fatia, mantendo o end-to-end sempre verde.
 
-### v2 — implementação real (Status: Deferred)
+### v2 — implementação real (Status: Approved — ver spec dedicado)
+
+> **Decisões revisadas.** O detalhamento e as decisões finais da v2 vivem em
+> `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v2.md`. Resumo das mudanças sobre o
+> esboço abaixo: usa a **app oficial "Claude" via `anthropics/claude-code-action`** (não
+> GitHub App próprio nem PAT — sem `create-github-app-token`), auth via
+> `CLAUDE_CODE_OAUTH_TOKEN` (não `ANTHROPIC_API_KEY`), e `expand=renderedFields` em vez de
+> ADF→markdown. A action cuida de branch/commit/PR; some o `scripts/branch-name`.
+
+Esboço original (superseded pelo spec v2):
 - `actions/create-github-app-token` (GitHub App) → exige secrets `APP_ID`, `APP_PRIVATE_KEY`.
 - `scripts/jira-fetch`: fetch dos detalhes da issue (`GET /rest/api/3/issue/{key}`), summary
   + description, ADF → markdown.
