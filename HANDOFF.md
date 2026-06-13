@@ -2,15 +2,18 @@
 
 ## Why
 
-`WatchRepository.register` era no-op silencioso em re-provisioning após estado terminal. `UniqueConstraint(kind, name)` fazia o `INSERT` lançar `IntegrityError` (capturado e ignorado) quando já existia linha em `ready`/`failed`/`timeout` — o watch thread iniciava mas o DB não voltava a `pending`, então restart subsequente não recuperava.
+Jira Coding Agent — walking skeleton v1. Hipótese a validar: Jira → atribui issue ao agente → dispara GitHub Actions → comenta de volta no Jira. Prova o round-trip e a autenticação nos dois sentidos antes de qualquer implementação de código real.
 
-Fix: substituir `INSERT` + `try/except IntegrityError` por upsert `INSERT ... ON CONFLICT(kind, name) DO UPDATE SET status='pending', session_id=excluded.session_id, created_at=excluded.created_at, notified_at=NULL`. `ON CONFLICT ... excluded` é idêntico em SQLite 3.24+ e Postgres — sem branching por dialeto. Import `IntegrityError` removido (órfão).
+Entregue v1 (skeleton):
+- `.github/workflows/jira-agent.yaml` — trigger `repository_dispatch` (`types: [jira-trigger-event]`). Skeleton com um step por etapa do pipeline alvo; só leitura da issue key e comentário no Jira são reais, o resto loga "would …". Issue key vinda de `client_payload` é validada por regex (`^[A-Z]+-[0-9]+$`) via env var antes de uso — evita injeção de comando.
+- `scripts/jira-comment` — bash+curl+jq, posta comentário ADF em `/rest/api/3/issue/{key}/comment` (basic auth). Testado em `tests/test_jira_comment.py` via mock HTTP server.
+- `docs/runbooks/jira-coding-agent-setup.md` — passo a passo reproduzível (Jira Automation, secrets, validação, troubleshooting).
 
-Alternativa rejeitada: `INSERT OR REPLACE` (SQLite) + `ON CONFLICT` (Postgres) com branching por `engine.dialect.name` — desnecessário, `excluded` cobre ambos com um SQL só.
+Design: `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent.md`.
 
 ## In Progress
 
-Nenhum trabalho em andamento. Fix aplicado e validado.
+Nenhum trabalho em andamento. v1 entregue. Validação end-to-end real é manual (seguir o runbook) — depende de configurar a Automation rule no Jira + secrets no GitHub.
 
 ## Open Questions / Hypotheses
 
@@ -26,7 +29,7 @@ Nenhum.
 make test 2>&1 | tail -5
 ```
 
-Confirmar `422 passed, 1 skipped`, 100% coverage.
+Confirmar `423 passed, 1 skipped`, 100% coverage.
 
 ## Next Steps
 
@@ -46,5 +49,6 @@ Nenhum item priorizado. Ver Backlog.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
+- **Jira Coding Agent v2/v3** (`docs/sdlc/03-execution/2026-06-13-jira-coding-agent.md`) — v2: implementação real com `claude -p`, GitHub App, branch, PR, transição "In Review". v3: gate de ambiguidade, `pr-agent.yaml` (auto-fix de CI via action oficial), `workflow_dispatch`/dry-run, extração para CLI Python testado.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
