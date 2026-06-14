@@ -2,24 +2,25 @@
 
 ## Why
 
-Jira Coding Agent v2 — implementação real (`claude-code-action` + App "Claude"). O agente lê a issue, implementa, abre PR, comenta no Jira e transiciona pra "In Review".
+Jira Coding Agent v2 entregue: agente lê issue do Jira, implementa, abre PR, comenta no Jira e transiciona pra "In Review". Implementação real via `claude-code-action` + App "Claude". Alternativa rejeitada: `claude -p` headless cru (mais cola para auth/PR; substituído pela action que cunha o token internamente a partir do `CLAUDE_CODE_OAUTH_TOKEN`).
 
 Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v2.md` (Status: Implemented). Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent-v2.md`. Setup: `docs/runbooks/jira-coding-agent-setup.md`.
 
-**Validado end-to-end em 2026-06-13** (run `27483606376`, PR `#9`, PLTF-11). Setup live, não recriar:
-- Site `smsilva.atlassian.net`, projeto `PLTF`. Issue de teste: **PLTF-11** (Story; criada espelhando PLTF-2). Mantém 1 comentário do último run validado.
-- Automation rule ativa no PLTF: nome "Jira Coding Agent — manual trigger", trigger "Manual trigger from work item", action "Send web request" → `POST https://api.github.com/repos/smsilva/wasp-agent/dispatches`, body `event_type=jira-trigger-event` + `client_payload.issue_key={{issue.key}}`. Disparar via issue → menu `• • •` → Automation.
-- PAT fine-grained do GitHub chamado "jira" (escopo `smsilva/wasp-agent`, `Contents: write` + `Actions: write`) cola no header `Authorization: Bearer <PAT>` da rule.
-- Secrets no repo GitHub: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Valores também no `.env` local.
-- Config Jira em `.jira/config.md` (gitignored). Permissões read-only do Atlassian MCP + hook de validação de task file em `.claude/settings.local.json`.
+**Validado end-to-end em 2026-06-13** com PLTF-11. Setup live, não recriar:
+- Site `smsilva.atlassian.net`, projeto `PLTF`. Issue de teste: **PLTF-11** (Story; criada espelhando PLTF-2).
+- Automation rule ativa: "Jira Coding Agent — manual trigger", `POST https://api.github.com/repos/smsilva/wasp-agent/dispatches`, body `event_type=jira-trigger-event` + `client_payload.issue_key={{issue.key}}`. Disparar via issue → menu `• • •` → Automation.
+- PAT fine-grained "jira" (escopo `smsilva/wasp-agent`, `Contents: write` + `Actions: write`) no header `Authorization: Bearer <PAT>` da rule (fica no Jira, não no GitHub).
+- Secrets no repo: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`. Valores Jira também no `.env` local.
+- Settings → Actions → General: flag "Allow GitHub Actions to create and approve pull requests" precisa estar ligada (sem ela, `gh pr create` falha com GraphQL `createPullRequest`).
+- Primeiro PR de cada novo branch do bot exige aprovação manual ("Approve workflows to run").
 
-Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (claude mcp add http `https://mcp.atlassian.com/v1/mcp`) antes de usar `mcp__atlassian__*`. Deletar comentário Jira não tem tool MCP — usar REST `DELETE /rest/api/3/issue/{key}/comment/{id}` com basic auth do `.env`.
+Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude mcp add http https://mcp.atlassian.com/v1/mcp`) antes de usar `mcp__atlassian__*`. Deletar comentário Jira não tem tool MCP — usar REST `DELETE /rest/api/3/issue/{key}/comment/{id}` com basic auth do `.env`.
 
 ## In Progress
 
-Nada em andamento. v2 entregue e validado.
+Nada em andamento. v2 entregue, validado, documentado.
 
-Próximo: v3 (ver Backlog) — gate de ambiguidade, `pr-agent.yaml`, dry-run, CLI Python testado. SEC-008 (artefato de log) pendente.
+Próximo: v3 (ver Backlog).
 
 ## Open Questions / Hypotheses
 
@@ -27,7 +28,7 @@ Nenhuma.
 
 ## Known Broken
 
-Nenhum.
+- **SEC-008** (Low, *unexpected*): artefato `claude-execution-log-<ISSUE_KEY>.tar.gz` é uploaded em `if: always()` com `retention-days: 30`, expondo body da issue + tool outputs + env vars do agente. Plano: apertar para `if: failure()` + `retention-days: 7` na v3. Spec: `docs/security/issues/SEC-008-jira-agent-execution-log-artifact.md`.
 
 ## How to Resume
 
@@ -54,6 +55,6 @@ Nenhum item priorizado. Ver Backlog.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Resolver SEC-008 (apertar `if: failure()` + `retention-days: 7` no artifact de log). Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
+- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Resolver SEC-008. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
