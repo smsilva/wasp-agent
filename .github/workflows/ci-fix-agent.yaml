@@ -19,6 +19,9 @@ jobs:
       pull-requests: write
       id-token: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Validate PR branch and author permission
         id: validate
         env:
@@ -78,3 +81,41 @@ jobs:
             --jq '[.comments[] | select(.body | contains("<!-- ci-fix-attempt -->"))] | length')"
           echo "attempts=${attempts}" >> "$GITHUB_OUTPUT"
           echo "Previous attempts: ${attempts}"
+
+      - name: Handle exhausted attempts
+        id: exhausted
+        if: >-
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts >= steps.parse.outputs.max_attempts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          BRANCH: ${{ steps.validate.outputs.branch }}
+          ATTEMPTS: ${{ steps.count.outputs.attempts }}
+          MAX_ATTEMPTS: ${{ steps.parse.outputs.max_attempts }}
+        run: |
+          # Extract ISSUE_KEY from branch (claude/PLTF-11 → PLTF-11).
+          issue_key="${BRANCH#claude/}"
+          if [[ ! "${issue_key}" =~ ^[A-Z]+-[0-9]+$ ]]; then
+            echo "Branch ${BRANCH} does not encode a valid Jira key — silencing Jira step"
+            issue_key=""
+          fi
+
+          # Collect run URLs from previous attempt comments for summary.
+          run_urls="$(gh pr view "${PR_NUMBER}" \
+            --repo "${REPO}" \
+            --json comments \
+            --jq '[.comments[] | select(.body | contains("<!-- ci-fix-attempt -->")) | .url] | join(", ")')"
+
+          pr_msg="Esgotei ${ATTEMPTS} tentativas (limite: ${MAX_ATTEMPTS}) sem fazer o CI passar. PR permanece aberto para revisão humana. Tentativas: ${run_urls}"
+          gh pr comment "${PR_NUMBER}" --repo "${REPO}" --body "${pr_msg}"
+
+          if [[ -n "${issue_key}" ]]; then
+            scripts/jira-transition "${issue_key}" "In Progress"
+            scripts/jira-comment "${issue_key}" \
+              "ci-fix-agent esgotou ${ATTEMPTS} tentativas no PR. Volta para In Progress para revisão humana."
+          fi
