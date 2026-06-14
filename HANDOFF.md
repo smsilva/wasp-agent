@@ -16,11 +16,13 @@ Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v2.md` (Status: Implemen
 
 Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude mcp add http https://mcp.atlassian.com/v1/mcp`) antes de usar `mcp__atlassian__*`. Deletar comentário Jira não tem tool MCP — usar REST `DELETE /rest/api/3/issue/{key}/comment/{id}` com basic auth do `.env`.
 
+**v3/SEC-008 entregue em 2026-06-13**: artefato de execução do agente gateado em `if: failure()` + `retention-days: 7`. v3 foi fatiada em 4 specs independentes; SEC-008 é o primeiro. Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v3-sec-008.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent-v3-sec-008.md`. **Validação manual pós-merge pendente** (Task 5 do plano): disparar PLTF-11 e confirmar ausência de artefato em run verde; forçar falha e confirmar artefato com 7d.
+
 ## In Progress
 
-Nada em andamento. v2 entregue, validado, documentado.
+Nada em andamento. v3/SEC-008 mergeado.
 
-Próximo: v3 (ver Backlog).
+Próximo: segundo spec da v3 (ver Backlog).
 
 ## Open Questions / Hypotheses
 
@@ -40,7 +42,8 @@ Confirmar suite verde + 100% coverage.
 
 ## Next Steps
 
-Nenhum item priorizado. Ver Backlog.
+- **Validação manual v3/SEC-008** (Task 5): disparar `gh workflow run jira-agent.yaml -f jira_issue=PLTF-11`; run verde → sem artefato. Forçar falha → artefato com 7d.
+- **Próximo spec da v3**: escolher entre `pr-agent.yaml` (auto-fix CI), dry-run, ou CLI Python.
 
 ## Backlog (carry-over)
 
@@ -55,6 +58,6 @@ Nenhum item priorizado. Ver Backlog.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
+- **Jira Coding Agent v3** (3 specs restantes) — fatiamento decidido: um spec por item. Itens: `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
