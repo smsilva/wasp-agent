@@ -119,3 +119,104 @@ jobs:
             scripts/jira-comment "${issue_key}" \
               "ci-fix-agent esgotou ${ATTEMPTS} tentativas no PR. Volta para In Progress para revisão humana."
           fi
+
+      - name: Find failing run URL
+        id: failing
+        if: >-
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts < steps.parse.outputs.max_attempts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Head SHA do PR.
+          head_sha="$(gh pr view "${PR_NUMBER}" \
+            --repo "${REPO}" \
+            --json headRefOid \
+            --jq '.headRefOid')"
+          # Último run do pull-request workflow nesse SHA com conclusão failure.
+          run_url="$(gh run list \
+            --repo "${REPO}" \
+            --workflow=pull-request.yaml \
+            --commit "${head_sha}" \
+            --status failure \
+            --json url \
+            --jq '.[0].url // ""')"
+          if [[ -z "${run_url}" ]]; then
+            echo "No failing pull-request run for ${head_sha}"
+            echo "url=" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=${run_url}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build prompt
+        id: prompt
+        if: >-
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts < steps.parse.outputs.max_attempts
+        env:
+          BRANCH: ${{ steps.validate.outputs.branch }}
+          RUN_URL: ${{ steps.failing.outputs.url }}
+          ATTEMPTS: ${{ steps.count.outputs.attempts }}
+          MAX_ATTEMPTS: ${{ steps.parse.outputs.max_attempts }}
+        run: |
+          # attempts é a contagem antes desta tentativa; a tentativa atual
+          # é attempts+1.
+          current_attempt=$((ATTEMPTS + 1))
+          delimiter="EOF_$(openssl rand -hex 16)"
+          {
+            echo "AGENT_PROMPT<<${delimiter}"
+            cat <<PROMPT
+          CI falhou no PR ${BRANCH} (tentativa ${current_attempt} de ${MAX_ATTEMPTS}).
+          Logs de falha: ${RUN_URL}
+
+          Leia os logs, identifique a causa, corrija o código.
+          Faça commit e push na branch existente — não crie branch nova.
+          Não altere código não relacionado à falha.
+          PROMPT
+            echo "${delimiter}"
+          } >> "$GITHUB_ENV"
+          echo "current_attempt=${current_attempt}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR branch
+        if: >-
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts < steps.parse.outputs.max_attempts
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.validate.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Implement fix with Claude
+        id: claude
+        if: >-
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts < steps.parse.outputs.max_attempts
+        uses: anthropics/claude-code-action@v1
+        with:
+          prompt: ${{ env.AGENT_PROMPT }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: >-
+            --model claude-opus-4-8
+            --dangerously-skip-permissions
+          show_full_output: true
+
+      - name: Post attempt marker
+        if: >-
+          always() &&
+          steps.validate.outputs.proceed == 'true' &&
+          steps.count.outputs.attempts < steps.parse.outputs.max_attempts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          CURRENT_ATTEMPT: ${{ steps.prompt.outputs.current_attempt }}
+          MAX_ATTEMPTS: ${{ steps.parse.outputs.max_attempts }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          CLAUDE_OUTCOME: ${{ steps.claude.outcome }}
+        run: |
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${REPO}" \
+            --body "<!-- ci-fix-attempt -->
+          Tentativa ${CURRENT_ATTEMPT} de ${MAX_ATTEMPTS} (claude-code-action: ${CLAUDE_OUTCOME}). [Ver run](${RUN_URL})."
