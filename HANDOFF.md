@@ -54,6 +54,6 @@ Nenhum item priorizado. Ver Backlog.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** — gate de ambiguidade, `pr-agent.yaml` (auto-fix de CI via action oficial), dry-run, extração para CLI Python testado. Resolver SEC-008 (apertar `if: failure()` + `retention-days: 7` no artifact de log).
+- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Resolver SEC-008 (apertar `if: failure()` + `retention-days: 7` no artifact de log). Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
