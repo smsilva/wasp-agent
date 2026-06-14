@@ -192,8 +192,10 @@ Esboço original (superseded pelo spec v2):
 - `scripts/jira-transition`: comenta com a URL do PR + transiciona para "In Review".
 
 ### v3 — robustez (Status: Deferred)
-- Gate de ambiguidade: primeira chamada `claude -p` classifica suficiência → JSON
-  `{sufficient, questions[]}`; se insuficiente, comenta perguntas + "Needs Info", sem PR.
+- ~~Gate de ambiguidade~~ — **dropado (2026-06-13)**: a premissa de produto é que só
+  issues refinadas (negócio + técnico) são delegadas ao agente. O filtro humano upstream
+  já cobre o risco que o gate mitigaria; replicar isso em código adiciona latência e um
+  segundo chamado ao modelo sem ganho líquido.
 - `pr-agent.yaml`: action oficial em `workflow_run` (ci.yaml `failure`, `head_branch: agent/**`)
   e `issue_comment` (`@claude`). Auto-fix no branch com **loop-guard** (label `agent-fix:N`,
   para em 3 tentativas).
