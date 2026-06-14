@@ -1,0 +1,36 @@
+name: ci-fix-notifier
+
+on:
+  workflow_run:
+    workflows: ["pull-request"]
+    types: [completed]
+
+jobs:
+  notify:
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      startsWith(github.event.workflow_run.head_branch, 'claude/')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Find PR and post invite
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          REPO: ${{ github.repository }}
+        run: |
+          pr_number="$(gh pr list \
+            --repo "${REPO}" \
+            --head "${HEAD_SHA}" \
+            --state open \
+            --json number \
+            --jq '.[0].number // ""')"
+          if [[ -z "${pr_number}" ]]; then
+            echo "No open PR found for ${HEAD_SHA} — silencing"
+            exit 0
+          fi
+          gh pr comment "${pr_number}" \
+            --repo "${REPO}" \
+            --body "CI falhou ([ver run](${RUN_URL})). Responda \`/fix\` para tentar corrigir automaticamente."
