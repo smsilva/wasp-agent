@@ -135,6 +135,12 @@ Base image: `python:3.14-alpine`. Non-root user: `adduser -D appuser` (alpine sy
 
 Postgres e Jaeger rodam via docker-compose. Ver `docs/runbooks/local-infra.md`. `make postgres-up` / `make postgres-down` gerenciam só o serviço postgres; volume `postgres_data` sobrevive ao down (use `docker compose down postgres -v` para destruir).
 
+### GitHub Actions
+
+`gh pr list --head` aceita **nome de branch**, não SHA. Em workflows com trigger `workflow_run`, usar `github.event.workflow_run.head_branch` (não `head_sha`) para achar o PR — passar SHA retorna lista vazia silenciosamente. Bug histórico: `ci-fix-notifier.yaml` (corrigido 2026-06-14).
+
+Para re-acionar `pull_request` com `paths:` filter, basta `git commit --allow-empty` + push na branch do PR. O filtro avalia o diff cumulativo PR vs base, não o diff do commit novo — então um commit vazio re-dispara o workflow desde que os arquivos do PR já casem com o filtro.
+
 ### Startup (`wasp/startup.py`)
 
 Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umask(0o077)`. Called from `main.py` after `load_dotenv()`.
