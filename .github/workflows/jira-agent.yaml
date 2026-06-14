@@ -92,7 +92,7 @@ jobs:
           scripts/jira-transition "${ISSUE_KEY}" "In Review"
 
       - name: Collect Claude execution log
-        if: always()
+        if: failure()
         env:
           ISSUE_KEY: ${{ env.ISSUE_KEY }}
         run: |
@@ -110,9 +110,9 @@ jobs:
             .
 
       - name: Upload Claude execution log
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: claude-execution-log-${{ env.ISSUE_KEY }}
           path: claude-execution-log-${{ env.ISSUE_KEY }}.tar.gz
-          retention-days: 30
+          retention-days: 7
