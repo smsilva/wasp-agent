@@ -143,6 +143,10 @@ Contains `startup()`: `configure_logging()`, `GitOpsCommitter.probe()`, `os.umas
 
 ## Conventions
 
+### Git branches
+
+`dev` é mirror do `main` — não é branch de integração. Após cada merge em `main` (via squash), sincronizar com `git checkout dev && git reset --hard origin/main && git push --force-with-lease origin dev`. Squash merges criam SHAs novos, então fast-forward não basta.
+
 ### Env vars
 
 Agent configuration uses prefix `AGENT_` (e.g., `AGENT_NOTIFIER`).
