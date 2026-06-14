@@ -35,30 +35,32 @@ POLL_INTERVAL_SECONDS = 10
 WATCH_TIMEOUT_SECONDS = 600
 
 
-def extract_chat_id(run_context) -> str | None:
-    if run_context is None:
-        return None
-    session_id = getattr(run_context, "session_id", None)
+SESSION_CHANNELS = ("tg", "local", "dc")
+
+
+def parse_session_id(session_id: str | None) -> tuple[str, str] | None:
+    """Parse an agno session_id into ``(channel, chat_id)``.
+
+    Format: ``<prefix>:<agent-name>:<chat_id>[:<message_short_id>]``
+    prefix: "tg" (Telegram) | "local" (curl/CLI) | "dc" (Discord).
+    Returns ``None`` when the session_id is empty or malformed.
+    """
     if not session_id:
         return None
     parts = session_id.split(":")
-    # agno session_id: <prefix>:<agent-name>:<chat_id>[:<message_short_id>]
-    # prefix: "tg" (Telegram) | "local" (curl/CLI) | "dc" (Discord)
-    if len(parts) >= 3 and parts[0] in ("tg", "local", "dc"):
-        return parts[2]
+    if len(parts) >= 3 and parts[0] in SESSION_CHANNELS:
+        return parts[0], parts[2]
     return None
+
+
+def extract_chat_id(run_context) -> str | None:
+    parsed = parse_session_id(getattr(run_context, "session_id", None))
+    return parsed[1] if parsed else None
 
 
 def extract_channel(run_context) -> str | None:
-    if run_context is None:
-        return None
-    session_id = getattr(run_context, "session_id", None)
-    if not session_id:
-        return None
-    parts = session_id.split(":")
-    if len(parts) >= 3 and parts[0] in ("tg", "local", "dc"):
-        return parts[0]
-    return None
+    parsed = parse_session_id(getattr(run_context, "session_id", None))
+    return parsed[0] if parsed else None
 
 
 def _find_condition(platform: dict, type_: str) -> dict | None:
