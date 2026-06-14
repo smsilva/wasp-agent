@@ -25,6 +25,7 @@ def _reset_repository() -> None:
 def restore_pending_watches() -> None:
     from wasp.watcher import (
         _select_notifier,
+        parse_session_id,
         watch_cluster,
         watch_platform,
     )  # lazy — avoids circular import
@@ -34,8 +35,8 @@ def restore_pending_watches() -> None:
         name = watch["name"]
         session_id = watch["session_id"]
 
-        parts = session_id.split(":")
-        if len(parts) < 3 or parts[0] not in ("tg", "local", "dc"):
+        parsed = parse_session_id(session_id)
+        if parsed is None:
             log.warning(
                 "restore: malformed session_id %r for %s/%s — skipping",
                 session_id,
@@ -44,8 +45,7 @@ def restore_pending_watches() -> None:
             )
             continue
 
-        channel = parts[0]
-        chat_id = parts[2]
+        channel, chat_id = parsed
 
         notifier = _select_notifier(channel)
         if notifier is None:
