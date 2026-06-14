@@ -1,0 +1,62 @@
+name: ci-fix-agent
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  fix:
+    # Filtros mínimos baratos antes do step de validação completa:
+    # - é comentário em PR (não em issue)
+    # - corpo contém /fix
+    # Branch e permissão são checados no primeiro step (precisam de gh api).
+    if: >-
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '/fix')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Validate PR branch and author permission
+        id: validate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+        run: |
+          branch="$(gh pr view "${PR_NUMBER}" \
+            --repo "${REPO}" \
+            --json headRefName \
+            --jq '.headRefName')"
+          if [[ ! "${branch}" =~ ^claude/ ]]; then
+            echo "PR branch ${branch} not claude/* — silencing"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          permission="$(gh api \
+            "repos/${REPO}/collaborators/${COMMENT_AUTHOR}/permission" \
+            --jq '.permission')"
+          # GitHub returns: admin, write, read, none. Aceitar admin|write.
+          if [[ "${permission}" != "admin" && "${permission}" != "write" ]]; then
+            echo "Author ${COMMENT_AUTHOR} has permission=${permission} — silencing"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "branch=${branch}" >> "$GITHUB_OUTPUT"
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Parse /fix command
+        id: parse
+        if: steps.validate.outputs.proceed == 'true'
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Extract --max-attempts N from comment body. Default 3.
+          max_attempts=3
+          if [[ "${COMMENT_BODY}" =~ --max-attempts[[:space:]]+([0-9]+) ]]; then
+            max_attempts="${BASH_REMATCH[1]}"
+          fi
+          echo "max_attempts=${max_attempts}" >> "$GITHUB_OUTPUT"
