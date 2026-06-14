@@ -1,6 +1,6 @@
 # Jira Coding Agent v2 — implementação real (claude-code-action + GitHub App oficial)
 
-**Status:** Approved
+**Status:** Implemented
 **Data:** 2026-06-13
 **Autor:** Silvio (brainstorming com Claude)
 **Spec base (v1):** `docs/sdlc/02-design/2026-06-13-jira-coding-agent.md`
