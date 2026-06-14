@@ -28,7 +28,7 @@ Nenhuma.
 
 ## Known Broken
 
-- **SEC-008** (Low, *unexpected*): artefato `claude-execution-log-<ISSUE_KEY>.tar.gz` é uploaded em `if: always()` com `retention-days: 30`, expondo body da issue + tool outputs + env vars do agente. Plano: apertar para `if: failure()` + `retention-days: 7` na v3. Spec: `docs/security/issues/SEC-008-jira-agent-execution-log-artifact.md`.
+Nada.
 
 ## How to Resume
 
@@ -55,6 +55,6 @@ Nenhum item priorizado. Ver Backlog.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Resolver SEC-008. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
+- **Jira Coding Agent v3** — `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
