@@ -18,9 +18,11 @@ Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude
 
 **v3/SEC-008 entregue em 2026-06-13**: artefato de execução do agente gateado em `if: failure()` + `retention-days: 7`. v3 foi fatiada em 4 specs independentes; SEC-008 é o primeiro. Spec: `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v3-sec-008.md`. Plano: `docs/sdlc/03-execution/2026-06-13-jira-coding-agent-v3-sec-008.md`. **Validação manual pós-merge pendente** (Task 5 do plano): disparar PLTF-11 e confirmar ausência de artefato em run verde; forçar falha e confirmar artefato com 7d.
 
+**v3/ci-fix-agent entregue em 2026-06-14**: dois workflows fecham o ciclo de CI no PR do `jira-agent`. `ci-fix-notifier.yaml` detecta falha de CI em branch `claude/*` e posta convite `/fix`; `ci-fix-agent.yaml` recebe `/fix [--max-attempts N]`, conta tentativas via marcador `<!-- ci-fix-attempt -->`, aciona `claude-code-action`, ou esgota e transiciona Jira para "In Progress". Spec: `docs/sdlc/02-design/2026-06-14-ci-fix-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md`. **Validado end-to-end em 2026-06-14** via branch `claude/PLTF-test-cifix` (PR #17, fechado): notifier postou convite, `/fix` acionou Claude action (consertou teste, CI passou no commit do agente), `/fix --max-attempts 1` esgotou corretamente. Bug capturado pela validação: `head_sha` → `head_branch` em `gh pr list --head` (fix em PR #18).
+
 ## In Progress
 
-**Jira Coding Agent v3 — ci-fix-agent** (segundo spec da v3). Spec: `docs/sdlc/02-design/2026-06-14-ci-fix-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md`.
+Nada em andamento.
 
 ## Open Questions / Hypotheses
 
@@ -40,8 +42,7 @@ Confirmar suite verde + 100% coverage.
 
 ## Next Steps
 
-- Executar o plano `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md` (ci-fix-agent + ci-fix-notifier).
-- Após merge: validação manual disparando uma falha intencional de CI em um PR `claude/*` e respondendo `/fix`.
+- Próximo spec da v3 (2 restantes): dry-run via `workflow_dispatch`, ou extração de `scripts/jira-*` + `scripts/ensure-pr` para CLI Python testado.
 
 ## Backlog (carry-over)
 
@@ -56,6 +57,6 @@ Confirmar suite verde + 100% coverage.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** (2 specs restantes) — `ci-fix-agent` em andamento (ver In Progress). Itens pendentes: dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
+- **Jira Coding Agent v3** (2 specs restantes) — `ci-fix-agent` entregue (ver Why). Itens pendentes: dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
