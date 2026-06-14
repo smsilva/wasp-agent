@@ -39,6 +39,7 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 | [2026-05-30-good-citizen-test.md](02-design/2026-05-30-good-citizen-test.md) | Good Citizen Test — Especificação para o `wasp-agent` |
 | [2026-06-13-jira-coding-agent.md](02-design/2026-06-13-jira-coding-agent.md) | Jira Coding Agent — AI coding agent disparado por Jira via GitHub Actions |
 | [2026-06-13-jira-coding-agent-v2.md](02-design/2026-06-13-jira-coding-agent-v2.md) | Jira Coding Agent v2 — implementação real (claude-code-action + GitHub App oficial) |
+| [2026-06-13-jira-coding-agent-v3-sec-008.md](02-design/2026-06-13-jira-coding-agent-v3-sec-008.md) | Jira Coding Agent v3 — SEC-008 fix (execution log artifact) |
 
 ## 03-execution
 
