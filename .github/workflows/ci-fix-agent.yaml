@@ -60,3 +60,21 @@ jobs:
             max_attempts="${BASH_REMATCH[1]}"
           fi
           echo "max_attempts=${max_attempts}" >> "$GITHUB_OUTPUT"
+
+      - name: Count previous attempts
+        id: count
+        if: steps.validate.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Conta comentários no PR que contêm o marcador.
+          # gh pr view retorna comments[*].body — incluir paginação não
+          # é necessário para PRs de agente (poucos comentários).
+          attempts="$(gh pr view "${PR_NUMBER}" \
+            --repo "${REPO}" \
+            --json comments \
+            --jq '[.comments[] | select(.body | contains("<!-- ci-fix-attempt -->"))] | length')"
+          echo "attempts=${attempts}" >> "$GITHUB_OUTPUT"
+          echo "Previous attempts: ${attempts}"
