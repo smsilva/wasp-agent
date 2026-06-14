@@ -66,7 +66,12 @@ jobs:
       - name: Ensure PR and capture URL
         id: pr
         env:
-          GH_TOKEN: ${{ steps.claude.outputs.github_token }}
+          # `steps.claude.outputs.github_token` returns the action's internal
+          # "Claude App token if available" — empty/invalid in `prompt` mode
+          # (no installation event). Use the workflow's own GITHUB_TOKEN,
+          # which carries the `contents: write` + `pull-requests: write`
+          # scopes already declared at the job level.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
           # The action's `branch_name` output is empty in `prompt` mode; Claude
           # is instructed in the prompt (see scripts/jira-fetch) to push a
