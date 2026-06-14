@@ -40,6 +40,7 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 | [2026-06-13-jira-coding-agent.md](02-design/2026-06-13-jira-coding-agent.md) | Jira Coding Agent — AI coding agent disparado por Jira via GitHub Actions |
 | [2026-06-13-jira-coding-agent-v2.md](02-design/2026-06-13-jira-coding-agent-v2.md) | Jira Coding Agent v2 — implementação real (claude-code-action + GitHub App oficial) |
 | [2026-06-13-jira-coding-agent-v3-sec-008.md](02-design/2026-06-13-jira-coding-agent-v3-sec-008.md) | Jira Coding Agent v3 — SEC-008 fix (execution log artifact) |
+| [2026-06-14-ci-fix-agent.md](02-design/2026-06-14-ci-fix-agent.md) | Jira Coding Agent v3 — ci-fix-agent (auto-fix de CI) |
 
 ## 03-execution
 
@@ -48,3 +49,4 @@ Atualizar esta tabela sempre que um arquivo for criado, movido para `archived/` 
 | [2026-06-13-jira-coding-agent.md](03-execution/2026-06-13-jira-coding-agent.md) | Jira Coding Agent (walking skeleton v1) — Implementation Plan |
 | [2026-06-13-jira-coding-agent-v2.md](03-execution/2026-06-13-jira-coding-agent-v2.md) | Jira Coding Agent v2 — Implementation Plan |
 | [2026-06-13-jira-coding-agent-v3-sec-008.md](03-execution/2026-06-13-jira-coding-agent-v3-sec-008.md) | Jira Coding Agent v3 — SEC-008 fix — Implementation Plan |
+| [2026-06-14-ci-fix-agent.md](03-execution/2026-06-14-ci-fix-agent.md) | Jira Coding Agent v3 — ci-fix-agent — Implementation Plan |
