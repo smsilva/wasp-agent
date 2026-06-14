@@ -1,8 +1,9 @@
 ---
 id: SEC-008
 severity: Low
-status: open
+status: resolved
 opened: 2026-06-13
+resolved: 2026-06-13
 ---
 
 # SEC-008: Artefato de execução do agente expõe corpo da issue + tool outputs
