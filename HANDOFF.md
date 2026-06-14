@@ -20,9 +20,7 @@ Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude
 
 ## In Progress
 
-Nada em andamento. v3/SEC-008 mergeado.
-
-Próximo: segundo spec da v3 (ver Backlog).
+**Jira Coding Agent v3 — ci-fix-agent** (segundo spec da v3). Spec: `docs/sdlc/02-design/2026-06-14-ci-fix-agent.md`. Plano: `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md`.
 
 ## Open Questions / Hypotheses
 
@@ -42,8 +40,8 @@ Confirmar suite verde + 100% coverage.
 
 ## Next Steps
 
-- **Validação manual v3/SEC-008** (Task 5): disparar `gh workflow run jira-agent.yaml -f jira_issue=PLTF-11`; run verde → sem artefato. Forçar falha → artefato com 7d.
-- **Próximo spec da v3**: escolher entre `pr-agent.yaml` (auto-fix CI), dry-run, ou CLI Python.
+- Executar o plano `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md` (ci-fix-agent + ci-fix-notifier).
+- Após merge: validação manual disparando uma falha intencional de CI em um PR `claude/*` e respondendo `/fix`.
 
 ## Backlog (carry-over)
 
@@ -58,6 +56,6 @@ Confirmar suite verde + 100% coverage.
 - **Postgres no agno em produção** — basta `DATABASE_BACKEND=postgres` + `DATABASE_URL`
 - **`readOnlyRootFilesystem`** — habilitar condicionado a `DATABASE_BACKEND=postgres`
 - **Mensageria para watches** (`docs/sdlc/01-exploration/2026-06-03-mensageria-watcher.md`) — Redis Streams como evolução quando replicas > 1
-- **Jira Coding Agent v3** (3 specs restantes) — fatiamento decidido: um spec por item. Itens: `pr-agent.yaml` (auto-fix de CI no PR do agente via action oficial em `workflow_run`/`issue_comment`, com loop-guard), dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
+- **Jira Coding Agent v3** (2 specs restantes) — `ci-fix-agent` em andamento (ver In Progress). Itens pendentes: dry-run via `workflow_dispatch`, extração da lógica para CLI Python testado. Gate de ambiguidade dropado: a premissa é que só issues refinadas (negócio + técnico) são delegadas ao agente, então o risco de ambiguidade chegar é absorvido pelo processo upstream.
 
 > Before trusting anything time-sensitive above, run `git status`, `git diff`, and `git log` against the base branch.
