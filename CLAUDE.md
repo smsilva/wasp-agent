@@ -54,6 +54,7 @@ Flow for new features: **exploration/ → design/ → execution/**. Each SDLC su
 | `references/` | Living docs about external tools/APIs | `<topic>.md` | Never — update in place |
 | `runbooks/` | Manual procedures (setup, troubleshooting) | `<topic>.md` | Never — update in place |
 | `security/issues/` | Security findings | `SEC-NNN-<slug>.md` | Resolved |
+| `presentations/` | Slide decks (`.pptx` + `.pdf`) for talks/demos | `YYYY-MM-DD-<slug>.{pptx,pdf}` | Never — keep both formats |
 
 Spec `Status` values: `Idea`, `Draft`, `Approved`, `Implemented`, `Deferred`.
 

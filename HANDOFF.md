@@ -20,7 +20,7 @@ Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude
 
 ## In Progress
 
-Nada em andamento. Próximo: escolher entre os 2 specs restantes da v3 e abrir brainstorming.
+Nada em andamento no projeto.
 
 ## Open Questions / Hypotheses
 
