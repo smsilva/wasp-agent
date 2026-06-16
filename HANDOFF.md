@@ -2,25 +2,15 @@
 
 ## Why
 
-Jira Coding Agent v2 entregue: agente lê issue do Jira, implementa, abre PR, comenta no Jira e transiciona pra "In Review". Implementação via `claude-code-action` + App "Claude". Alternativa rejeitada: `claude -p` headless cru (mais cola para auth/PR; a action cunha token internamente a partir do `CLAUDE_CODE_OAUTH_TOKEN`).
+Sessão dedicada a polish do deck `docs/presentations/2026-06-15-jira-coding-agent.pptx`: traduzir para inglês, trocar tons de azul por preto/branco/cinza, aplicar fundo de chalkboard, escurecer fundo 30%, slide 2 com título cinza/subtítulo branco, remover linha decorativa inferior (skill `pptx` atualizada para não voltar a sugerir), caixas do slide 8+ no estilo do slide 9 (ativa = preta `#1A1A1A` sem borda; inativa = cinza `#808080` 25% alpha sem borda, texto camuflado).
 
-**Setup live (não recriar):**
-- Site `smsilva.atlassian.net`, projeto `PLTF`. Issue de teste: **PLTF-11**.
-- Automation rule "Jira Coding Agent — manual trigger": `POST https://api.github.com/repos/smsilva/wasp-agent/dispatches`, body `event_type=jira-trigger-event` + `client_payload.issue_key={{issue.key}}`. Disparar via issue → menu `• • •` → Automation.
-- PAT fine-grained "jira" (escopo `smsilva/wasp-agent`, `Contents: write` + `Actions: write`) no header `Authorization: Bearer <PAT>` da rule (fica no Jira).
-- Secrets no repo: `JIRA_BASE_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `CLAUDE_CODE_OAUTH_TOKEN`. Valores Jira também no `.env` local.
-- Settings → Actions → General: flag "Allow GitHub Actions to create and approve pull requests" ligada (sem ela, `gh pr create` falha com GraphQL `createPullRequest`).
-- Primeiro PR de cada novo branch do bot exige aprovação manual ("Approve workflows to run").
+Texto inativo dos slides 3-7 (bullets em "Motivation") + título "From ticket to PR" dos slides 9-12 atualizados para **Dark Gray 1 = `#666666`**, confirmado deterministicamente via re-extração do `.pptx` salvo.
 
-Atlassian MCP não está no catálogo `mcp --list`; conectar via `/mcp` (`claude mcp add http https://mcp.atlassian.com/v1/mcp`) antes de usar `mcp__atlassian__*`. Deletar comentário Jira não tem tool MCP — usar REST `DELETE /rest/api/3/issue/{key}/comment/{id}` com basic auth do `.env`.
-
-**v3/SEC-008 entregue 2026-06-13**: artefato de execução do agente gateado em `if: failure()` + `retention-days: 7`. Spec `docs/sdlc/02-design/2026-06-13-jira-coding-agent-v3-sec-008.md`; plano `docs/sdlc/03-execution/2026-06-13-jira-coding-agent-v3-sec-008.md`. Validação manual pós-merge ainda pendente: disparar PLTF-11 (run verde → sem artefato; falha forçada → artefato com 7d).
-
-**v3/ci-fix-agent entregue e validado end-to-end 2026-06-14**: dois workflows fecham o ciclo de CI no PR do `jira-agent`. `ci-fix-notifier.yaml` detecta falha em branch `claude/*` e posta convite `/fix`. `ci-fix-agent.yaml` recebe `/fix [--max-attempts N]` (default 3), conta tentativas via marcador `<!-- ci-fix-attempt -->`, aciona `claude-code-action`, ou esgota e transiciona Jira para "In Progress". Spec `docs/sdlc/02-design/2026-06-14-ci-fix-agent.md`; plano `docs/sdlc/03-execution/2026-06-14-ci-fix-agent.md`. Validação capturou bug (`gh pr list --head` aceita branch name, não SHA) já corrigido — documentado em `CLAUDE.md::GitHub Actions`.
+Aprendizado central capturado em `~/git/linux/claude/rules/pptx.md`: mapping correto LibreOffice → hex é `Dark Gray 1 = #666666` (eu havia gravado errado como `#1C1C1C`; a auditoria determinística mentiu por confirmação circular até o usuário inverter o swatch ao vivo no LibreOffice).
 
 ## In Progress
 
-Nada em andamento no projeto.
+Nada em andamento. Última ação: usuário abriu o deck no LibreOffice para inspeção visual (sem mais edits relatados).
 
 ## Open Questions / Hypotheses
 
@@ -33,10 +23,8 @@ Nada.
 ## How to Resume
 
 ```bash
-make test 2>&1 | tail -5
+xdg-open /home/silvios/git/wasp-agent/docs/presentations/2026-06-15-jira-coding-agent.pptx
 ```
-
-Confirmar suite verde + 100% coverage.
 
 ## Next Steps
 
